@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aurel — AI Interview Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#09090B;
+    --bg-secondary:#111827;
+    --card:#1F2937;
+    --card-glass: rgba(31,41,55,0.55);
+    --border:#374151;
+    --border-soft: rgba(55,65,81,0.6);
+    --primary:#3B82F6;
+    --accent:#06B6D4;
+    --success:#10B981;
+    --warning:#F59E0B;
+    --error:#EF4444;
+    --text:#F9FAFB;
+    --text-secondary:#9CA3AF;
+    --grad-1: linear-gradient(135deg,#3B82F6 0%,#06B6D4 100%);
+    --grad-2: linear-gradient(135deg,#6366F1 0%,#3B82F6 100%);
+    --radius: 18px;
+    --radius-sm: 12px;
+    --font: 'Inter', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  /* ambient background */
+  .bg-glow{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(700px 500px at 15% -5%, rgba(59,130,246,0.16), transparent 60%),
+      radial-gradient(600px 500px at 90% 10%, rgba(6,182,212,0.13), transparent 60%),
+      radial-gradient(800px 600px at 50% 100%, rgba(99,102,241,0.10), transparent 60%);
+  }
+  .noise{
+    position:fixed; inset:0; z-index:1; pointer-events:none; opacity:0.035; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .cursor-glow{
+    position:fixed; width:420px; height:420px; border-radius:50%; pointer-events:none; z-index:0;
+    background: radial-gradient(circle, rgba(59,130,246,0.10) 0%, transparent 70%);
+    transform: translate(-50%,-50%);
+    transition: opacity .3s ease;
+    top:0; left:0;
+  }
+
+  .wrap{max-width:1200px; margin:0 auto; padding:0 32px; position:relative; z-index:2;}
+
+  /* NAV */
+  nav{
+    position:sticky; top:0; z-index:50;
+    backdrop-filter: blur(16px) saturate(140%);
+    background: rgba(9,9,11,0.65);
+    border-bottom:1px solid var(--border-soft);
+  }
+  .nav-inner{
+    max-width:1200px; margin:0 auto; padding:16px 32px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .logo{display:flex; align-items:center; gap:10px; font-weight:800; font-size:19px; letter-spacing:-0.02em;}
+  .logo-mark{
+    width:32px; height:32px; border-radius:9px; background:var(--grad-1);
+    display:flex; align-items:center; justify-content:center; box-shadow:0 0 24px rgba(59,130,246,0.5);
+  }
+  .logo-mark svg{width:17px; height:17px;}
+  .nav-links{display:flex; gap:36px; align-items:center;}
+  .nav-links a{color:var(--text-secondary); text-decoration:none; font-size:14.5px; font-weight:500; transition:color .2s;}
+  .nav-links a:hover{color:var(--text);}
+  .nav-cta{display:flex; gap:12px; align-items:center;}
+  .btn{
+    font-family:var(--font); font-weight:600; font-size:14.5px; border:none; cursor:pointer;
+    border-radius:11px; padding:11px 20px; display:inline-flex; align-items:center; gap:8px;
+    transition: transform .18s ease, box-shadow .18s ease, background .2s ease;
+  }
+  .btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .btn-ghost{background:transparent; color:var(--text-secondary); border:1px solid transparent;}
+  .btn-ghost:hover{color:var(--text); background:rgba(255,255,255,0.04);}
+  .btn-primary{
+    background:var(--grad-1); color:#fff;
+    box-shadow:0 0 0 1px rgba(255,255,255,0.06) inset, 0 8px 24px -8px rgba(59,130,246,0.55);
+  }
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 0 0 1px rgba(255,255,255,0.08) inset, 0 14px 32px -8px rgba(59,130,246,0.7);}
+  .btn-outline{background:rgba(255,255,255,0.03); color:var(--text); border:1px solid var(--border);}
+  .btn-outline:hover{border-color:var(--primary); background:rgba(59,130,246,0.08);}
+
+  /* HERO */
+  .hero{padding:96px 0 60px; position:relative;}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px; padding:7px 14px; border-radius:999px;
+    background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.28);
+    font-size:12.5px; font-weight:600; color:#93C5FD; letter-spacing:0.02em; margin-bottom:26px;
+  }
+  .eyebrow .dot{width:6px; height:6px; border-radius:50%; background:var(--success); box-shadow:0 0 8px var(--success);}
+  .hero-grid{display:grid; grid-template-columns:1.05fr 0.95fr; gap:56px; align-items:center;}
+  h1.hero-title{
+    font-size:56px; line-height:1.06; font-weight:800; letter-spacing:-0.03em; margin-bottom:22px;
+  }
+  h1.hero-title .grad{
+    background:var(--grad-1); -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .hero-sub{font-size:17.5px; line-height:1.65; color:var(--text-secondary); max-width:520px; margin-bottom:34px;}
+  .hero-actions{display:flex; gap:14px; margin-bottom:40px; flex-wrap:wrap;}
+  .btn-lg{padding:14px 26px; font-size:15.5px; border-radius:13px;}
+  .hero-trust{display:flex; align-items:center; gap:18px; color:var(--text-secondary); font-size:13px;}
+  .avatar-stack{display:flex;}
+  .avatar-stack span{
+    width:30px; height:30px; border-radius:50%; border:2px solid var(--bg);
+    background:var(--grad-2); margin-left:-8px; display:inline-block;
+  }
+  .avatar-stack span:first-child{margin-left:0;}
+
+  /* Hero visual: AI orb */
+  .hero-visual{position:relative; display:flex; align-items:center; justify-content:center; height:460px;}
+  .orb-ring{
+    position:absolute; width:340px; height:340px; border-radius:50%;
+    border:1px solid rgba(59,130,246,0.25);
+    animation: spin 22s linear infinite;
+  }
+  .orb-ring::before{
+    content:''; position:absolute; top:-3px; left:50%; width:7px; height:7px; margin-left:-3.5px;
+    border-radius:50%; background:var(--accent); box-shadow:0 0 14px var(--accent);
+  }
+  .orb-ring.r2{width:410px; height:410px; animation-duration:32s; animation-direction:reverse; border-color:rgba(6,182,212,0.15);}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .orb-core{
+    position:relative; width:220px; height:220px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #1e3a8a 0%, #0b1220 65%);
+    border:1px solid rgba(59,130,246,0.4);
+    box-shadow:0 0 90px rgba(59,130,246,0.35), inset 0 0 60px rgba(6,182,212,0.15);
+    display:flex; align-items:center; justify-content:center;
+    animation: breathe 4.5s ease-in-out infinite;
+  }
+  @keyframes breathe{0%,100%{transform:scale(1);} 50%{transform:scale(1.035);}}
+  .wave{display:flex; align-items:center; gap:5px; height:60px;}
+  .wave span{
+    width:5px; border-radius:3px; background:var(--grad-1);
+    animation: wave 1.2s ease-in-out infinite;
+  }
+  .wave span:nth-child(1){height:18px; animation-delay:-1.1s;}
+  .wave span:nth-child(2){height:36px; animation-delay:-0.9s;}
+  .wave span:nth-child(3){height:52px; animation-delay:-0.7s;}
+  .wave span:nth-child(4){height:30px; animation-delay:-0.5s;}
+  .wave span:nth-child(5){height:44px; animation-delay:-0.3s;}
+  .wave span:nth-child(6){height:22px; animation-delay:-0.1s;}
+  .wave span:nth-child(7){height:38px; animation-delay:-0.2s;}
+  @keyframes wave{0%,100%{transform:scaleY(0.4);} 50%{transform:scaleY(1);}}
+  .orb-badge{
+    position:absolute; padding:9px 14px; border-radius:12px; font-size:12.5px; font-weight:600;
+    background:var(--card-glass); backdrop-filter:blur(12px); border:1px solid var(--border-soft);
+    display:flex; align-items:center; gap:7px; box-shadow:0 8px 24px -8px rgba(0,0,0,0.5);
+  }
+  .orb-badge.b1{top:8px; left:-10px; color:#6EE7B7;}
+  .orb-badge.b2{bottom:30px; right:-24px; color:#93C5FD;}
+  .orb-badge .dot2{width:6px; height:6px; border-radius:50%; background:currentColor;}
+
+  /* Trusted by */
+  .trusted{padding:40px 0; border-top:1px solid var(--border-soft); border-bottom:1px solid var(--border-soft);}
+  .trusted-label{text-align:center; color:var(--text-secondary); font-size:12.5px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:26px;}
+  .logo-row{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:28px; opacity:0.55;}
+  .logo-row span{font-weight:700; font-size:17px; letter-spacing:-0.01em; color:var(--text-secondary);}
+
+  /* SECTION HEADS */
+  .section{padding:100px 0;}
+  .section-head{max-width:640px; margin:0 auto 56px; text-align:center;}
+  .section-eyebrow{color:var(--accent); font-weight:700; font-size:12.5px; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:14px;}
+  .section-title{font-size:38px; font-weight:800; letter-spacing:-0.025em; margin-bottom:14px;}
+  .section-sub{color:var(--text-secondary); font-size:16px; line-height:1.6;}
+
+  /* FEATURE GRID */
+  .feature-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  .glass-card{
+    background:var(--card-glass); border:1px solid var(--border-soft); border-radius:var(--radius);
+    padding:28px; backdrop-filter:blur(10px); transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+    position:relative; overflow:hidden;
+  }
+  .glass-card:hover{transform:translateY(-4px); border-color:rgba(59,130,246,0.4); box-shadow:0 20px 40px -20px rgba(59,130,246,0.35);}
+  .feat-icon{
+    width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.25); margin-bottom:18px; color:#60A5FA;
+  }
+  .feat-icon svg{width:22px; height:22px;}
+  .glass-card h3{font-size:17px; font-weight:700; margin-bottom:8px; letter-spacing:-0.01em;}
+  .glass-card p{color:var(--text-secondary); font-size:14.5px; line-height:1.6;}
+
+  /* DASHBOARD PREVIEW */
+  .dash-shell{
+    background:linear-gradient(180deg, var(--bg-secondary), var(--bg));
+    border:1px solid var(--border-soft); border-radius:24px; padding:20px;
+    box-shadow:0 40px 80px -30px rgba(0,0,0,0.6);
+  }
+  .dash-topbar{display:flex; align-items:center; justify-content:space-between; padding:6px 8px 20px;}
+  .dots{display:flex; gap:6px;}
+  .dots span{width:10px; height:10px; border-radius:50%;}
+  .dots span:nth-child(1){background:#EF4444;} .dots span:nth-child(2){background:#F59E0B;} .dots span:nth-child(3){background:#10B981;}
+  .dash-search{
+    flex:1; max-width:300px; margin:0 20px; background:rgba(255,255,255,0.04); border:1px solid var(--border);
+    border-radius:9px; padding:7px 12px; color:var(--text-secondary); font-size:12.5px; display:flex; align-items:center; gap:8px;
+  }
+  .dash-grid{display:grid; grid-template-columns:220px 1fr; gap:18px;}
+  .dash-sidebar{background:rgba(17,24,39,0.6); border:1px solid var(--border-soft); border-radius:16px; padding:16px 12px;}
+  .sb-item{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; font-size:13.5px; color:var(--text-secondary); margin-bottom:4px; font-weight:500;}
+  .sb-item svg{width:16px; height:16px; flex-shrink:0;}
+  .sb-item.active{background:rgba(59,130,246,0.14); color:#93C5FD; border:1px solid rgba(59,130,246,0.25);}
+  .dash-main{display:flex; flex-direction:column; gap:16px;}
+  .stat-row{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+  .stat-card{background:var(--card); border:1px solid var(--border-soft); border-radius:14px; padding:16px;}
+  .stat-top{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;}
+  .stat-label{font-size:12px; color:var(--text-secondary); font-weight:600;}
+  .stat-icon{width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center;}
+  .stat-value{font-size:24px; font-weight:800; letter-spacing:-0.02em;}
+  .stat-delta{font-size:11.5px; font-weight:600; margin-top:4px;}
+  .up{color:var(--success);} .warn{color:var(--warning);}
+
+  .panel-row{display:grid; grid-template-columns:1.4fr 1fr; gap:16px;}
+  .panel{background:var(--card); border:1px solid var(--border-soft); border-radius:14px; padding:18px;}
+  .panel h4{font-size:14.5px; font-weight:700; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;}
+  .panel h4 span{font-size:11.5px; color:var(--text-secondary); font-weight:500;}
+  .radar-wrap{display:flex; align-items:center; justify-content:center; padding:6px 0 0;}
+  .activity-item{display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid var(--border-soft); font-size:13px;}
+  .activity-item:last-child{border:none;}
+  .activity-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .activity-title{font-weight:600; color:var(--text);}
+  .activity-meta{color:var(--text-secondary); font-size:11.5px;}
+  .pill{padding:3px 9px; border-radius:999px; font-size:10.5px; font-weight:700; margin-left:auto;}
+  .pill-blue{background:rgba(59,130,246,0.15); color:#93C5FD;}
+  .pill-green{background:rgba(16,185,129,0.15); color:#6EE7B7;}
+  .pill-amber{background:rgba(245,158,11,0.15); color:#FCD34D;}
+
+  .progress-track{height:7px; border-radius:99px; background:rgba(255,255,255,0.06); overflow:hidden; margin-top:8px;}
+  .progress-fill{height:100%; border-radius:99px; background:var(--grad-1);}
+
+  /* TESTIMONIALS */
+  .test-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  .test-card{background:var(--card-glass); border:1px solid var(--border-soft); border-radius:var(--radius); padding:26px;}
+  .stars{color:var(--warning); font-size:13px; margin-bottom:14px; letter-spacing:2px;}
+  .test-card p{font-size:14.5px; line-height:1.65; color:#E5E7EB; margin-bottom:20px;}
+  .test-person{display:flex; align-items:center; gap:10px;}
+  .test-avatar{width:36px; height:36px; border-radius:50%; background:var(--grad-2);}
+  .test-name{font-size:13.5px; font-weight:700;}
+  .test-role{font-size:12px; color:var(--text-secondary);}
+
+  /* CTA */
+  .cta-band{
+    border-radius:26px; padding:64px 56px; text-align:center; position:relative; overflow:hidden;
+    background:linear-gradient(135deg, rgba(59,130,246,0.14), rgba(6,182,212,0.10));
+    border:1px solid rgba(59,130,246,0.28);
+  }
+  .cta-band h2{font-size:34px; font-weight:800; letter-spacing:-0.02em; margin-bottom:14px;}
+  .cta-band p{color:var(--text-secondary); font-size:16px; margin-bottom:30px;}
+
+  /* FOOTER */
+  footer{border-top:1px solid var(--border-soft); padding:56px 0 32px;}
+  .footer-grid{display:grid; grid-template-columns:1.4fr repeat(4,1fr); gap:32px; margin-bottom:44px;}
+  .footer-grid h5{font-size:13px; font-weight:700; margin-bottom:16px;}
+  .footer-grid a{display:block; color:var(--text-secondary); font-size:13.5px; text-decoration:none; margin-bottom:11px; transition:color .2s;}
+  .footer-grid a:hover{color:var(--text);}
+  .footer-bottom{display:flex; justify-content:space-between; align-items:center; padding-top:28px; border-top:1px solid var(--border-soft); color:var(--text-secondary); font-size:12.5px;}
+
+  @media (max-width:980px){
+    .hero-grid{grid-template-columns:1fr;}
+    .hero-visual{height:320px; order:-1;}
+    .feature-grid{grid-template-columns:repeat(2,1fr);}
+    .test-grid{grid-template-columns:1fr;}
+    .panel-row{grid-template-columns:1fr;}
+    .stat-row{grid-template-columns:repeat(2,1fr);}
+    .dash-grid{grid-template-columns:1fr;}
+    .dash-sidebar{display:none;}
+    .footer-grid{grid-template-columns:repeat(2,1fr);}
+    .nav-links{display:none;}
+    h1.hero-title{font-size:38px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+<div class="noise"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<nav>
+  <div class="nav-inner">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="3.4"/></svg>
+      </div>
+      Aurel
+    </div>
+    <div class="nav-links">
+      <a href="#product">Product</a>
+      <a href="#dashboard">Dashboard</a>
+      <a href="#testimonials">Stories</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="nav-cta">
+      <button class="btn btn-ghost">Log in</button>
+      <button class="btn btn-primary">Start free interview</button>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow"><span class="dot"></span> Live now — real‑time voice interviews</div>
+        <h1 class="hero-title">Walk into your<br>next interview<br><span class="grad">already having won it.</span></h1>
+        <p class="hero-sub">Aurel runs full mock interviews with a voice AI that listens, pushes back, and scores you like a real bar‑raiser — then tells you exactly what to fix before the real thing.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary btn-lg">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg>
+            Start Interview
+          </button>
+          <button class="btn btn-outline btn-lg">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Watch Demo
+          </button>
+        </div>
+        <div class="hero-trust">
+          <div class="avatar-stack"><span></span><span></span><span></span><span></span></div>
+          <span>Trusted by 40,000+ candidates prepping for FAANG, YC startups &amp; consulting</span>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="orb-ring r2"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-core">
+          <div class="wave">
+            <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="orb-badge b1"><span class="dot2"></span> Listening…</div>
+        <div class="orb-badge b2"><span class="dot2"></span> Confidence 87%</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUSTED BY -->
+  <section class="trusted">
+    <div class="trusted-label">Candidates from teams currently interviewing at</div>
+    <div class="logo-row">
+      <span>Meridian</span><span>Northwind</span><span>Vantage</span><span>Solace Labs</span><span>Kestrel</span><span>Ondo</span>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section" id="product">
+    <div class="section-head">
+      <div class="section-eyebrow">Why Aurel</div>
+      <div class="section-title">Practice that actually feels like the real room</div>
+      <div class="section-sub">Every module is built around one idea: pressure teaches faster than tutorials.</div>
+    </div>
+    <div class="feature-grid">
+
+      <div class="glass-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg></div>
+        <h3>Voice mock interviews</h3>
+        <p>A live AI interviewer that reacts in real time — follow‑up questions, camera preview, and full transcription as you speak.</p>
+      </div>
+
+      <div class="glass-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+        <h3>Coding rounds, judged</h3>
+        <p>Monaco editor, real test cases, and hints tuned to how stuck you actually are — not a canned answer key.</p>
+      </div>
+
+      <div class="glass-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <h3>Resume, decoded</h3>
+        <p>Drag in your resume and get an ATS score, keyword gaps, and line‑by‑line rewrite suggestions in under a minute.</p>
+      </div>
+
+      <div class="glass-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></div>
+        <h3>Scorecards that don't flatter you</h3>
+        <p>Separate scores for technical depth, communication, and confidence — with the radar chart to prove it.</p>
+      </div>
+
+      <div class="glass-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></div>
+        <h3>Facial &amp; tone feedback</h3>
+        <p>Eye contact, pacing, and expression analysis, delivered as coaching notes instead of a raw surveillance report.</p>
+      </div>
+
+      <div class="glass-card">
+        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <h3>A roadmap, not a to‑do list</h3>
+        <p>Aurel turns your weak topics into a day‑by‑day study plan with the specific questions to drill next.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- DASHBOARD PREVIEW -->
+  <section class="section" id="dashboard">
+    <div class="section-head">
+      <div class="section-eyebrow">Inside the product</div>
+      <div class="section-title">Your prep, on one screen</div>
+      <div class="section-sub">Score trends, weak areas, and what to practice next — no digging required.</div>
+    </div>
+
+    <div class="dash-shell">
+      <div class="dash-topbar">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="dash-search">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          Search interviews, topics, reports…
+        </div>
+        <div style="width:64px"></div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="dash-sidebar">
+          <div class="sb-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg> Dashboard</div>
+          <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></svg> Mock Interview</div>
+          <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Coding Round</div>
+          <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Resume Analyzer</div>
+          <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg> Analytics</div>
+          <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Roadmap</div>
+          <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg> Leaderboard</div>
+        </div>
+
+        <div class="dash-main">
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-top"><span class="stat-label">Overall Score</span>
+                <div class="stat-icon" style="background:rgba(59,130,246,0.15);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.4"><circle cx="12" cy="12" r="9"/></svg></div>
+              </div>
+              <div class="stat-value">82<span style="font-size:14px;color:var(--text-secondary);">/100</span></div>
+              <div class="stat-delta up">▲ 6 pts this week</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-top"><span class="stat-label">Interviews Done</span>
+                <div class="stat-icon" style="background:rgba(16,185,129,0.15);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></div>
+              </div>
+              <div class="stat-value">24</div>
+              <div class="stat-delta up">▲ 3 this week</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-top"><span class="stat-label">Practice Hours</span>
+                <div class="stat-icon" style="background:rgba(6,182,212,0.15);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg></div>
+              </div>
+              <div class="stat-value">37.5</div>
+              <div class="stat-delta" style="color:var(--text-secondary);">Avg 5.3 hrs/wk</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-top"><span class="stat-label">Streak</span>
+                <div class="stat-icon" style="background:rgba(245,158,11,0.15);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2.4"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div>
+              </div>
+              <div class="stat-value">12<span style="font-size:14px;color:var(--text-secondary);"> days</span></div>
+              <div class="stat-delta warn">Keep it going</div>
+            </div>
+          </div>
+
+          <div class="panel-row">
+            <div class="panel">
+              <h4>Skill Breakdown <span>Last 8 sessions</span></h4>
+              <div style="display:flex; flex-direction:column; gap:14px; padding-top:4px;">
+                <div>
+                  <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:2px;"><span>Communication</span><span style="color:var(--text-secondary);">88%</span></div>
+                  <div class="progress-track"><div class="progress-fill" style="width:88%;"></div></div>
+                </div>
+                <div>
+                  <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:2px;"><span>Technical Depth</span><span style="color:var(--text-secondary);">74%</span></div>
+                  <div class="progress-track"><div class="progress-fill" style="width:74%;"></div></div>
+                </div>
+                <div>
+                  <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:2px;"><span>Coding Accuracy</span><span style="color:var(--text-secondary);">65%</span></div>
+                  <div class="progress-track"><div class="progress-fill" style="width:65%; background:linear-gradient(90deg,#F59E0B,#EF4444);"></div></div>
+                </div>
+                <div>
+                  <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:2px;"><span>Confidence</span><span style="color:var(--text-secondary);">91%</span></div>
+                  <div class="progress-track"><div class="progress-fill" style="width:91%;"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h4>Recent Activity</h4>
+              <div class="activity-item">
+                <div class="activity-dot" style="background:var(--primary);"></div>
+                <div><div class="activity-title">System Design Mock</div><div class="activity-meta">2 hrs ago · 42 min</div></div>
+                <span class="pill pill-blue">86</span>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot" style="background:var(--success);"></div>
+                <div><div class="activity-title">Resume Re‑scan</div><div class="activity-meta">Yesterday</div></div>
+                <span class="pill pill-green">ATS 91</span>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot" style="background:var(--warning);"></div>
+                <div><div class="activity-title">DP: Coin Change</div><div class="activity-meta">2 days ago · 3 attempts</div></div>
+                <span class="pill pill-amber">Retry</span>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot" style="background:var(--accent);"></div>
+                <div><div class="activity-title">Behavioral: Conflict</div><div class="activity-meta">3 days ago · 35 min</div></div>
+                <span class="pill pill-blue">79</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="section" id="testimonials">
+    <div class="section-head">
+      <div class="section-eyebrow">Results</div>
+      <div class="section-title">Candidates who stopped guessing</div>
+    </div>
+    <div class="test-grid">
+      <div class="test-card">
+        <div class="stars">★★★★★</div>
+        <p>The voice interviewer pushed back on a vague answer exactly the way a real panel did two weeks later. That rep is what got me through.</p>
+        <div class="test-person"><div class="test-avatar"></div><div><div class="test-name">Priya N.</div><div class="test-role">SWE, offer at a Series C startup</div></div></div>
+      </div>
+      <div class="test-card">
+        <div class="stars">★★★★★</div>
+        <p>Seeing my confidence score drop every time I rambled was uncomfortable and exactly what I needed to fix it.</p>
+        <div class="test-person"><div class="test-avatar"></div><div><div class="test-name">Marcus T.</div><div class="test-role">New grad, backend track</div></div></div>
+      </div>
+      <div class="test-card">
+        <div class="stars">★★★★★</div>
+        <p>The resume analyzer caught three keyword gaps I'd missed across a dozen manual reviews. Interview rate roughly doubled.</p>
+        <div class="test-person"><div class="test-avatar"></div><div><div class="test-name">Elena R.</div><div class="test-role">Product analyst, career switch</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section" style="padding-top:20px;">
+    <div class="cta-band">
+      <h2>Your next interview is closer than you think.</h2>
+      <p>Start a free mock interview in under 60 seconds — no card required.</p>
+      <button class="btn btn-primary btn-lg">Start Interview</button>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="logo" style="margin-bottom:14px;">
+          <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="3.4"/></svg></div>
+          Aurel
+        </div>
+        <p style="color:var(--text-secondary); font-size:13.5px; max-width:220px; line-height:1.6;">AI interview coaching that prepares you for the room, not the rubric.</p>
+      </div>
+      <div><h5>Product</h5><a href="#">Mock Interview</a><a href="#">Coding Round</a><a href="#">Resume Analyzer</a><a href="#">Analytics</a></div>
+      <div><h5>Company</h5><a href="#">About</a><a href="#">Careers</a><a href="#">Blog</a><a href="#">Contact</a></div>
+      <div><h5>Resources</h5><a href="#">Question Bank</a><a href="#">Study Plans</a><a href="#">Leaderboard</a><a href="#">FAQ</a></div>
+      <div><h5>Legal</h5><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Security</a></div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Aurel. All rights reserved.</span>
+      <span>Made for people who'd rather practice than panic.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const glow = document.getElementById('cursorGlow');
+  document.addEventListener('mousemove', (e)=>{
+    glow.style.left = e.clientX + 'px';
+    glow.style.top = e.clientY + 'px';
+  });
+
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        en.target.style.opacity = 1;
+        en.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, {threshold:0.15});
+
+  document.querySelectorAll('.glass-card, .test-card, .dash-shell').forEach(el=>{
+    el.style.opacity = 0;
+    el.style.transform = 'translateY(18px)';
+    el.style.transition = 'opacity .6s ease, transform .6s ease';
+    io.observe(el);
+  });
+</script>
+
+</body>
+</html>
