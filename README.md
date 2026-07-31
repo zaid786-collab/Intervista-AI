@@ -1,2 +1,1 @@
-# Intervista-AI
-Repo for AI Interview App.
+# Intervista-AI : Final Placement Solution
