@@ -3,12 +3,13 @@ import "./Navbar.css";
 function Navbar({
   onGoHome,
   onOpenDashboard,
+  onOpenCompanies,
   onOpenPricing,
   onOpenFaq,
   onOpenLogin,
   onOpenSignup,
-  user,
   onLogout,
+  user,
 }) {
   return (
     <nav className="navbar">
@@ -23,7 +24,11 @@ function Navbar({
 
       <div className="navMenu">
         <ul className="navLinks">
-          <li>Resources</li>
+          <li>
+            <button type="button" className="navLinkButton">
+              Resources
+            </button>
+          </li>
 
           <li>
             <button
@@ -35,7 +40,15 @@ function Navbar({
             </button>
           </li>
 
-          <li>Companies</li>
+          <li>
+            <button
+              type="button"
+              className="navLinkButton"
+              onClick={onOpenCompanies}
+            >
+              Companies
+            </button>
+          </li>
 
           <li>
             <button

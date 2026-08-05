@@ -36,6 +36,7 @@ import {
 function Dashboard({
   onGoHome,
   onOpenDashboard,
+  onOpenCompanies,
   onOpenPricing,
   onOpenFaq,
   onOpenLogin,
@@ -43,21 +44,23 @@ function Dashboard({
   onLogout,
   user,
 }) {
+
   const [darkMode, setDarkMode] = useState(true);
 
   return (
     <>
       {/* Home Navbar */}
       <HomeNavbar
-        onGoHome={onGoHome}
-        onOpenDashboard={onOpenDashboard}
-        onOpenPricing={onOpenPricing}
-        onOpenFaq={onOpenFaq}
-        onOpenLogin={onOpenLogin}
-        onOpenSignup={onOpenSignup}
-        onLogout={onLogout}
-        user={user}
-      />
+  onGoHome={onGoHome}
+  onOpenDashboard={onOpenDashboard}
+  onOpenCompanies={onOpenCompanies}
+  onOpenPricing={onOpenPricing}
+  onOpenFaq={onOpenFaq}
+  onOpenLogin={onOpenLogin}
+  onOpenSignup={onOpenSignup}
+  onLogout={onLogout}
+  user={user}
+/>
 
       <div className={darkMode ? "dashboard dark" : "dashboard light"}>
         <Sidebar />
