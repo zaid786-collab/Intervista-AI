@@ -2,10 +2,11 @@ function Sidebar() {
     return (
         <div className="sidebar">
 
-            <div className="sidebar-brand" aria-label="Intervista AI">
+            <div className="logo">
                 <span aria-hidden="true">✦</span>
                 <h2>Intervista AI</h2>
             </div>
+            
 
             <ul>
                 <li>Dashboard</li>

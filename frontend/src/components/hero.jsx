@@ -5,7 +5,8 @@ function Hero() {
     <section className="hero">
 
       <div className="left">
-
+        <br></br>
+    <br></br>
         <div className="badge">
           🟢 Live now — real-time voice interviews
         </div>

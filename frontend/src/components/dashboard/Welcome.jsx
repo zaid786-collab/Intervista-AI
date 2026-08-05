@@ -7,9 +7,9 @@ function Welcome() {
         <div className="welcome">
 
             <h1>
-                Good Evening
+                Welcome Back
             </h1>
-
+        <br></br>
             <p>
                 Ready to crush your next interview?
             </p>

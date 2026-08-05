@@ -8,6 +8,7 @@ import Footer from "./components/Footer/Footer";
 
 function App() {
   const [page, setPage] = useState("home");
+
   const [user, setUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("intervista-current-user")) || null;
@@ -16,26 +17,49 @@ function App() {
     }
   });
 
+  // Dashboard Page
   if (page === "dashboard") {
-    return <Dashboard />;
+    return (
+      <Dashboard
+        onGoHome={() => setPage("home")}
+        onOpenDashboard={() => setPage("dashboard")}
+        onOpenPricing={() => setPage("pricing")}
+        onOpenFaq={() => setPage("faq")}
+        onOpenLogin={() => setPage("login")}
+        onOpenSignup={() => setPage("signup")}
+        user={user}
+        onLogout={() => {
+          localStorage.removeItem("intervista-current-user");
+          setUser(null);
+          setPage("home");
+        }}
+      />
+    );
   }
 
   const navigation = {
+    onGoHome: () => setPage("home"),
     onOpenDashboard: () => setPage("dashboard"),
     onOpenPricing: () => setPage("pricing"),
     onOpenFaq: () => setPage("faq"),
     onOpenLogin: () => setPage("login"),
     onOpenSignup: () => setPage("signup"),
+
     onAuth: (authenticatedUser) => {
-      localStorage.setItem("intervista-current-user", JSON.stringify(authenticatedUser));
+      localStorage.setItem(
+        "intervista-current-user",
+        JSON.stringify(authenticatedUser)
+      );
       setUser(authenticatedUser);
       setPage("home");
     },
+
     onLogout: () => {
       localStorage.removeItem("intervista-current-user");
       setUser(null);
       setPage("home");
     },
+
     user,
   };
 
@@ -46,6 +70,7 @@ function App() {
       {page === "faq" && <FAQ {...navigation} />}
       {page === "login" && <AuthPage mode="login" {...navigation} />}
       {page === "signup" && <AuthPage mode="signup" {...navigation} />}
+
       {page !== "login" && page !== "signup" && <Footer />}
     </>
   );
