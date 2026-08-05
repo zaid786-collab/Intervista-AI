@@ -2,8 +2,6 @@ import { useState } from "react";
 import "./Dashboard.css";
 
 import Sidebar from "./Sidebar";
-
-import HomeNavbar from "../Navbar";
 import FloatingControls from "./FloatingControls";
 
 import Welcome from "./Welcome";
@@ -33,124 +31,97 @@ import {
   FaClock,
 } from "react-icons/fa";
 
-function Dashboard({
-  onGoHome,
-  onOpenDashboard,
-  onOpenCompanies,
-  onOpenPricing,
-  onOpenFaq,
-  onOpenLogin,
-  onOpenSignup,
-  onLogout,
-  user,
-}) {
-
+function Dashboard() {
   const [darkMode, setDarkMode] = useState(true);
 
   return (
-    <>
-      {/* Home Navbar */}
-      <HomeNavbar
-  onGoHome={onGoHome}
-  onOpenDashboard={onOpenDashboard}
-  onOpenCompanies={onOpenCompanies}
-  onOpenPricing={onOpenPricing}
-  onOpenFaq={onOpenFaq}
-  onOpenLogin={onOpenLogin}
-  onOpenSignup={onOpenSignup}
-  onLogout={onLogout}
-  user={user}
-/>
+    <div className={darkMode ? "dashboard dark" : "dashboard light"}>
+      <Sidebar />
 
-      <div className={darkMode ? "dashboard dark" : "dashboard light"}>
-        <Sidebar />
+      <div className="main">
+        <Welcome />
 
-        <div className="main">
+        <FloatingControls
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+        />
 
-          <Welcome />
+        <div className="cards">
+          <Card
+            icon={<FaUserGraduate />}
+            title="Total Interviews"
+            value="24"
+            text="Completed this month"
+          />
 
-            <FloatingControls
-                darkMode={darkMode}
-                setDarkMode={setDarkMode}
-            />
+          <Card
+            icon={<FaChartLine />}
+            title="Average Score"
+            value="78%"
+            text="Performance is improving"
+          />
 
-          <div className="cards">
-            <Card
-              icon={<FaUserGraduate />}
-              title="Total Interviews"
-              value="24"
-              text="Completed this month"
-            />
+          <Card
+            icon={<FaTrophy />}
+            title="Best Score"
+            value="92%"
+            text="Excellent performance"
+          />
 
-            <Card
-              icon={<FaChartLine />}
-              title="Average Score"
-              value="78%"
-              text="Performance is improving"
-            />
-
-            <Card
-              icon={<FaTrophy />}
-              title="Best Score"
-              value="92%"
-              text="Excellent performance"
-            />
-
-            <Card
-              icon={<FaClock />}
-              title="Practice Time"
-              value="18 hrs"
-              text="This week's practice"
-            />
-          </div>
-
-          <div className="dashboard-row">
-            <Analytics />
-            <AIInsights />
-          </div>
-
-          <div className="dashboard-row">
-            <Recent />
-            <Upcoming />
-          </div>
-
-          <div className="dashboard-row">
-            <CodingChallenge />
-            <InterviewHeatmap />
-          </div>
-
-          <div className="dashboard-row">
-            <ResumeAnalyzer />
-            <Leaderboard />
-          </div>
-
-          <div className="dashboard-row">
-            <Notifications />
-            <Schedule />
-          </div>
-
-          <div className="dashboard-row">
-            <JobRecommendations />
-            <Achievements />
-          </div>
-
-          <div className="dashboard-row">
-            <QuickActions />
-            <ProgressTracker />
-          </div>
-
-          <div className="full-width">
-            <MockInterview />
-          </div>
-
-          <div className="full-width">
-            <Activity />
-          </div>
-
-          <AIChat />
+          <Card
+            icon={<FaClock />}
+            title="Practice Time"
+            value="18 hrs"
+            text="This week's practice"
+          />
         </div>
+
+        <div className="dashboard-row">
+          <Analytics />
+          <AIInsights />
+        </div>
+
+        <div className="dashboard-row">
+          <Recent />
+          <Upcoming />
+        </div>
+
+        <div className="dashboard-row">
+          <CodingChallenge />
+          <InterviewHeatmap />
+        </div>
+
+        <div className="dashboard-row">
+          <ResumeAnalyzer />
+          <Leaderboard />
+        </div>
+
+        <div className="dashboard-row">
+          <Notifications />
+          <Schedule />
+        </div>
+
+        <div className="dashboard-row">
+          <JobRecommendations />
+          <Achievements />
+        </div>
+
+        <div className="dashboard-row">
+          <QuickActions />
+          <ProgressTracker />
+        </div>
+
+        <div className="full-width">
+          <MockInterview />
+        </div>
+
+        <div className="full-width">
+          <Activity />
+        </div>
+
+        <AIChat />
       </div>
-    </>
+    </div>
   );
 }
 

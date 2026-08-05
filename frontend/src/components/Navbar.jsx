@@ -15,7 +15,10 @@ function Navbar({
     <nav className="navbar">
       <div
         className="logo"
-        onClick={onGoHome}
+        onClick={() => {
+          console.log("Home Click");
+          onGoHome();
+        }}
         style={{ cursor: "pointer" }}
       >
         <div className="logoBox">✦</div>
@@ -34,7 +37,10 @@ function Navbar({
             <button
               type="button"
               className="navLinkButton"
-              onClick={onOpenDashboard}
+              onClick={() => {
+                console.log("Dashboard Click");
+                onOpenDashboard();
+              }}
             >
               Dashboard
             </button>
@@ -44,7 +50,10 @@ function Navbar({
             <button
               type="button"
               className="navLinkButton"
-              onClick={onOpenCompanies}
+              onClick={() => {
+                console.log("Companies Click");
+                onOpenCompanies();
+              }}
             >
               Companies
             </button>
@@ -54,7 +63,10 @@ function Navbar({
             <button
               type="button"
               className="navLinkButton"
-              onClick={onOpenPricing}
+              onClick={() => {
+                console.log("Pricing Click");
+                onOpenPricing();
+              }}
             >
               Pricing
             </button>
@@ -64,7 +76,10 @@ function Navbar({
             <button
               type="button"
               className="navLinkButton"
-              onClick={onOpenFaq}
+              onClick={() => {
+                console.log("FAQ Click");
+                onOpenFaq();
+              }}
             >
               FAQ
             </button>

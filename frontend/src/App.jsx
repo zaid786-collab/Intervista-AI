@@ -19,27 +19,6 @@ function App() {
     }
   });
 
- 
-  if (page === "dashboard") {
-  return (
-    <Dashboard
-      onGoHome={() => setPage("home")}
-      onOpenDashboard={() => setPage("dashboard")}
-      onOpenCompanies={() => setPage("companies")}
-      onOpenPricing={() => setPage("pricing")}
-      onOpenFaq={() => setPage("faq")}
-      onOpenLogin={() => setPage("login")}
-      onOpenSignup={() => setPage("signup")}
-      user={user}
-      onLogout={() => {
-        localStorage.removeItem("intervista-current-user");
-        setUser(null);
-        setPage("home");
-      }}
-    />
-  );
-}
-
   const navigation = {
     onGoHome: () => setPage("home"),
     onOpenDashboard: () => setPage("dashboard"),
@@ -70,17 +49,22 @@ function App() {
   return (
     <>
       {/* Navbar */}
-      {page !== "login" &&
-        page !== "signup" &&
-        page !== "dashboard" && (
-          <Navbar {...navigation} />
-        )}
+      {page !== "login" && page !== "signup" && (
+        <Navbar {...navigation} />
+      )}
 
       {/* Pages */}
       {page === "home" && <Home />}
-      {page === "pricing" && <Pricing />}
-      {page === "faq" && <FAQ />}
+
+      {page === "dashboard" && (
+        <Dashboard {...navigation} />
+      )}
+
       {page === "companies" && <Companies />}
+
+      {page === "pricing" && <Pricing />}
+
+      {page === "faq" && <FAQ />}
 
       {page === "login" && (
         <AuthPage mode="login" {...navigation} />
