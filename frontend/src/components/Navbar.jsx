@@ -10,13 +10,13 @@ function Navbar({ onOpenDashboard, onOpenPricing, onOpenFaq, onOpenLogin, onOpen
 
       <div className="navMenu">
         <ul className="navLinks">
-          <li>Product</li>
+          <li>Resources</li>
           <li>
             <button type="button" className="navLinkButton" onClick={onOpenDashboard}>
               Dashboard
             </button>
           </li>
-          <li>Stories</li>
+          <li>Companies</li>
           <li>
             <button type="button" className="navLinkButton" onClick={onOpenPricing}>
               Pricing
