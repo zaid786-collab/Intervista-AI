@@ -1,0 +1,328 @@
+/* ==========================================================================
+   Intervista AI — Footer
+   Tokens: ink navy background, violet accent, warm off-white text
+   ========================================================================== */
+
+.iv-footer {
+  --iv-bg: #0f1419;
+  --iv-bg-soft: #151b23;
+  --iv-text: #e8e6e1;
+  --iv-text-muted: #8b93a7;
+  --iv-accent: #7c6ff0;
+  --iv-accent-soft: #a79bfd;
+  --iv-border: #232935;
+
+  position: relative;
+  background: var(--iv-bg);
+  color: var(--iv-text);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  overflow: hidden;
+  padding: 4rem 1.5rem 2rem;
+}
+
+.iv-footer__glow {
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  width: 640px;
+  height: 320px;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(124, 111, 240, 0.18) 0%,
+    rgba(124, 111, 240, 0) 70%
+  );
+  pointer-events: none;
+}
+
+.iv-footer__container {
+  position: relative;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+/* ---------- Top section ---------- */
+
+.iv-footer__top {
+  display: grid;
+  grid-template-columns: minmax(240px, 380px) 1fr;
+  gap: 3rem;
+}
+
+.iv-footer__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.iv-footer__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.iv-footer__logo-text {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--iv-text);
+}
+
+.iv-footer__logo-accent {
+  color: var(--iv-accent-soft);
+}
+
+/* Signature element: a small waveform, evoking the spoken interview */
+.iv-footer__waveform {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 16px;
+}
+
+.iv-footer__bar {
+  width: 3px;
+  background: var(--iv-accent);
+  border-radius: 2px;
+  animation: iv-wave 1.6s ease-in-out infinite;
+}
+
+.iv-footer__bar:nth-child(1) {
+  height: 6px;
+  animation-delay: 0s;
+}
+.iv-footer__bar:nth-child(2) {
+  height: 14px;
+  animation-delay: 0.15s;
+}
+.iv-footer__bar:nth-child(3) {
+  height: 9px;
+  animation-delay: 0.3s;
+}
+.iv-footer__bar:nth-child(4) {
+  height: 16px;
+  animation-delay: 0.45s;
+}
+.iv-footer__bar:nth-child(5) {
+  height: 7px;
+  animation-delay: 0.6s;
+}
+
+@keyframes iv-wave {
+  0%,
+  100% {
+    transform: scaleY(0.6);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.iv-footer__tagline {
+  font-size: 0.925rem;
+  line-height: 1.6;
+  color: var(--iv-text-muted);
+  max-width: 34ch;
+  margin: 0;
+}
+
+.iv-footer__newsletter {
+  margin-top: 0.5rem;
+}
+
+.iv-footer__label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--iv-text);
+  margin-bottom: 0.6rem;
+}
+
+.iv-footer__input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.iv-footer__input {
+  flex: 1;
+  min-width: 0;
+  background: var(--iv-bg-soft);
+  border: 1px solid var(--iv-border);
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.875rem;
+  color: var(--iv-text);
+}
+
+.iv-footer__input::placeholder {
+  color: var(--iv-text-muted);
+}
+
+.iv-footer__input:focus-visible {
+  outline: 2px solid var(--iv-accent);
+  outline-offset: 2px;
+}
+
+.iv-footer__submit {
+  flex-shrink: 0;
+  background: var(--iv-accent);
+  color: #0f1419;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.iv-footer__submit:hover {
+  background: var(--iv-accent-soft);
+}
+
+.iv-footer__submit:focus-visible {
+  outline: 2px solid var(--iv-accent-soft);
+  outline-offset: 2px;
+}
+
+/* ---------- Link groups ---------- */
+
+.iv-footer__links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.iv-footer__group-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--iv-text);
+  margin: 0 0 1rem;
+}
+
+.iv-footer__group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.iv-footer__link {
+  font-size: 0.875rem;
+  color: var(--iv-text-muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.iv-footer__link:hover {
+  color: var(--iv-accent-soft);
+}
+
+.iv-footer__link:focus-visible {
+  outline: 2px solid var(--iv-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ---------- Divider & bottom bar ---------- */
+
+.iv-footer__divider {
+  height: 1px;
+  background: var(--iv-border);
+  margin: 3rem 0 1.5rem;
+}
+
+.iv-footer__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.iv-footer__copyright {
+  font-size: 0.8rem;
+  color: var(--iv-text-muted);
+  margin: 0;
+}
+
+.iv-footer__socials {
+  list-style: none;
+  display: flex;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+}
+
+.iv-footer__social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--iv-border);
+  color: var(--iv-text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.iv-footer__social-link:hover {
+  color: var(--iv-accent-soft);
+  border-color: var(--iv-accent);
+}
+
+.iv-footer__social-link:focus-visible {
+  outline: 2px solid var(--iv-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-footer__bar {
+    animation: none;
+  }
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 860px) {
+  .iv-footer__top {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .iv-footer__links {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .iv-footer {
+    padding: 3rem 1.25rem 1.75rem;
+  }
+
+  .iv-footer__links {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.75rem 1.5rem;
+  }
+
+  .iv-footer__bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
