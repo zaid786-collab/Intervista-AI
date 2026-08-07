@@ -3,10 +3,10 @@ import "./Hero.css";
 function Hero() {
   return (
     <section className="hero">
-
       <div className="left">
-        <br></br>
-    <br></br>
+        <br />
+        <br />
+
         <div className="badge">
           🟢 Live now — real-time voice interviews
         </div>
@@ -26,7 +26,6 @@ function Hero() {
         </p>
 
         <div className="buttons">
-
           <button className="primary">
             🎤 Start Interview
           </button>
@@ -34,33 +33,22 @@ function Hero() {
           <button className="secondary">
             ▶ Watch Demo
           </button>
-
         </div>
-
       </div>
 
       <div className="right">
-
         <div className="voiceCircle">
-
           <div className="innerCircle">
-
             <div className="bars">
-
               <span></span>
               <span></span>
               <span></span>
               <span></span>
               <span></span>
-
             </div>
-
           </div>
-
         </div>
-
       </div>
-
     </section>
   );
 }

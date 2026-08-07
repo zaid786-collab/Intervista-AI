@@ -1,95 +1,98 @@
 import "./Navbar.css";
 
 function Navbar({
-  onGoHome,
+  onOpenHome,
+  onOpenResources,
   onOpenDashboard,
   onOpenCompanies,
   onOpenPricing,
   onOpenFaq,
   onOpenLogin,
   onOpenSignup,
-  onLogout,
   user,
+  onLogout,
 }) {
   return (
     <nav className="navbar">
-      <div
+
+      {/* Logo */}
+      <button
+        type="button"
         className="logo"
-        onClick={() => {
-          console.log("Home Click");
-          onGoHome();
-        }}
-        style={{ cursor: "pointer" }}
+        onClick={onOpenHome}
       >
         <div className="logoBox">✦</div>
         <h2>Intervista AI</h2>
-      </div>
+      </button>
 
       <div className="navMenu">
-        <ul className="navLinks">
-          <li>
-            <button type="button" className="navLinkButton">
-              Resources
-            </button>
-          </li>
 
+        <ul className="navLinks">
+
+          {/* Resources */}
           <li>
             <button
               type="button"
               className="navLinkButton"
-              onClick={() => {
-                console.log("Dashboard Click");
-                onOpenDashboard();
-              }}
+              onClick={onOpenResources}
+            >
+              Resources
+            </button>
+          </li>
+
+          {/* Dashboard */}
+          <li>
+            <button
+              type="button"
+              className="navLinkButton"
+              onClick={onOpenDashboard}
             >
               Dashboard
             </button>
           </li>
 
+          {/* Companies */}
           <li>
             <button
               type="button"
               className="navLinkButton"
-              onClick={() => {
-                console.log("Companies Click");
-                onOpenCompanies();
-              }}
+              onClick={onOpenCompanies}
             >
               Companies
             </button>
           </li>
 
+          {/* Pricing */}
           <li>
             <button
               type="button"
               className="navLinkButton"
-              onClick={() => {
-                console.log("Pricing Click");
-                onOpenPricing();
-              }}
+              onClick={onOpenPricing}
             >
               Pricing
             </button>
           </li>
 
+          {/* FAQ */}
           <li>
             <button
               type="button"
               className="navLinkButton"
-              onClick={() => {
-                console.log("FAQ Click");
-                onOpenFaq();
-              }}
+              onClick={onOpenFaq}
             >
               FAQ
             </button>
           </li>
+
         </ul>
 
         <div className="navRight">
+
           {user ? (
             <>
-              <span className="navUser">Hi, {user.name}</span>
+              <span className="navUser">
+                Hi, {user.name}
+              </span>
 
               <button
                 type="button"
@@ -116,7 +119,9 @@ function Navbar({
           >
             Start free interview
           </button>
+
         </div>
+
       </div>
     </nav>
   );
