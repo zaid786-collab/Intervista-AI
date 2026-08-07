@@ -35,18 +35,26 @@ function Dashboard() {
   const [darkMode, setDarkMode] = useState(true);
 
   return (
-    <div className={darkMode ? "dashboard dark" : "dashboard light"}>
+    <div className={`dashboard ${darkMode ? "dark" : "light"}`}>
+
+      {/* Sidebar */}
       <Sidebar />
 
+      {/* Main Dashboard */}
       <div className="main">
-        <Welcome />
 
+        {/* Top Controls */}
         <FloatingControls
           darkMode={darkMode}
           setDarkMode={setDarkMode}
         />
 
+        {/* Welcome */}
+        <Welcome />
+
+        {/* Statistics Cards */}
         <div className="cards">
+
           <Card
             icon={<FaUserGraduate />}
             title="Total Interviews"
@@ -74,52 +82,64 @@ function Dashboard() {
             value="18 hrs"
             text="This week's practice"
           />
+
         </div>
 
+        {/* Analytics + AI Insights */}
         <div className="dashboard-row">
           <Analytics />
           <AIInsights />
         </div>
 
+        {/* Recent + Upcoming */}
         <div className="dashboard-row">
           <Recent />
           <Upcoming />
         </div>
 
+        {/* Coding + Heatmap */}
         <div className="dashboard-row">
           <CodingChallenge />
           <InterviewHeatmap />
         </div>
 
+        {/* Resume + Leaderboard */}
         <div className="dashboard-row">
           <ResumeAnalyzer />
           <Leaderboard />
         </div>
 
+        {/* Notifications + Schedule */}
         <div className="dashboard-row">
           <Notifications />
           <Schedule />
         </div>
 
+        {/* Jobs + Achievements */}
         <div className="dashboard-row">
           <JobRecommendations />
           <Achievements />
         </div>
 
+        {/* Quick Actions + Progress */}
         <div className="dashboard-row">
           <QuickActions />
           <ProgressTracker />
         </div>
 
+        {/* Mock Interview */}
         <div className="full-width">
           <MockInterview />
         </div>
 
+        {/* Activity */}
         <div className="full-width">
           <Activity />
         </div>
 
+        {/* AI Chat */}
         <AIChat />
+
       </div>
     </div>
   );

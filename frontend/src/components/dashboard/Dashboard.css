@@ -1967,3 +1967,373 @@ grid-template-columns:1fr;
 .welcome{
     margin-top: 90px;
 }
+
+/* =====================================================
+   INTERVISTA AI — DASHBOARD THEME
+   Same visual language as Home Page
+   ===================================================== */
+
+.dashboard {
+  background: var(--bg-main);
+  color: var(--text-main);
+  min-height: 100vh;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ================= SIDEBAR ================= */
+
+.dashboard .sidebar {
+  background: rgba(5, 8, 20, 0.96) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.dashboard .sidebar-brand {
+  color: #ffffff;
+}
+
+.dashboard .sidebar-brand span {
+  color: #25d6ff;
+}
+
+.dashboard .sidebar li {
+  color: #9da7b6;
+  background: transparent;
+}
+
+.dashboard .sidebar li:hover {
+  color: #ffffff;
+  background: rgba(53, 109, 255, 0.10);
+}
+
+.dashboard .sidebar li.active {
+  color: #ffffff;
+  background: linear-gradient(
+    90deg,
+    rgba(53, 109, 255, 0.20),
+    rgba(37, 214, 255, 0.08)
+  );
+  border: 1px solid rgba(37, 214, 255, 0.15);
+}
+
+/* ================= MAIN ================= */
+
+
+.dashboard .main {
+  background: var(--bg-main);
+  color: var(--text-main);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ================= DASHBOARD NAVBAR ================= */
+
+.dashboard .dashboard-navbar {
+  background: transparent;
+  color: #ffffff;
+}
+
+.dashboard .search-box {
+  background: rgba(12, 17, 30, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboard .search-box input {
+  color: #ffffff;
+}
+
+.dashboard .search-box input::placeholder {
+  color: #687386;
+}
+
+.dashboard .notification,
+.dashboard .profile {
+  background: rgba(12, 17, 30, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboard .profile p {
+  color: #9da7b6;
+}
+
+/* ================= HEADINGS ================= */
+
+.dashboard h1,
+.dashboard h2,
+.dashboard h3,
+.dashboard h4 {
+  color: #ffffff;
+}
+
+.dashboard p,
+.dashboard small {
+  color: #9da7b6;
+}
+
+/* ================= ALL SECTIONS ================= */
+
+.dashboard .recent,
+.dashboard .chart,
+.dashboard .analytics,
+.dashboard .pie-chart,
+.dashboard .pie-placeholder,
+.dashboard .upcoming,
+.dashboard .activity,
+.dashboard .quick-actions,
+.dashboard .progress-tracker,
+.dashboard .leaderboard,
+.dashboard .schedule,
+.dashboard .ai-insights,
+.dashboard .resume,
+.dashboard .challenge,
+.dashboard .achievements,
+.dashboard .mock-interview,
+.dashboard .notifications,
+.dashboard .jobs,
+.dashboard .heatmap {
+  background: rgba(12, 17, 30, 0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 10px 35px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+/* ================= CARDS ================= */
+
+.dashboard .card,
+.dashboard .action-btn,
+.dashboard .schedule-card,
+.dashboard .job-card,
+.dashboard .notification-card,
+.dashboard .achievement-card,
+.dashboard .mock-card,
+.dashboard .device-status div {
+  background: rgba(12, 17, 30, 0.88) !important;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 10px 35px rgba(0, 0, 0, 0.20);
+}
+
+.dashboard .card:hover,
+.dashboard .action-btn:hover,
+.dashboard .schedule-card:hover,
+.dashboard .job-card:hover,
+.dashboard .notification-card:hover,
+.dashboard .achievement-card:hover,
+.dashboard .mock-card:hover {
+  background: rgba(16, 24, 42, 0.95) !important;
+  border-color: rgba(37, 214, 255, 0.22);
+  box-shadow:
+    0 15px 40px rgba(0, 0, 0, 0.32),
+    0 0 25px rgba(37, 150, 255, 0.06);
+}
+
+/* ================= CARD TEXT ================= */
+
+.dashboard .card h4,
+.dashboard .card h2,
+.dashboard .card h3,
+.dashboard .card p {
+  color: #ffffff;
+}
+
+.dashboard .card-text,
+.dashboard .interview-card p,
+.dashboard .job-info p,
+.dashboard .job-info small {
+  color: #9da7b6;
+}
+
+/* ================= BLUE ACCENTS ================= */
+
+.dashboard .card-icon,
+.dashboard .insight-icon,
+.dashboard .activity-icon,
+.dashboard .action-icon,
+.dashboard .schedule-icon,
+.dashboard .notification-icon,
+.dashboard .job-logo,
+.dashboard .achievement-icon {
+  background: linear-gradient(
+    135deg,
+    #356dff,
+    #25d6ff
+  );
+}
+
+/* ================= BUTTONS ================= */
+
+.dashboard .start-btn,
+.dashboard .join-btn,
+.dashboard .view-btn,
+.dashboard .apply-btn,
+.dashboard .solve-btn,
+.dashboard .start-interview,
+.dashboard .upload-btn {
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  ) !important;
+
+  color: #ffffff;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.dashboard .start-btn:hover,
+.dashboard .join-btn:hover,
+.dashboard .view-btn:hover,
+.dashboard .apply-btn:hover,
+.dashboard .solve-btn:hover,
+.dashboard .start-interview:hover,
+.dashboard .upload-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(38, 171, 255, 0.35);
+}
+
+/* ================= SECONDARY BUTTON ================= */
+
+.dashboard .schedule-btn {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.dashboard .schedule-btn:hover {
+  background: rgba(53, 109, 255, 0.12);
+  border-color: #25d6ff;
+  color: #ffffff;
+}
+
+/* ================= AI INSIGHTS ================= */
+
+.dashboard .insight-card {
+  background: rgba(53, 109, 255, 0.08);
+  border: 1px solid rgba(53, 109, 255, 0.12);
+}
+
+.dashboard .insight-card:hover {
+  background: rgba(53, 109, 255, 0.14);
+}
+
+/* ================= TABLE ================= */
+
+.dashboard table {
+  color: #ffffff;
+}
+
+.dashboard th {
+  color: #9da7b6;
+}
+
+.dashboard td {
+  color: #ffffff;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboard tr:hover {
+  background: rgba(53, 109, 255, 0.06);
+}
+
+/* ================= PROGRESS ================= */
+
+.dashboard .progress-bar {
+  background: #151d2e;
+}
+
+.dashboard .progress-fill {
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+}
+
+/* ================= INPUTS ================= */
+
+.dashboard input,
+.dashboard select,
+.dashboard textarea {
+  background: rgba(8, 12, 22, 0.90);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.dashboard input::placeholder,
+.dashboard textarea::placeholder {
+  color: #687386;
+}
+
+.dashboard input:focus,
+.dashboard select:focus,
+.dashboard textarea:focus {
+  outline: none;
+  border-color: rgba(37, 214, 255, 0.5);
+  box-shadow: 0 0 18px rgba(37, 214, 255, 0.08);
+}
+
+/* ================= CHAT ================= */
+
+.dashboard .chat-box {
+  background: rgba(12, 17, 30, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboard .chat-header,
+.dashboard .chat-footer button {
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+}
+
+.dashboard .ai-message {
+  background: rgba(53, 109, 255, 0.20);
+}
+
+.dashboard .user-message {
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+}
+
+/* ================= FLOATING CONTROLS ================= */
+
+.dashboard .floating-btn,
+.dashboard .floating-profile {
+  background: rgba(12, 17, 30, 0.90);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboard .floating-btn:hover,
+.dashboard .floating-profile:hover {
+  background: #356dff;
+}
+
+/* ================= SCROLLBAR ================= */
+
+.dashboard::-webkit-scrollbar,
+.dashboard .sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dashboard::-webkit-scrollbar-track,
+.dashboard .sidebar::-webkit-scrollbar-track {
+  background: #05070f;
+}
+
+.dashboard::-webkit-scrollbar-thumb,
+.dashboard .sidebar::-webkit-scrollbar-thumb {
+  background: #1d3150;
+  border-radius: 20px;
+}
+
+.dashboard::-webkit-scrollbar-thumb:hover,
+.dashboard .sidebar::-webkit-scrollbar-thumb:hover {
+  background: #356dff;
+}

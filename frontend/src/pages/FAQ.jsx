@@ -12,7 +12,7 @@ const faqData = [
   {
     question: "How does the AI interview work?",
     answer:
-      "Choose a role, experience level, and interview type. Aura asks realistic questions, listens to your answers, analyzes your performance, and gives detailed feedback.",
+      "Choose a role, experience level, and interview type. Intervista AI asks realistic questions, listens to your answers, analyzes your performance, and gives detailed feedback.",
   },
   {
     question: "How long is a practice interview?",

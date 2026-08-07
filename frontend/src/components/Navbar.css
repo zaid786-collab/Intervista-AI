@@ -204,3 +204,20 @@
     font-size:.9rem;
     white-space:nowrap;
 }
+
+/* Permanent active page */
+
+.navLinks li.active-page {
+  color: #ffffff;
+  background: rgba(53, 109, 255, 0.10);
+  box-shadow: 0 0 18px rgba(53, 109, 255, 0.08);
+}
+
+.navLinks li.active-page::after {
+  width: 70%;
+}
+
+.navLinks li.active-page .navLinkButton {
+  color: #ffffff;
+  font-weight: 600;
+}

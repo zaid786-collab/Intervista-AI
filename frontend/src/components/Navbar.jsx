@@ -11,6 +11,7 @@ function Navbar({
   onOpenSignup,
   user,
   onLogout,
+  currentPage,
 }) {
   return (
     <nav className="navbar">
@@ -30,7 +31,13 @@ function Navbar({
         <ul className="navLinks">
 
           {/* Resources */}
-          <li>
+          <li
+            className={
+              currentPage === "resources"
+                ? "active-page"
+                : ""
+            }
+          >
             <button
               type="button"
               className="navLinkButton"
@@ -41,7 +48,13 @@ function Navbar({
           </li>
 
           {/* Dashboard */}
-          <li>
+          <li
+            className={
+              currentPage === "dashboard"
+                ? "active-page"
+                : ""
+            }
+          >
             <button
               type="button"
               className="navLinkButton"
@@ -52,18 +65,30 @@ function Navbar({
           </li>
 
           {/* Companies */}
-          <li>
-            <button
-              type="button"
-              className="navLinkButton"
-              onClick={onOpenCompanies}
-            >
-              Companies
-            </button>
-          </li>
+          <li
+  className={
+    currentPage === "companies"
+      ? "active-page"
+      : ""
+  }
+>
+  <button
+    type="button"
+    className="navLinkButton"
+    onClick={onOpenCompanies}
+  >
+    Companies
+  </button>
+</li>
 
           {/* Pricing */}
-          <li>
+          <li
+            className={
+              currentPage === "pricing"
+                ? "active-page"
+                : ""
+            }
+          >
             <button
               type="button"
               className="navLinkButton"
@@ -74,7 +99,13 @@ function Navbar({
           </li>
 
           {/* FAQ */}
-          <li>
+          <li
+            className={
+              currentPage === "faq"
+                ? "active-page"
+                : ""
+            }
+          >
             <button
               type="button"
               className="navLinkButton"
@@ -123,6 +154,7 @@ function Navbar({
         </div>
 
       </div>
+
     </nav>
   );
 }

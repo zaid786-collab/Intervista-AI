@@ -5,11 +5,11 @@ import Pricing from "./pages/Pricing";
 import FAQ from "./pages/FAQ";
 import AuthPage from "./pages/AuthPage";
 import Resources from "./pages/Resources";
+import Companies from "./pages/Companies";
 
 import Dashboard from "./components/dashboard/Dashboard";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer/Footer";
-import Companies from "./pages/Companies";
 
 function App() {
   const [page, setPage] = useState("home");
@@ -24,13 +24,11 @@ function App() {
     } catch {
       return null;
     }
-  }); 
+  });
 
   const navigation = {
-    // Intervista AI logo → Home
     onOpenHome: () => setPage("home"),
 
-    // Navbar navigation
     onOpenResources: () => setPage("resources"),
 
     onOpenDashboard: () => setPage("dashboard"),
@@ -45,7 +43,6 @@ function App() {
 
     onOpenSignup: () => setPage("signup"),
 
-    // Authentication
     onAuth: (authenticatedUser) => {
       localStorage.setItem(
         "intervista-current-user",
@@ -68,36 +65,45 @@ function App() {
 
   return (
     <>
-      {/* Common Home Navbar - visible on every main page */}
+      {/* Common Navbar */}
       {page !== "login" && page !== "signup" && (
-        <Navbar {...navigation} />
+        <Navbar
+          {...navigation}
+          currentPage={page}
+        />
       )}
 
-      {/* Pages */}
+      {/* Home */}
       {page === "home" && (
         <Home {...navigation} />
       )}
 
+      {/* Resources */}
       {page === "resources" && (
         <Resources {...navigation} />
       )}
 
-       {page === "companies" && (
+      {/* Companies */}
+      {page === "companies" && (
         <Companies {...navigation} />
       )}
 
+      {/* Pricing */}
       {page === "pricing" && (
         <Pricing {...navigation} />
       )}
 
+      {/* FAQ */}
       {page === "faq" && (
         <FAQ {...navigation} />
       )}
 
+      {/* Dashboard */}
       {page === "dashboard" && (
         <Dashboard {...navigation} />
       )}
 
+      {/* Login */}
       {page === "login" && (
         <AuthPage
           mode="login"
@@ -105,6 +111,7 @@ function App() {
         />
       )}
 
+      {/* Signup */}
       {page === "signup" && (
         <AuthPage
           mode="signup"
@@ -114,8 +121,9 @@ function App() {
 
       {/* Footer */}
       {page !== "login" &&
-        page !== "signup" &&
-        page !== "dashboard" && <Footer />}
+        page !== "signup" && (
+          <Footer />
+        )}
     </>
   );
 }
