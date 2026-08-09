@@ -294,3 +294,452 @@ padding-top: 140px;
     transform: scale(0.75);
   }
 }
+
+/* =====================================================
+   HOME PAGE — ADDITIONAL SECTIONS
+===================================================== */
+
+.home-section {
+  padding: 110px 80px;
+  background: #05070f;
+  color: #fff;
+}
+
+.section-heading {
+  max-width: 760px;
+  margin: 0 auto 65px;
+  text-align: center;
+}
+
+.section-heading > span,
+.ai-content > span,
+.home-cta > div > span {
+  display: inline-block;
+  color: #25d6ff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+}
+
+.section-heading h2,
+.ai-content h2,
+.home-cta h2 {
+  font-size: 52px;
+  line-height: 1.1;
+  margin-bottom: 22px;
+}
+
+.section-heading h2 span,
+.ai-content h2 span {
+  color: #2c98ff;
+}
+
+.section-heading p,
+.ai-content > p,
+.home-cta p {
+  color: #9da7b6;
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+
+/* ================= FEATURES ================= */
+
+.feature-grid {
+  max-width: 1200px;
+  margin: auto;
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px;
+}
+
+.feature-card {
+  padding: 35px;
+  min-height: 250px;
+
+  background: rgba(12, 17, 30, .85);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 22px;
+
+  transition: .35s;
+}
+
+.feature-card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(37,214,255,.3);
+  box-shadow: 0 20px 50px rgba(0,0,0,.3);
+}
+
+.feature-icon {
+  width: 55px;
+  height: 55px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 16px;
+
+  background: linear-gradient(
+    135deg,
+    #356dff,
+    #25d6ff
+  );
+
+  font-size: 24px;
+  margin-bottom: 25px;
+}
+
+.feature-card h3 {
+  font-size: 22px;
+  margin-bottom: 15px;
+}
+
+.feature-card p {
+  color: #9da7b6;
+  line-height: 1.7;
+}
+
+
+/* ================= HOW IT WORKS ================= */
+
+.how-section {
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(37,100,255,.08),
+      transparent 45%
+    ),
+    #05070f;
+}
+
+.steps-grid {
+  max-width: 1200px;
+  margin: auto;
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px;
+}
+
+.step-card {
+  position: relative;
+
+  padding: 35px;
+
+  background: rgba(8,12,22,.8);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 22px;
+}
+
+.step-number {
+  color: #25d6ff;
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 35px;
+}
+
+.step-card h3 {
+  font-size: 23px;
+  margin-bottom: 15px;
+}
+
+.step-card p {
+  color: #9da7b6;
+  line-height: 1.7;
+}
+
+
+/* ================= PRACTICE ================= */
+
+.practice-grid {
+  max-width: 1200px;
+  margin: auto;
+
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 25px;
+}
+
+.practice-card {
+  padding: 35px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(12,17,30,.95),
+    rgba(8,12,22,.85)
+  );
+
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 22px;
+
+  transition: .35s;
+}
+
+.practice-card:hover {
+  transform: translateY(-7px);
+  border-color: rgba(44,152,255,.35);
+}
+
+.practice-card > span {
+  color: #25d6ff;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.practice-card h3 {
+  margin: 20px 0 12px;
+  font-size: 24px;
+}
+
+.practice-card p {
+  color: #9da7b6;
+  line-height: 1.7;
+}
+
+
+/* ================= AI SECTION ================= */
+
+.ai-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 80px;
+
+  background:
+    radial-gradient(
+      circle at 80% 50%,
+      rgba(37,100,255,.12),
+      transparent 35%
+    ),
+    #05070f;
+}
+
+.ai-content {
+  width: 50%;
+}
+
+.ai-points {
+  margin-top: 35px;
+}
+
+.ai-points div {
+  margin-bottom: 25px;
+}
+
+.ai-points strong {
+  font-size: 17px;
+  color: #fff;
+}
+
+.ai-points p {
+  margin-top: 7px;
+  color: #8792a5;
+}
+
+
+.ai-visual {
+  width: 45%;
+  min-height: 420px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+}
+
+.ai-glow {
+  position: absolute;
+
+  width: 300px;
+  height: 300px;
+
+  border-radius: 50%;
+
+  background: #2563ff;
+  filter: blur(100px);
+  opacity: .18;
+}
+
+.ai-score-card {
+  position: relative;
+  z-index: 2;
+
+  width: 360px;
+  padding: 40px;
+
+  border-radius: 25px;
+
+  background: rgba(12,17,30,.9);
+  border: 1px solid rgba(255,255,255,.1);
+
+  box-shadow:
+    0 30px 80px rgba(0,0,0,.4);
+}
+
+.ai-score-card span {
+  color: #9da7b6;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+}
+
+.ai-score-card strong {
+  display: block;
+
+  margin: 15px 0;
+
+  font-size: 70px;
+
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.score-bar {
+  height: 10px;
+
+  background: #182133;
+
+  border-radius: 20px;
+
+  overflow: hidden;
+
+  margin-bottom: 15px;
+}
+
+.score-bar div {
+  width: 86%;
+  height: 100%;
+
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+
+  border-radius: inherit;
+}
+
+.ai-score-card small {
+  color: #25d6ff;
+}
+
+
+/* ================= CTA ================= */
+
+.home-cta {
+  padding: 130px 80px;
+
+  text-align: center;
+
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(37,100,255,.16),
+      transparent 45%
+    ),
+    #05070f;
+}
+
+.home-cta > div {
+  max-width: 850px;
+  margin: auto;
+}
+
+.home-cta h2 {
+  font-size: 58px;
+}
+
+.cta-button {
+  margin-top: 35px;
+
+  padding: 18px 35px;
+
+  border: none;
+  border-radius: 15px;
+
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+
+  color: white;
+
+  font-size: 18px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: .35s;
+}
+
+.cta-button:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 40px rgba(37,180,255,.35);
+}
+
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 900px) {
+
+  .home-section {
+    padding: 80px 30px;
+  }
+
+  .section-heading h2,
+  .ai-content h2,
+  .home-cta h2 {
+    font-size: 40px;
+  }
+
+  .feature-grid,
+  .steps-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-section {
+    flex-direction: column;
+  }
+
+  .ai-content,
+  .ai-visual {
+    width: 100%;
+  }
+
+}
+
+@media (max-width: 600px) {
+
+  .home-section {
+    padding: 70px 20px;
+  }
+
+  .section-heading h2,
+  .ai-content h2,
+  .home-cta h2 {
+    font-size: 32px;
+  }
+
+  .ai-score-card {
+    width: 100%;
+  }
+
+  .home-cta {
+    padding: 90px 20px;
+  }
+
+}
