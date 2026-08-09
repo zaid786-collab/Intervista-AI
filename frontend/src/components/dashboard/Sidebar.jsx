@@ -1,23 +1,40 @@
+import { useState } from "react";
+
 function Sidebar() {
-    return (
-        <div className="sidebar">
+  const [activeItem, setActiveItem] = useState("Dashboard");
 
-            <div className="logo">
-                <span aria-hidden="true">✦</span>
-                <h2>Intervista AI</h2>
-            </div>
-            
+  const menuItems = [
+    "Dashboard",
+    "Interviews",
+    "Analytics",
+    "Feedback",
+    "Settings",
+  ];
 
-            <ul>
-                <li>Dashboard</li>
-                <li>Interviews</li>
-                <li>Analytics</li>
-                <li>Feedback</li>
-                <li>Settings</li>
-            </ul>
+  return (
+    <div className="sidebar">
 
-        </div>
-    );
+      <div className="logo">
+        <span aria-hidden="true">✦</span>
+        <h2>Intervista AI</h2>
+      </div>
+
+      <ul>
+        {menuItems.map((item) => (
+          <li
+            key={item}
+            className={`sidebar-item ${
+              activeItem === item ? "active" : ""
+            }`}
+            onClick={() => setActiveItem(item)}
+          >
+            {item}
+          </li>
+        ))}
+      </ul>
+
+    </div>
+  );
 }
 
 export default Sidebar;
