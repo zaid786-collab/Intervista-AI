@@ -7,11 +7,13 @@ function Welcome() {
         <div className="welcome">
 
             <h1>
-                Welcome Back
+                <span>Welcome Back</span>
             </h1>
         <br></br>
             <p>
-                Ready to crush your next interview?
+                <span>
+                    Ready to crush your next interview?
+                </span>
             </p>
 
             <button className="start-btn">

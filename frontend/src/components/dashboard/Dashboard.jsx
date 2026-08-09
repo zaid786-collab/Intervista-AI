@@ -1,9 +1,7 @@
 import { useState } from "react";
 import "./Dashboard.css";
-
 import Sidebar from "./Sidebar";
 import FloatingControls from "./FloatingControls";
-
 import Welcome from "./Welcome";
 import Card from "./Cards";
 import Analytics from "./Analytics";

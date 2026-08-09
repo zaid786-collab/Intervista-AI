@@ -11,13 +11,13 @@ function FloatingControls({ darkMode, setDarkMode }) {
   return (
     <div className="floating-controls">
 
-      <button
+      {/* <button
         className="floating-btn"
         onClick={() => setDarkMode(!darkMode)}
         title="Theme"
       >
         {darkMode ? <FaSun /> : <FaMoon />}
-      </button>
+      </button> */}
 
       <button className="floating-btn notification-btn" title="Notifications">
         <FaBell />

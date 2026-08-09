@@ -1,6 +1,12 @@
 .dark{
-    --bg-main:#071943;
-    --bg-sidebar:#111827;
+    --bg-main: 
+    radial-gradient(circle at 80% 15%, rgba(37, 121, 255, 0.12), transparent 30%),
+    radial-gradient(circle at 15% 35%, rgba(0, 191, 255, 0.07), transparent 28%),
+    #05070f;
+    --bg-sidebar:
+    radial-gradient(circle at 80% 15%, rgba(37, 121, 255, 0.12), transparent 30%),
+    radial-gradient(circle at 15% 35%, rgba(0, 191, 255, 0.07), transparent 28%),
+    #05070f;
     --bg-card:#0c3b87;
     --bg-card-hover:#1782b7;
     --bg-section:#1e293b;
@@ -10,7 +16,7 @@
 
     --table-hover:#294d85;
 }
-
+/* 
 .light{
     --bg-main:#f4f7fc;
     --bg-sidebar:#ffffff;
@@ -22,7 +28,7 @@
     --text-secondary:#475569;
 
     --table-hover:#f1f5f9;
-}
+} */
 
 *{
     margin:0;
@@ -31,21 +37,23 @@
     font-family:Arial,sans-serif;
 }
 
-body{
-    background:#071943;
-    color:white;
-    margin: 0;
-    transition: 0.3s;
-}
-
 .dashboard{
+    background:
+    radial-gradient(circle at 80% 15%, rgba(37, 121, 255, 0.12), transparent 30%),
+    radial-gradient(circle at 15% 35%, rgba(0, 191, 255, 0.07), transparent 28%),
+    #05070f;
+    color: #ffffff;
     display:flex;
     min-height:100vh;
 }
 
 .sidebar{
     width: 400px;
-    background:#111827;
+    background:
+    radial-gradient(circle at 80% 15%, rgba(37, 121, 255, 0.12), transparent 30%),
+    radial-gradient(circle at 15% 35%, rgba(0, 191, 255, 0.07), transparent 28%),
+    #05070f;
+    color: #ffffff;
     padding: 35px 25px;
     background:var(--bg-main);
 }
@@ -127,8 +135,36 @@ body{
     border-radius:8px;
 }
 
-.welcome{
-    margin-top:30px;
+.welcome h1 p{
+  margin: 0 0 25px;
+  font-size: clamp(42px, 6vw, 78px);
+  line-height: 1.02;
+  font-weight: 800;
+  letter-spacing: -2.5px;
+}
+
+.welcome h1 span {
+  background: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #9fd7ff 45%,
+    #28c8ff 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.welcome p span {
+  background: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #9fd7ff 45%,
+    #28c8ff 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .cards{
