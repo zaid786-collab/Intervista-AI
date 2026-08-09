@@ -35,6 +35,30 @@ padding-top: 140px;
 }
 
 .hero .left h1 {
+  margin: 0 0 25px;
+
+  font-size: clamp(52px, 6vw, 78px);
+  line-height: 1.02;
+
+  font-weight: 800;
+  letter-spacing: -2.5px;
+}
+
+.hero .left h1 span {
+  background: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #9fd7ff 45%,
+    #0bade3 100%
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  -webkit-text-fill-color: transparent;
+}
+
+/* .hero .left h1 {
   font-size: 78px;
   line-height: 1.05;
   font-weight: 800;
@@ -44,7 +68,7 @@ padding-top: 140px;
 
 .hero .left h1 span {
   color: #2c98ff;
-}
+} */
 
 .hero .left p {
   font-size: 21px;

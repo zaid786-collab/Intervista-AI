@@ -12,9 +12,9 @@ function Hero() {
         </div>
 
         <h1>
-          Walk into your
+          <span>Walk into your</span>
           <br />
-          next interview
+          <span>next interview</span>
           <br />
           <span>already having won it.</span>
         </h1>
