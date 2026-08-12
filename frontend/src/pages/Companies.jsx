@@ -7,10 +7,10 @@ const companyData = {
 
     questions: [
       {
-        title: "Two Sum",
-        topic: "Arrays • Hash Map",
-        difficulty: "Easy",
-        url: "https://leetcode.com/problems/two-sum/",
+        title: "Minimum Time Difference",
+        topic: " Staff, Array, MathString, Sorting",
+        difficulty: "Hard",
+        url: "https://leetcode.com/problems/minimum-time-difference/description/?envType=problem-list-v2&envId=7p55wqm",
       },
       {
         title: "Longest Substring Without Repeating Characters",
@@ -31,10 +31,10 @@ const companyData = {
         url: "https://leetcode.com/problems/merge-k-sorted-lists/",
       },
       {
-        title: "Word Ladder",
-        topic: "Graphs • BFS",
-        difficulty: "Hard",
-        url: "https://leetcode.com/problems/word-ladder/",
+        title: "Wave array [Practice Problem]",
+        topic: "Arrays",
+        difficulty: "Medium",
+        url: "https://www.geeksforgeeks.org/problems/wave-array-1587115621/1",
       },
     ],
 
@@ -123,8 +123,8 @@ const companyData = {
       "What is the difference between process and thread?",
       "Explain virtual memory.",
       "What is a deadlock?",
-      "Explain database indexing.",
-      "How would you design a scalable application?",
+      "What is the Difference Between Abstraction and Encapsulation?",
+      "How do you detect a cycle in a linked list?",
     ],
 
     preparation: {
@@ -167,10 +167,10 @@ const companyData = {
 
     questions: [
       {
-        title: "Two Sum",
-        topic: "Arrays • Hash Map",
+        title: "Segregate even and odd nodes in a Linked List",
+        topic: "Arrays • Linked List",
         difficulty: "Easy",
-        url: "https://leetcode.com/problems/two-sum/",
+        url: "https://www.geeksforgeeks.org/dsa/segregate-even-and-odd-elements-in-a-linked-list/",
       },
       {
         title: "Longest Palindromic Substring",
@@ -202,8 +202,8 @@ const companyData = {
       "Explain the difference between stack and heap.",
       "How does BFS work?",
       "Explain binary search.",
-      "What is database indexing?",
-      "Explain caching.",
+      "Tell me about a time you were 75% through a project and had to pivot quickly. How did you handle it?",
+      "Describe your most difficult customer and how you handled it. ",
       "Tell me about a difficult technical problem you solved.",
     ],
 
@@ -241,7 +241,88 @@ const companyData = {
       },
     ],
   },
+
+  Meta: {
+    stats: ["140+", "110+", "36+"],
+
+    questions: [
+      {
+        title: "Move all zeroes to the end of the array",
+        topic: "Arrays",
+        difficulty: "Easy",
+        url: "https://www.geeksforgeeks.org/dsa/move-zeroes-end-array/",
+      },
+      {
+        title: "Multiply large numbers represented as strings",
+        topic: "Strings • DP",
+        difficulty: "Medium",
+        url: "https://www.geeksforgeeks.org/dsa/multiply-large-numbers-represented-as-strings/",
+      },
+      {
+        title: "Convert a Binary Tree to a Circular Doubly Linked List",
+        topic: "Trees • Linked List",
+        difficulty: "Medium",
+        url: "https://www.geeksforgeeks.org/dsa/convert-a-binary-tree-to-a-circular-doubly-link-list/",
+      },
+      {
+        title: "Merge k Sorted Lists",
+        topic: "Linked List • Heap",
+        difficulty: "Hard",
+        url: "https://leetcode.com/problems/merge-k-sorted-lists/",
+      },
+      {
+        title: "Write a function to get the intersection point of two linked lists",
+        topic: "Linked List",
+        difficulty: "Hard",
+        url: "https://www.geeksforgeeks.org/dsa/write-a-function-to-get-the-intersection-point-of-two-linked-lists/",
+      },
+    ],
+
+    mostAsked: [
+      "Why do you want to work at Meta, and how does our mission resonate with your personal values?",
+      "How does Stack/Queue operations work ?",
+      "what is sorting , Define its types ?",
+      "How would you measure the success of a newly launched Instagram Reels feature?",
+      "How do you address public criticism around privacy while still driving Meta’s data-driven culture?",
+      "How would you measure the success of a newly launched Instagram Reels feature?",
+    ],
+
+    preparation: {
+      overview:
+        "Meta interviews emphasize problem solving, coding fundamentals, CS concepts and communication.",
+      topics:
+        "Arrays, Strings, Linked Lists, Trees, Graphs, Dynamic Programming, OOP, OS, DBMS and Networks.",
+      strategy:
+        "Practice medium-level DSA problems and make sure you can explain multiple approaches.",
+      tips:
+        "Think aloud during the interview and explain why your chosen approach is efficient.",
+    },
+
+    rounds: [
+      {
+        title: "Sorting of Candidates",
+        description:
+          "Sorting used for initial screening.",
+      },
+      {
+        title: "Technical Interview/Assesment",
+        description:
+          "DSA, algorithms, problem solving and CS fundamentals.",
+      },
+      {
+        title: "Advanced Round-",
+        description:
+          "More complex questions, design and coding discussion.",
+      },
+      {
+        title: "Personal Interview",
+        description:
+          "Way of Speaking , collaboration, behavioral and professional discussion.",
+      },
+    ],
+  },
 };
+  
 
 const defaultCompanyData = {
   stats: ["100+", "70+", "25+"],
