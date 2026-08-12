@@ -1,39 +1,83 @@
 import { useState } from "react";
 
-function Sidebar() {
-  const [activeItem, setActiveItem] = useState("Dashboard");
+import {
+  FaHome,
+  FaMicrophone,
+  FaChartLine,
+  FaComments,
+  FaCog,
+} from "react-icons/fa";
 
-  const menuItems = [
-    "Dashboard",
-    "Interviews",
-    "Analytics",
-    "Feedback",
-    "Settings",
-  ];
+function Sidebar({ onNavigate }) {
+  const [activeItem, setActiveItem] = useState("dashboard");
+
+  const handleClick = (item) => {
+    setActiveItem(item);
+
+    if (onNavigate) {
+      onNavigate(item);
+    }
+  };
 
   return (
-    <div className="sidebar">
+    <aside className="sidebar">
 
-      <div className="logo">
-        <span aria-hidden="true">✦</span>
+      {/* Logo */}
+      <div className="sidebar-brand">
+        <span className="sidebar-logo">✦</span>
         <h2>Intervista AI</h2>
       </div>
 
-      <ul>
-        {menuItems.map((item) => (
-          <li
-            key={item}
-            className={`sidebar-item ${
-              activeItem === item ? "active" : ""
-            }`}
-            onClick={() => setActiveItem(item)}
-          >
-            {item}
-          </li>
-        ))}
-      </ul>
+      {/* Navigation */}
+      <nav className="sidebar-nav">
+        <p className="sidebar-label">MAIN MENU</p>
 
-    </div>
+        <ul>
+
+          <li
+            className={activeItem === "dashboard" ? "active" : ""}
+            onClick={() => handleClick("dashboard")}
+          >
+            <FaHome className="sidebar-icon" />
+            <span>Dashboard</span>
+          </li>
+
+          <li
+            className={activeItem === "interviews" ? "active" : ""}
+            onClick={() => handleClick("interviews")}
+          >
+            <FaMicrophone className="sidebar-icon" />
+            <span>Interviews</span>
+          </li>
+
+          <li
+            className={activeItem === "analytics" ? "active" : ""}
+            onClick={() => handleClick("analytics")}
+          >
+            <FaChartLine className="sidebar-icon" />
+            <span>Analytics</span>
+          </li>
+
+          <li
+            className={activeItem === "feedback" ? "active" : ""}
+            onClick={() => handleClick("feedback")}
+          >
+            <FaComments className="sidebar-icon" />
+            <span>Feedback</span>
+          </li>
+
+          <li
+            className={activeItem === "settings" ? "active" : ""}
+            onClick={() => handleClick("settings")}
+          >
+            <FaCog className="sidebar-icon" />
+            <span>Settings</span>
+          </li>
+
+        </ul>
+      </nav>
+
+    </aside>
   );
 }
 

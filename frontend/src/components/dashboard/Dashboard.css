@@ -2079,7 +2079,7 @@ grid-template-columns:1fr;
 
 /* ================= SIDEBAR ================= */
 
-.dashboard .sidebar {
+/* .dashboard .sidebar {
   background: rgba(5, 8, 20, 0.96) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(14px);
@@ -2112,6 +2112,271 @@ grid-template-columns:1fr;
     rgba(37, 214, 255, 0.08)
   );
   border: 1px solid rgba(37, 214, 255, 0.15);
+} */
+
+/* =====================================================
+   INTERVISTA AI DASHBOARD SIDEBAR
+===================================================== */
+
+.sidebar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+
+  width: 300px !important;
+  height: 100vh !important;
+
+  padding: 30px 20px !important;
+
+  background:
+    radial-gradient(
+      circle at 80% 15%,
+      rgba(37, 121, 255, 0.12),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 15% 35%,
+      rgba(0, 191, 255, 0.07),
+      transparent 28%
+    ),
+    #05070f !important;
+
+  color: #ffffff;
+
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+
+  overflow-y: auto;
+
+  z-index: 2000;
+
+  box-sizing: border-box;
+}
+
+
+/* ================= LOGO ================= */
+
+.sidebar-brand {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 10px !important;
+
+  height: 50px;
+
+  margin-bottom: 45px !important;
+
+  padding: 0 18px;
+
+  color: #ffffff;
+
+  box-sizing: border-box;
+}
+
+.sidebar-logo {
+  color: #25d6ff !important;
+
+  font-size: 24px !important;
+
+  text-shadow:
+    0 0 12px rgba(37, 214, 255, 0.6);
+}
+
+.sidebar-brand h2 {
+  margin: 0 !important;
+
+  font-size: 23px !important;
+
+  font-weight: 700;
+
+  color: #ffffff !important;
+}
+
+
+/* ================= NAVIGATION ================= */
+
+.sidebar-nav {
+  width: 100%;
+}
+
+.sidebar-label {
+  margin: 0 0 15px 16px !important;
+
+  color: #64748b !important;
+
+  font-size: 11px !important;
+
+  font-weight: 700;
+
+  letter-spacing: 1.5px;
+}
+
+
+/* Remove default list styling */
+
+.sidebar ul {
+  list-style: none !important;
+
+  padding: 0 !important;
+
+  margin: 0 !important;
+
+  width: 100%;
+}
+
+
+/* ================= NAV ITEM ================= */
+
+.sidebar li {
+  position: relative;
+
+  display: flex !important;
+
+  align-items: center !important;
+
+  gap: 16px !important;
+
+  width: 100%;
+
+  height: 52px;
+
+  padding: 0 18px !important;
+
+  margin: 0 0 10px 0 !important;
+
+  box-sizing: border-box;
+
+  border-radius: 13px;
+
+  color: #9da7b6 !important;
+
+  font-size: 16px !important;
+
+  font-weight: 500;
+
+  cursor: pointer;
+
+  background: transparent;
+
+  transition:
+    color 0.3s ease,
+    background 0.3s ease,
+    transform 0.3s ease;
+
+  overflow: hidden;
+}
+
+
+/* Icon */
+
+.sidebar-icon {
+  min-width: 20px;
+
+  font-size: 17px;
+
+  color: #7d8ba3;
+
+  transition: color 0.3s ease;
+}
+
+
+/* Hover */
+
+.sidebar li:hover {
+  color: #ffffff !important;
+
+  background: rgba(255, 255, 255, 0.045);
+
+  transform: translateX(3px);
+}
+
+.sidebar li:hover .sidebar-icon {
+  color: #25d6ff;
+}
+
+
+/* ================= ANIMATED UNDERLINE ================= */
+
+.sidebar li::after {
+  content: "";
+
+  position: absolute;
+
+  left: 18px;
+
+  bottom: 6px;
+
+  width: 0;
+
+  height: 2px;
+
+  border-radius: 20px;
+
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+
+  transition: width 0.35s ease;
+
+  box-shadow:
+    0 0 8px rgba(37, 214, 255, 0.45);
+}
+
+
+/* Hover underline */
+
+.sidebar li:hover::after {
+  width: 55%;
+}
+
+
+/* ================= ACTIVE ITEM ================= */
+
+.sidebar li.active {
+  color: #ffffff !important;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(53, 109, 255, 0.14),
+      rgba(37, 214, 255, 0.04)
+    );
+
+  box-shadow:
+    inset 3px 0 0 #356dff;
+}
+
+.sidebar li.active .sidebar-icon {
+  color: #25d6ff;
+}
+
+
+/* Permanent underline */
+
+.sidebar li.active::after {
+  width: 55%;
+}
+
+
+/* ================= SCROLLBAR ================= */
+
+.sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #1d3150;
+
+  border-radius: 20px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #356dff;
 }
 
 /* ================= MAIN ================= */
@@ -2433,4 +2698,136 @@ grid-template-columns:1fr;
 .dashboard::-webkit-scrollbar-thumb:hover,
 .dashboard .sidebar::-webkit-scrollbar-thumb:hover {
   background: #356dff;
+}
+
+#dashboard-top,
+#analytics-section,
+#feedback-section,
+#mock-interview,
+#settings-section {
+  scroll-margin-top: 30px;
+}
+
+/* =====================================================
+   DASHBOARD SETTINGS
+===================================================== */
+
+.dashboard-settings {
+  width: 100%;
+  padding: 30px;
+
+  background:
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(37, 214, 255, 0.08),
+      transparent 35%
+    ),
+    var(--bg-section);
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+
+  box-shadow:
+    0 10px 35px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+
+  transition: all 0.3s ease;
+
+  justify-content: space-between;
+}
+
+
+/* Heading */
+
+.dashboard-settings h2 {
+  margin: 0 0 8px;
+
+  color: var(--text-main);
+
+  font-size: 24px;
+  font-weight: 700;
+}
+
+
+/* Description */
+
+.dashboard-settings p {
+  margin: 0 0 25px;
+
+  color: var(--text-secondary);
+
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+
+.settings-theme-btn {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 13px 22px;
+
+  border: none;
+  border-radius: 12px;
+
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.3s ease;
+
+  box-shadow:
+    0 8px 20px rgba(37, 150, 255, 0.18);
+}
+
+.settings-buttons {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.settings-theme-btn:hover {
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 12px 30px rgba(37, 150, 255, 0.3);
+}
+
+
+.settings-theme-btn:active {
+  transform: translateY(0);
+}
+
+.light .dashboard-settings {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+
+@media (max-width: 768px) {
+  .dashboard-settings {
+    padding: 22px;
+  }
+
+  .dashboard-settings h2 {
+    font-size: 20px;
+  }
+
+  .settings-theme-btn {
+    width: 100%;
+  }
 }

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import "./Dashboard.css";
+
 import Sidebar from "./Sidebar";
 import FloatingControls from "./FloatingControls";
+
 import Welcome from "./Welcome";
 import Card from "./Cards";
 import Analytics from "./Analytics";
@@ -32,27 +34,48 @@ import {
 function Dashboard() {
   const [darkMode, setDarkMode] = useState(true);
 
+  // Dashboard sidebar navigation
+  const handleSidebarNavigation = (section) => {
+    const sectionMap = {
+      dashboard: "dashboard-top",
+      interviews: "mock-interview",
+      analytics: "analytics-section",
+      feedback: "feedback-section",
+      settings: "settings-section",
+    };
+
+    const elementId = sectionMap[section];
+    const element = document.getElementById(elementId);
+
+    if (element) {
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  };
+
   return (
-    <div className={`dashboard ${darkMode ? "dark" : "light"}`}>
+    <div className={darkMode ? "dashboard dark" : "dashboard light"}>
 
-      {/* Sidebar */}
-      <Sidebar />
+      <Sidebar
+        onNavigate={handleSidebarNavigation}
+      />
 
-      {/* Main Dashboard */}
       <div className="main">
 
-        {/* Top Controls */}
+        {/* Dashboard top */}
+        <div id="dashboard-top">
+          <Welcome />
+        </div>
+
         <FloatingControls
           darkMode={darkMode}
           setDarkMode={setDarkMode}
         />
 
-        {/* Welcome */}
-        <Welcome />
-
-        {/* Statistics Cards */}
+        {/* Stats */}
         <div className="cards">
-
           <Card
             icon={<FaUserGraduate />}
             title="Total Interviews"
@@ -80,53 +103,56 @@ function Dashboard() {
             value="18 hrs"
             text="This week's practice"
           />
-
         </div>
 
-        {/* Analytics + AI Insights */}
-        <div className="dashboard-row">
+        {/* Analytics */}
+        <div
+          className="dashboard-row"
+          id="analytics-section"
+        >
           <Analytics />
           <AIInsights />
         </div>
 
-        {/* Recent + Upcoming */}
-        <div className="dashboard-row">
+        {/* Feedback */}
+        <div
+          className="dashboard-row"
+          id="feedback-section"
+        >
           <Recent />
           <Upcoming />
         </div>
 
-        {/* Coding + Heatmap */}
         <div className="dashboard-row">
           <CodingChallenge />
           <InterviewHeatmap />
         </div>
 
-        {/* Resume + Leaderboard */}
         <div className="dashboard-row">
           <ResumeAnalyzer />
           <Leaderboard />
         </div>
 
-        {/* Notifications + Schedule */}
         <div className="dashboard-row">
           <Notifications />
           <Schedule />
         </div>
 
-        {/* Jobs + Achievements */}
         <div className="dashboard-row">
           <JobRecommendations />
           <Achievements />
         </div>
 
-        {/* Quick Actions + Progress */}
         <div className="dashboard-row">
           <QuickActions />
           <ProgressTracker />
         </div>
 
-        {/* Mock Interview */}
-        <div className="full-width">
+        {/* Interviews */}
+        <div
+          className="full-width"
+          id="mock-interview"
+        >
           <MockInterview />
         </div>
 
@@ -135,7 +161,34 @@ function Dashboard() {
           <Activity />
         </div>
 
-        {/* AI Chat */}
+        {/* Settings / controls */}
+        <div
+          className="full-width"
+          id="settings-section"
+        >
+          <div className="dashboard-settings">
+            <h2>Dashboard Settings</h2>
+            <p>
+              Customize your dashboard experience and
+              manage your preferences.
+            </p>
+
+            <div className="settings-buttons">
+              <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="settings-theme-btn"
+            >
+              {darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            </button>
+
+            <button className="settings-theme-btn">
+              Themes
+            </button>
+            </div>
+
+          </div>
+        </div>
+
         <AIChat />
 
       </div>
