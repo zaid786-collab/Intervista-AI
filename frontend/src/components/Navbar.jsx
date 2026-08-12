@@ -20,7 +20,7 @@ function Navbar({
       <button
         type="button"
         className="logo"
-        onClick={onOpenHome}
+        onClick={() => onOpenHome()}
       >
         <div className="logoBox">✦</div>
         <h2>Intervista AI</h2>
@@ -31,85 +31,55 @@ function Navbar({
         <ul className="navLinks">
 
           {/* Resources */}
-          <li
-            className={
-              currentPage === "resources"
-                ? "active-page"
-                : ""
-            }
-          >
+          <li className={currentPage === "resources" ? "active-page" : ""}>
             <button
               type="button"
               className="navLinkButton"
-              onClick={onOpenResources}
+              onClick={() => onOpenResources()}
             >
               Resources
             </button>
           </li>
 
           {/* Dashboard */}
-          <li
-            className={
-              currentPage === "dashboard"
-                ? "active-page"
-                : ""
-            }
-          >
+          <li className={currentPage === "dashboard" ? "active-page" : ""}>
             <button
               type="button"
               className="navLinkButton"
-              onClick={onOpenDashboard}
+              onClick={() => onOpenDashboard()}
             >
               Dashboard
             </button>
           </li>
 
           {/* Companies */}
-          <li
-  className={
-    currentPage === "companies"
-      ? "active-page"
-      : ""
-  }
->
-  <button
-    type="button"
-    className="navLinkButton"
-    onClick={onOpenCompanies}
-  >
-    Companies
-  </button>
-</li>
-
-          {/* Pricing */}
-          <li
-            className={
-              currentPage === "pricing"
-                ? "active-page"
-                : ""
-            }
-          >
+          <li className={currentPage === "companies" ? "active-page" : ""}>
             <button
               type="button"
               className="navLinkButton"
-              onClick={onOpenPricing}
+              onClick={() => onOpenCompanies()}
+            >
+              Companies
+            </button>
+          </li>
+
+          {/* Pricing */}
+          <li className={currentPage === "pricing" ? "active-page" : ""}>
+            <button
+              type="button"
+              className="navLinkButton"
+              onClick={() => onOpenPricing()}
             >
               Pricing
             </button>
           </li>
 
           {/* FAQ */}
-          <li
-            className={
-              currentPage === "faq"
-                ? "active-page"
-                : ""
-            }
-          >
+          <li className={currentPage === "faq" ? "active-page" : ""}>
             <button
               type="button"
               className="navLinkButton"
-              onClick={onOpenFaq}
+              onClick={() => onOpenFaq()}
             >
               FAQ
             </button>
@@ -128,7 +98,7 @@ function Navbar({
               <button
                 type="button"
                 className="loginBtn"
-                onClick={onLogout}
+                onClick={() => onLogout()}
               >
                 Log out
               </button>
@@ -137,7 +107,7 @@ function Navbar({
             <button
               type="button"
               className="loginBtn"
-              onClick={onOpenLogin}
+              onClick={() => onOpenLogin()}
             >
               Log in
             </button>
@@ -146,7 +116,7 @@ function Navbar({
           <button
             type="button"
             className="startBtn"
-            onClick={onOpenSignup}
+            onClick={() => onOpenSignup()}
           >
             Start free interview
           </button>
@@ -154,7 +124,6 @@ function Navbar({
         </div>
 
       </div>
-
     </nav>
   );
 }

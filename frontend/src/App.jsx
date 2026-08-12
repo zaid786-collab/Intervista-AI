@@ -26,22 +26,30 @@ function App() {
     }
   });
 
+  const goToPage = (targetPage) => {
+    setPage(targetPage);
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
   const navigation = {
-    onOpenHome: () => setPage("home"),
+    onOpenHome: () => goToPage("home"),
 
-    onOpenResources: () => setPage("resources"),
+    onOpenResources: () => goToPage("resources"),
 
-    onOpenDashboard: () => setPage("dashboard"),
+    onOpenDashboard: () => goToPage("dashboard"),
 
-    onOpenCompanies: () => setPage("companies"),
+    onOpenCompanies: () => goToPage("companies"),
 
-    onOpenPricing: () => setPage("pricing"),
+    onOpenPricing: () => goToPage("pricing"),
 
-    onOpenFaq: () => setPage("faq"),
+    onOpenFaq: () => goToPage("faq"),
 
-    onOpenLogin: () => setPage("login"),
+    onOpenLogin: () => goToPage("login"),
 
-    onOpenSignup: () => setPage("signup"),
+    onOpenSignup: () => goToPage("signup"),
 
     onAuth: (authenticatedUser) => {
       localStorage.setItem(
@@ -50,14 +58,14 @@ function App() {
       );
 
       setUser(authenticatedUser);
-      setPage("home");
+      goToPage("home");
     },
 
     onLogout: () => {
       localStorage.removeItem("intervista-current-user");
 
       setUser(null);
-      setPage("home");
+      goToPage("home");
     },
 
     user,
@@ -65,7 +73,7 @@ function App() {
 
   return (
     <>
-      {/* Common Navbar */}
+      {/* Navbar */}
       {page !== "login" && page !== "signup" && (
         <Navbar
           {...navigation}
@@ -120,7 +128,8 @@ function App() {
       )}
 
       {/* Footer */}
-      {page !== "signup" && (
+      {page !== "login" &&
+        page !== "signup" && (
           <Footer />
         )}
     </>

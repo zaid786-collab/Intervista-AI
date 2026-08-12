@@ -1,183 +1,162 @@
+/* ================= NAVBAR ================= */
+
 .navbar {
   width: 100%;
   height: 90px;
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 9999;
+  z-index: 99999;
+
   display: flex;
   align-items: center;
+
   padding: 0 60px;
+
   background: rgba(5, 8, 20, 0.92);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  isolation: isolate;
 }
+
+
+/* ================= LOGO ================= */
 
 .logo {
   display: flex;
   align-items: center;
   gap: 10px;
+
   background: none;
   border: none;
   padding: 0;
   margin: 0;
+
   color: inherit;
   cursor: pointer;
   font: inherit;
+
+  position: relative;
+  z-index: 10;
 }
 
 .logo:hover {
   background: none;
 }
 
-.navMenu{
-    flex:1;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-left:70px;
-}
 
-.navLinks{
-    display:flex;
-    align-items:center;
-    gap:42px;
-    list-style:none;
-    margin:0;
-    padding:0;
-}
+/* ================= NAV MENU ================= */
 
-.navLinks li:hover{
-    color:#fff;
-    background:rgba(53,109,255,.08);
-}
+.navMenu {
+  flex: 1;
 
-.navLinks li{
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 
-    height: 44px;
-    padding: 0 16px;
-
-    color: #b7bfd3;
-    font-size: 18px;
-    font-weight: 500;
-    cursor: pointer;
-
-    border-radius: 12px;
-
-    transition: all .3s ease;
-}
-
-.navLinks li::after{
-    content: "";
-    position: absolute;
-    left: 50%;
-    bottom: -6px;
-    transform: translateX(-50%);
-    width: 0;
-    height: 2px;
-    border-radius: 20px;
-    background: linear-gradient(90deg,#356dff,#25d6ff);
-    transition: .35s;
-}
-
-.navLinks li:hover{
-    color:#fff;
-    background:rgba(255,255,255,.04);
-    backdrop-filter:blur(8px);
-}
-
-.navLinks li:hover::after{
-    width:70%;
+  margin-left: 70px;
 }
 
 
+/* ================= NAV LINKS ================= */
 
-.navRight{
-    display:flex;
-    align-items:center;
-    gap:20px;
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 42px;
+
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.startBtn{
-    height:56px;
-    padding:0 32px;
-    border:none;
-    border-radius:16px;
-    background:linear-gradient(90deg,#356dff,#25d6ff);
-    color:#fff;
-    font-size:18px;
-    font-weight:600;
-    cursor:pointer;
-    transition:.35s;
+
+/* Individual nav item */
+
+.navLinks li {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 44px;
+  padding: 0 16px;
+
+  color: #b7bfd3;
+  font-size: 18px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  border-radius: 12px;
+
+  transition:
+    color 0.3s ease,
+    background 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
-.startBtn:hover{
-    transform:translateY(-2px);
-    box-shadow:0 12px 35px rgba(38,171,255,.45);
+
+/* Hover */
+
+.navLinks li:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.04);
+
+  backdrop-filter: blur(8px);
 }
 
-.loginBtn{
-    position:relative;
-    overflow:hidden;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    width:110px;
-    height:56px;
-    border-radius:16px;
-    text-decoration:none;
-    color:#fff;
-    font-size:17px;
-    font-weight:600;
-    background:#11151f;
-    border:1px solid rgba(255,255,255,.12);
-    transition:.35s;
+
+/* ================= ANIMATED UNDERLINE ================= */
+
+.navLinks li::after {
+  content: "";
+
+  position: absolute;
+
+  left: 50%;
+  bottom: -6px;
+
+  transform: translateX(-50%);
+
+  width: 0;
+  height: 2px;
+
+  border-radius: 20px;
+
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+
+  transition: width 0.35s ease;
+
+  /* IMPORTANT */
+  pointer-events: none;
 }
 
-.loginBtn::before{
-    content:"";
-    position:absolute;
-    top:0;
-    left:-150%;
-    width:60%;
-    height:100%;
-    background:linear-gradient(
-        120deg,
-        transparent,
-        rgba(255,255,255,.8),
-        transparent
-    );
-    transform:skewX(-25deg);
+
+/* Hover underline */
+
+.navLinks li:hover::after {
+  width: 70%;
 }
 
-.loginBtn:hover::before{
-    animation:shine .7s linear;
-}
 
-.loginBtn:hover{
-    border-color:#2ac8ff;
-    box-shadow:0 0 20px rgba(42,200,255,.35);
-}
-
-@keyframes shine{
-    0%{
-        left:-150%;
-    }
-    100%{
-        left:180%;
-    }
-}
+/* ================= NAV BUTTON ================= */
 
 .navLinkButton {
   border: none;
   background: transparent;
+
   color: inherit;
   font: inherit;
+
   cursor: pointer;
 
   padding: 0;
@@ -191,28 +170,207 @@
   justify-content: center;
 
   position: relative;
-  z-index: 2;
+
+  /* Keep button above every decorative element */
+  z-index: 10;
+
+  /* Make browser focus styling predictable */
+  outline: none;
 }
 
-.navUser{
-    color:#9ecbff;
-    font-size:.9rem;
-    white-space:nowrap;
-}
 
-/* Permanent active page */
+/* ================= ACTIVE PAGE ================= */
 
 .navLinks li.active-page {
   color: #ffffff;
+
   background: rgba(53, 109, 255, 0.10);
-  box-shadow: 0 0 18px rgba(53, 109, 255, 0.08);
+
+  box-shadow:
+    0 0 18px rgba(53, 109, 255, 0.08);
 }
+
+
+/* Permanent underline */
 
 .navLinks li.active-page::after {
   width: 70%;
 }
 
+
+/* Active button */
+
 .navLinks li.active-page .navLinkButton {
   color: #ffffff;
   font-weight: 600;
+}
+
+
+/* ================= RIGHT SIDE ================= */
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+
+/* ================= LOGIN ================= */
+
+.loginBtn {
+  position: relative;
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 110px;
+  height: 56px;
+
+  border-radius: 16px;
+
+  text-decoration: none;
+
+  color: #ffffff;
+
+  font-size: 17px;
+  font-weight: 600;
+
+  background: #11151f;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  cursor: pointer;
+
+  transition: 0.35s;
+
+  z-index: 10;
+}
+
+.loginBtn::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: -150%;
+
+  width: 60%;
+  height: 100%;
+
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.8),
+    transparent
+  );
+
+  transform: skewX(-25deg);
+
+  pointer-events: none;
+}
+
+.loginBtn:hover::before {
+  animation: shine 0.7s linear;
+}
+
+.loginBtn:hover {
+  border-color: #2ac8ff;
+
+  box-shadow:
+    0 0 20px rgba(42, 200, 255, 0.35);
+}
+
+
+/* ================= START BUTTON ================= */
+
+.startBtn {
+  height: 56px;
+
+  padding: 0 32px;
+
+  border: none;
+  border-radius: 16px;
+
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+
+  color: #ffffff;
+
+  font-size: 18px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.35s;
+
+  position: relative;
+  z-index: 10;
+}
+
+.startBtn:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 12px 35px rgba(38, 171, 255, 0.45);
+}
+
+
+/* ================= USER ================= */
+
+.navUser {
+  color: #9ecbff;
+
+  font-size: 0.9rem;
+
+  white-space: nowrap;
+}
+
+
+/* ================= ANIMATION ================= */
+
+@keyframes shine {
+  0% {
+    left: -150%;
+  }
+
+  100% {
+    left: 180%;
+  }
+}
+
+/* ================= NAVBAR CLICK FIX ================= */
+
+.navbar {
+  position: fixed;
+  z-index: 999999;
+  pointer-events: auto;
+}
+
+/* Make sure navigation stays clickable */
+.navMenu,
+.navLinks,
+.navLinks li,
+.navLinkButton,
+.navRight,
+.logo,
+.loginBtn,
+.startBtn {
+  pointer-events: auto;
+}
+
+/* Navigation buttons should always be above page content */
+.navLinkButton {
+  position: relative;
+  z-index: 1000000;
+}
+
+/* Active/hover effects */
+.navLinks li {
+  position: relative;
+  z-index: 100000;
 }
