@@ -138,7 +138,7 @@ function App() {
 
       {/* Footer */}
       {page !== "login" &&
-        page !== "signup" && (
+        page !== "signup" &&  page !== "profile" && (
           <Footer />
         )}
     </>
