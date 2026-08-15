@@ -2,7 +2,6 @@ import {
   FaMoon,
   FaSun,
   FaBell,
-  FaUserCircle
 } from "react-icons/fa";
 
 import "./Dashboard.css";
@@ -24,9 +23,6 @@ function FloatingControls({ darkMode, setDarkMode }) {
         <span className="notification-dot">3</span>
       </button>
 
-      <button className="floating-profile" title="Profile">
-        <FaUserCircle />
-      </button>
 
     </div>
   );

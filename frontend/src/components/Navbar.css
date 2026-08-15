@@ -374,3 +374,128 @@
   position: relative;
   z-index: 100000;
 }
+
+/* ================= PROFILE BUTTON ================= */
+
+.profileBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  height: 56px;
+  padding: 5px 14px 5px 7px;
+
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 16px;
+
+  background: rgba(255, 255, 255, 0.04);
+
+  color: #fff;
+
+  cursor: pointer;
+
+  transition: all 0.3s ease;
+}
+
+.profileBtn:hover {
+  background: rgba(53, 109, 255, 0.12);
+
+  border-color: rgba(53, 109, 255, 0.45);
+
+  box-shadow: 0 0 20px rgba(53, 109, 255, 0.18);
+
+  transform: translateY(-1px);
+}
+
+
+/* Profile circle */
+
+.profileIcon {
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: linear-gradient(
+    135deg,
+    #356dff,
+    #25d6ff
+  );
+
+  color: white;
+
+  font-size: 17px;
+  font-weight: 700;
+
+  flex-shrink: 0;
+}
+
+
+/* Profile text */
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  line-height: 1.2;
+}
+
+.profileName {
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  white-space: nowrap;
+}
+
+.profileRole {
+  color: #8d98b3;
+
+  font-size: 11px;
+
+  margin-top: 3px;
+
+  white-space: nowrap;
+}
+
+
+
+.profileBtn {
+  height: 56px;
+  padding: 0 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border-radius: 16px;
+
+  background: #11151f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.35s ease;
+}
+
+.profileBtn:hover {
+  border-color: #2ac8ff;
+  background: rgba(42, 200, 255, 0.08);
+  box-shadow: 0 0 20px rgba(42, 200, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.profileIcon {
+  font-size: 18px;
+}

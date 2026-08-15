@@ -6,12 +6,14 @@ import FAQ from "./pages/FAQ";
 import AuthPage from "./pages/AuthPage";
 import Resources from "./pages/Resources";
 import Companies from "./pages/Companies";
-
+import Profile from "./pages/Profile";
 import Dashboard from "./components/dashboard/Dashboard";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer/Footer";
 
 function App() {
+
+
   const [page, setPage] = useState("home");
 
   const [user, setUser] = useState(() => {
@@ -50,6 +52,8 @@ function App() {
     onOpenLogin: () => goToPage("login"),
 
     onOpenSignup: () => goToPage("signup"),
+
+    onOpenProfile: () => setPage("profile"),
 
     onAuth: (authenticatedUser) => {
       localStorage.setItem(
@@ -109,6 +113,11 @@ function App() {
       {/* Dashboard */}
       {page === "dashboard" && (
         <Dashboard {...navigation} />
+      )}
+
+      {/* {Profile Page} */}
+      {page === "profile" && (
+        <Profile user={user}/>
       )}
 
       {/* Login */}
