@@ -64,17 +64,17 @@ function Profile({ user }) {
 
             <div className="profile-field">
               <span>EMAIL ADDRESS</span>
-              <strong>{email}</strong>
+              <strong>zaidkhan24082006@gmail.com</strong>
             </div>
 
             <div className="profile-field">
               <span>ACCOUNT TYPE</span>
-              <strong>Free Member</strong>
+              <strong>Premium Member</strong>
             </div>
 
             <div className="profile-field">
               <span>MEMBER SINCE</span>
-              <strong>2026</strong>
+              <strong>2025</strong>
             </div>
 
           </div>
