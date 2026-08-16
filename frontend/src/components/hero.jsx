@@ -14,11 +14,11 @@ function Hero({ onOpenSignup }) {
           </div>
 
           <h1>
-            <span>Walk into your</span>
+            Walk into your
             <br />
             <span>next interview</span>
             <br />
-            <span>already having won it.</span>
+            <span className="span2">already having won it.</span>
           </h1>
 
           <p>
