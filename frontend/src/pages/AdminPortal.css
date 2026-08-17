@@ -1,0 +1,250 @@
+/* ================= ADMIN PORTAL ================= */
+
+.admin-page {
+  min-height: 100vh;
+  padding: 140px 55px 90px;
+
+  background:
+    radial-gradient(
+      circle at 80% 10%,
+      rgba(37, 121, 255, 0.10),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 15% 35%,
+      rgba(0, 191, 255, 0.06),
+      transparent 28%
+    ),
+    #05070f;
+
+  color: #ffffff;
+}
+
+.admin-container {
+  width: 100%;
+  max-width: 1250px;
+  margin: 0 auto;
+}
+
+.admin-hero {
+  padding: 35px;
+  margin-bottom: 30px;
+
+  background: rgba(11, 16, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.admin-hero span.eyebrow {
+  color: #25d6ff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.admin-hero h1 {
+  margin: 8px 0;
+  font-size: 30px;
+}
+
+.admin-hero p {
+  margin: 0;
+  color: #9ca8bd;
+  font-size: 15px;
+}
+
+.admin-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.admin-summary-card {
+  padding: 22px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(53, 109, 255, 0.10),
+      rgba(37, 214, 255, 0.035)
+    );
+
+  border: 1px solid rgba(53, 109, 255, 0.12);
+  border-radius: 16px;
+}
+
+.admin-summary-card span {
+  display: block;
+  color: #8e9ab0;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.admin-summary-card strong {
+  font-size: 26px;
+  color: #ffffff;
+}
+
+.admin-card {
+  padding: 32px;
+  margin-bottom: 25px;
+
+  background: rgba(11, 16, 32, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 22px;
+
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.20);
+
+  overflow-x: auto;
+}
+
+.admin-card h2 {
+  margin: 0 0 20px;
+  font-size: 22px;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 14px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 14px;
+}
+
+.admin-table th {
+  color: #758198;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.admin-table td {
+  color: #e6ebf5;
+}
+
+.admin-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.admin-badge.admin {
+  color: #25d6ff;
+  background: rgba(37, 214, 255, 0.12);
+  border: 1px solid rgba(37, 214, 255, 0.3);
+}
+
+.admin-badge.member {
+  color: #9ca8bd;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-badge.disabled {
+  color: #ff7189;
+  background: rgba(255, 77, 109, 0.12);
+  border: 1px solid rgba(255, 77, 109, 0.3);
+}
+
+.admin-mini-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-mini-track {
+  width: 90px;
+  height: 8px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.admin-mini-fill {
+  height: 100%;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #356dff, #25d6ff);
+}
+
+.admin-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-action-btn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #111725;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.admin-action-btn:hover {
+  border-color: #25d6ff;
+  transform: translateY(-1px);
+}
+
+.admin-action-btn.danger:hover {
+  border-color: #ff4d6d;
+  color: #ff7189;
+}
+
+.admin-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.admin-empty,
+.admin-error,
+.admin-loading {
+  color: #9ca8bd;
+  font-size: 14px;
+}
+
+.admin-error {
+  color: #ff7189;
+}
+
+.admin-denied {
+  padding: 60px 30px;
+  text-align: center;
+  color: #9ca8bd;
+}
+
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 1000px) {
+  .admin-page {
+    padding: 120px 25px 70px;
+  }
+
+  .admin-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-summary {
+    grid-template-columns: 1fr;
+  }
+}

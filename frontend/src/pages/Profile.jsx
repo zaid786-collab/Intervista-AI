@@ -3,6 +3,11 @@ import "./Profile.css";
 function Profile({ user }) {
   const name = user?.name || "Interview Candidate";
   const email = user?.email || "candidate@example.com";
+  const accountType = user?.is_admin ? "Admin" : "Free Member";
+  const memberSince = user?.created_at
+    ? new Date(user.created_at).getFullYear()
+    : "—";
+  const progress = user?.progress ?? 0;
 
   return (
     <main className="profile-page">
@@ -59,24 +64,53 @@ function Profile({ user }) {
 
             <div className="profile-field">
               <span>FULL NAME</span>
-              <strong>Mohammad Zaid Khan</strong>
+              <strong>{name}</strong>
             </div>
 
             <div className="profile-field">
               <span>EMAIL ADDRESS</span>
-              <strong>zaidkhan24082006@gmail.com</strong>
+              <strong>{email}</strong>
             </div>
 
             <div className="profile-field">
               <span>ACCOUNT TYPE</span>
-              <strong>Premium Member</strong>
+              <strong>{accountType}</strong>
             </div>
 
             <div className="profile-field">
               <span>MEMBER SINCE</span>
-              <strong>2025</strong>
+              <strong>{memberSince}</strong>
             </div>
 
+          </div>
+
+        </section>
+
+
+        {/* ================= OVERALL PROGRESS ================= */}
+        <section className="profile-card">
+
+          <div className="profile-card-header">
+            <div>
+              <span className="section-label">
+                PROGRESS
+              </span>
+
+              <h2>Overall Progress</h2>
+
+              <p>
+                Your interview-readiness progress across Intervista AI.
+              </p>
+            </div>
+          </div>
+
+          <div className="progress-overview">
+            <span>Completion</span>
+            <strong>{progress}%</strong>
+          </div>
+
+          <div className="progress-track">
+            <div className="progress-fill" style={{ width: `${progress}%` }} />
           </div>
 
         </section>

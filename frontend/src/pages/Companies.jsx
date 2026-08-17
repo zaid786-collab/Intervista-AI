@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./Companies.css";
-import companyData from "./companyData";
+import companyData from "./CompanyData";
 
 function Companies() {
   const companies = [

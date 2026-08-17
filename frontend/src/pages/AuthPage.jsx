@@ -1,36 +1,42 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar";
+import { login, signup, setToken } from "../api";
 import "./AuthPage.css";
 
 export default function AuthPage({ mode = "login", onAuth, onOpenLogin, onOpenSignup, ...navigation }) {
   const isLogin = mode === "login";
   const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const updateField = (event) => setFormData((current) => ({ ...current, [event.target.name]: event.target.value }));
-  const handleSubmit = (event) => {
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+
     const email = formData.email.trim().toLowerCase();
     const password = formData.password;
     if (!email || !password) return setError("Please fill in your email and password.");
 
-    let storedUsers;
-    try { storedUsers = JSON.parse(localStorage.getItem("intervista-users") || "[]"); } catch { storedUsers = []; }
-
-    if (isLogin) {
-      const existingUser = storedUsers.find((item) => item.email === email);
-      if (!existingUser || existingUser.password !== password) return setError("Invalid email or password.");
-      onAuth({ name: existingUser.name, email: existingUser.email });
-      return;
+    if (!isLogin) {
+      if (password.length < 6) return setError("Password must be at least 6 characters long.");
+      if (formData.confirmPassword !== password) return setError("Passwords do not match.");
     }
 
-    if (password.length < 6) return setError("Password must be at least 6 characters long.");
-    if (formData.confirmPassword !== password) return setError("Passwords do not match.");
-    if (storedUsers.some((item) => item.email === email)) return setError("An account with this email already exists.");
-    const newUser = { name: formData.name.trim() || email.split("@")[0], email, password };
-    localStorage.setItem("intervista-users", JSON.stringify([...storedUsers, newUser]));
-    onAuth({ name: newUser.name, email: newUser.email });
+    setLoading(true);
+    try {
+      const result = isLogin
+        ? await login({ email, password })
+        : await signup({ name: formData.name.trim() || email.split("@")[0], email, password });
+
+      setToken(result.access_token);
+      onAuth(result.user);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -44,7 +50,9 @@ export default function AuthPage({ mode = "login", onAuth, onOpenLogin, onOpenSi
           <label>Password<input type="password" name="password" value={formData.password} onChange={updateField} placeholder="Enter your password" /></label>
           {!isLogin && <label>Confirm password<input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={updateField} placeholder="Confirm password" /></label>}
           {error && <p className="authError">{error}</p>}
-          <button type="submit" className="authSubmitBtn">{isLogin ? "Log in" : "Create account"}</button>
+          <button type="submit" className="authSubmitBtn" disabled={loading}>
+            {loading ? "Please wait..." : isLogin ? "Log in" : "Create account"}
+          </button>
         </form>
         <p className="authSwitch">{isLogin ? "New here?" : "Already have an account?"} <button type="button" className="textButton" onClick={isLogin ? onOpenSignup : onOpenLogin}>{isLogin ? "Create an account" : "Log in"}</button></p>
       </main>

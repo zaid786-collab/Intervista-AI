@@ -10,6 +10,7 @@ function Navbar({
   onOpenLogin,
   onOpenSignup,
   onOpenProfile,
+  onOpenAdmin,
   user,
   onLogout,
   currentPage,
@@ -82,13 +83,25 @@ function Navbar({
             </button>
           </li>
 
+          {user?.is_admin && (
+            <li className={currentPage === "admin" ? "active-page" : ""}>
+              <button
+                type="button"
+                className="navLinkButton"
+                onClick={onOpenAdmin}
+              >
+                Admin
+              </button>
+            </li>
+          )}
+
         </ul>
 
 
 <div className="navRight">
 
  <button
- type="button"
+type="button"
   className="startBtn"
   onClick={onOpenProfile}
 >
