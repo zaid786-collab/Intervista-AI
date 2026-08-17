@@ -1,6 +1,18 @@
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/useAuth";
 import "./Hero.css";
 
-function Hero({ onOpenSignup }) {
+function Hero() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  const handleStart = () => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    } else {
+      navigate("/signup");
+    }
+  };
   return (
     <>
       {/* ================= HERO ================= */}
@@ -31,7 +43,7 @@ function Hero({ onOpenSignup }) {
 
             <button
               className="primary"
-              onClick={onOpenSignup}
+              onClick={handleStart}
             >
               🎤 Start Interview
             </button>
@@ -430,7 +442,7 @@ function Hero({ onOpenSignup }) {
 
           <button
             className="cta-button"
-            onClick={onOpenSignup}
+            onClick={handleStart}
           >
             Start free interview →
           </button>

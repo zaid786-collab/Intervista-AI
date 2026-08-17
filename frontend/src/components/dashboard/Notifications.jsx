@@ -38,7 +38,8 @@ const notifications = [
   }
 ];
 
-function Notifications() {
+function Notifications({ notifications: propNotifications }) {
+    const list = propNotifications && propNotifications.length > 0 ? propNotifications : notifications;
 
     return (
 
@@ -56,7 +57,7 @@ function Notifications() {
 
                 <span className="notification-count">
 
-                    4 New
+                    {list.length} New
 
                 </span>
 
@@ -64,7 +65,7 @@ function Notifications() {
 
             {
 
-                notifications.map((item,index)=>(
+                list.map((item,index)=>(
 
                     <div
                         className="notification-card"
@@ -73,10 +74,10 @@ function Notifications() {
 
                         <div
                             className="notification-icon"
-                            style={{background:item.color}}
+                            style={{background:item.color || "#2563eb"}}
                         >
 
-                            {item.icon}
+                            {item.icon || <FaBell />}
 
                         </div>
 

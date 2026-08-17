@@ -20,7 +20,9 @@ const data = [
   { name: "Sun", score: 80 }
 ];
 
-function Chart() {
+function Chart({ performanceData }) {
+  const chartData = performanceData && performanceData.length > 0 ? performanceData : data;
+
   return (
     <div className="chart">
 
@@ -28,7 +30,7 @@ function Chart() {
 
       <ResponsiveContainer width="100%" height={300}>
 
-        <BarChart data={data}>
+        <BarChart data={chartData}>
 
           <CartesianGrid strokeDasharray="3 3" />
 

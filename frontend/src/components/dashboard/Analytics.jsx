@@ -2,11 +2,11 @@ import Chart from "./Chart";
 import "./Dashboard.css";
 import InterviewPieChart from "./PieChart";
 
-function Analytics() {
+function Analytics({ performanceData }) {
     return (
         <div className="analytics">
 
-            <Chart />
+            <Chart performanceData={performanceData} />
 
             <InterviewPieChart />
 

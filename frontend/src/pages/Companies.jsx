@@ -1,6 +1,19 @@
 import { useState } from "react";
 import "./Companies.css";
-import companyData from "./CompanyData";
+import companyData from "./companyData";
+
+const defaultCompany = {
+  stats: ["50+", "30+", "10+"],
+  questions: [],
+  mostAsked: [],
+  preparation: {
+    overview: "Focus on strong DSA fundamentals, system design, and behavioral preparation.",
+    topics: "DSA, System Design, Problem Solving",
+    strategy: "Practice problems consistently and explain your approach clearly.",
+    tips: "Clarify requirements, test edge cases, and communicate effectively."
+  },
+  rounds: []
+};
 
 function Companies() {
   const companies = [
@@ -31,7 +44,7 @@ function Companies() {
     useState("dsa");
 
   const data =
-    companyData[selectedCompany] || defaultCompanyData;
+    companyData[selectedCompany] || defaultCompany;
 
   const toggleSolved = (questionTitle) => {
     const key = `${selectedCompany}-${questionTitle}`;

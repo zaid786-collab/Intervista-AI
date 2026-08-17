@@ -1,8 +1,5 @@
 import "./Dashboard.css";
-import {
-  FaMedal,
-  FaArrowUp
-} from "react-icons/fa";
+import { FaArrowUp } from "react-icons/fa";
 
 const users = [
   {

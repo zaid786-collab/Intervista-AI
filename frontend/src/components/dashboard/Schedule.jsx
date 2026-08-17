@@ -36,7 +36,9 @@ const interviews = [
   }
 ];
 
-function Schedule() {
+function Schedule({ interviews: propInterviews }) {
+  const list = propInterviews && propInterviews.length > 0 ? propInterviews : interviews;
+
   return (
     <div className="schedule">
 
@@ -53,7 +55,7 @@ function Schedule() {
 
       </div>
 
-      {interviews.map((item, index) => (
+      {list.map((item, index) => (
 
         <div
           className="schedule-card"
@@ -62,9 +64,9 @@ function Schedule() {
 
           <div
             className="schedule-icon"
-            style={{ background: item.color }}
+            style={{ background: item.color || "#2563eb" }}
           >
-            {item.icon}
+            {item.icon || (item.mode === "Online Coding" ? <FaLaptopCode /> : <FaVideo />)}
           </div>
 
           <div className="schedule-info">
@@ -79,9 +81,9 @@ function Schedule() {
 
             <FaClock />
 
-            <span>{item.date}</span>
+            <span>{item.date || "Upcoming"}</span>
 
-            <small>{item.time}</small>
+            <small>{item.time || ""}</small>
 
           </div>
 

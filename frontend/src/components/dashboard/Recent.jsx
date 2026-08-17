@@ -1,32 +1,31 @@
 import "./Dashboard.css";
 
-function Recent() {
-    const interviews = [
-        {
-            role: "Frontend Developer",
-            score: "92%",
-            status: "Completed",
-            detail: <button className="detail-btn">View Summary</button>
-        },
-        {
-            role: "Backend Developer",
-            score: "85%",
-            status: "Completed",
-            detail: <button className="detail-btn">View Summary</button>
-        },
-        {
-            role: "React Developer",
-            score: "78%",
-            status: "Pending",
-            detail: <button className="detail-btn">View Summary</button>
-        },
-        {
-            role: "AI Engineer",
-            score: "95%",
-            status: "Completed",
-            detail: <button className="detail-btn">View Summary</button>
-        }
-    ];
+const defaultInterviews = [
+    {
+        role: "Frontend Developer",
+        score: "92%",
+        status: "Completed",
+    },
+    {
+        role: "Backend Developer",
+        score: "85%",
+        status: "Completed",
+    },
+    {
+        role: "React Developer",
+        score: "78%",
+        status: "Pending",
+    },
+    {
+        role: "AI Engineer",
+        score: "95%",
+        status: "Completed",
+    }
+];
+
+function Recent({ interviews = defaultInterviews }) {
+    const list = interviews && interviews.length > 0 ? interviews : defaultInterviews;
+
 
     return (
         <div className="recent">
@@ -43,11 +42,11 @@ function Recent() {
                 </thead>
 
                 <tbody>
-                    {interviews.map((item, index) => (
+                    {list.map((item, index) => (
                         <tr key={index}>
                             <td>{item.role}</td>
 
-                            <td>{item.score}</td>
+                            <td>{item.score || "-"}</td>
 
                             <td>
                                 <span
@@ -61,7 +60,9 @@ function Recent() {
                                 </span>
                             </td>
 
-                            <td>{item.detail}</td>
+                            <td>
+                                <button className="detail-btn">View Summary</button>
+                            </td>
                         </tr>
                     ))}
                 </tbody>

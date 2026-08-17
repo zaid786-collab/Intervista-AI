@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Dashboard.css";
+import { fetchDashboardData } from "../../api";
 
 import Sidebar from "./Sidebar";
 import FloatingControls from "./FloatingControls";
@@ -33,6 +34,30 @@ import {
 
 function Dashboard() {
   const [darkMode, setDarkMode] = useState(true);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchDashboardData()
+      .then((data) => {
+        if (isMounted) {
+          setDashboardData(data);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setError(err.message || "Failed to load dashboard data");
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Dashboard sidebar navigation
   const handleSidebarNavigation = (section) => {
@@ -55,6 +80,13 @@ function Dashboard() {
     }
   };
 
+  const metrics = dashboardData?.metrics || {
+    total_interviews: 24,
+    avg_score: "78%",
+    best_score: "92%",
+    practice_time: "18 hrs",
+  };
+
   return (
     <div className={darkMode ? "dashboard dark" : "dashboard light"}>
 
@@ -74,33 +106,39 @@ function Dashboard() {
           setDarkMode={setDarkMode}
         />
 
+        {error && (
+          <div style={{ padding: "12px 20px", margin: "10px 0", borderRadius: "8px", backgroundColor: "#fee2e2", color: "#b91c1c" }}>
+            ⚠ {error} - Showing cached/default metrics.
+          </div>
+        )}
+
         {/* Stats */}
         <div className="cards">
           <Card
             icon={<FaUserGraduate />}
             title="Total Interviews"
-            value="24"
+            value={metrics.total_interviews}
             text="Completed this month"
           />
 
           <Card
             icon={<FaChartLine />}
             title="Average Score"
-            value="78%"
+            value={metrics.avg_score}
             text="Performance is improving"
           />
 
           <Card
             icon={<FaTrophy />}
             title="Best Score"
-            value="92%"
+            value={metrics.best_score}
             text="Excellent performance"
           />
 
           <Card
             icon={<FaClock />}
             title="Practice Time"
-            value="18 hrs"
+            value={metrics.practice_time}
             text="This week's practice"
           />
         </div>
@@ -110,7 +148,7 @@ function Dashboard() {
           className="dashboard-row"
           id="analytics-section"
         >
-          <Analytics />
+          <Analytics performanceData={dashboardData?.weekly_performance} />
           <AIInsights />
         </div>
 
@@ -119,7 +157,7 @@ function Dashboard() {
           className="dashboard-row"
           id="feedback-section"
         >
-          <Recent />
+          <Recent interviews={dashboardData?.recent_interviews} />
           <Upcoming />
         </div>
 
@@ -134,8 +172,8 @@ function Dashboard() {
         </div>
 
         <div className="dashboard-row">
-          <Notifications />
-          <Schedule />
+          <Notifications notifications={dashboardData?.notifications} />
+          <Schedule interviews={dashboardData?.upcoming_interviews} />
         </div>
 
         <div className="dashboard-row">
@@ -158,8 +196,9 @@ function Dashboard() {
 
         {/* Activity */}
         <div className="full-width">
-          <Activity />
+          <Activity activities={dashboardData?.activities} />
         </div>
+
 
         {/* Settings / controls */}
         <div

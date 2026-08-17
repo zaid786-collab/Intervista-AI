@@ -1,6 +1,10 @@
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/useAuth";
 import "./Profile.css";
 
-function Profile({ user }) {
+function Profile() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const name = user?.name || "Interview Candidate";
   const email = user?.email || "candidate@example.com";
   const accountType = user?.is_admin ? "Admin" : "Free Member";
@@ -247,7 +251,11 @@ function Profile({ user }) {
             </p>
           </div>
 
-          <button className="profile-cta-btn">
+          <button
+            type="button"
+            className="profile-cta-btn"
+            onClick={() => navigate("/dashboard")}
+          >
             Start New Interview →
           </button>
 

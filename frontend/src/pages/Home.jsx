@@ -1,32 +1,9 @@
-import Navbar from "../components/Navbar";
 import Hero from "../components/hero";
 
-function Home({
-  onOpenDashboard,
-  onOpenPricing,
-  onOpenFaq,
-  onOpenLogin,
-  onOpenSignup,
-  user,
-  onLogout,
-}) {
+function Home() {
   return (
     <div className="home-page">
-
-      {/* Fixed Home Navbar */}
-      <Navbar
-        onOpenDashboard={onOpenDashboard}
-        onOpenPricing={onOpenPricing}
-        onOpenFaq={onOpenFaq}
-        onOpenLogin={onOpenLogin}
-        onOpenSignup={onOpenSignup}
-        user={user}
-        onLogout={onLogout}
-      />
-
-      {/* Hero Section */}
       <Hero />
-
     </div>
   );
 }

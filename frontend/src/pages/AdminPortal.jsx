@@ -1,37 +1,36 @@
 import { useEffect, useState } from "react";
 import { adminDeleteUser, adminListUsers, adminUpdateUser } from "../api";
+import { useAuth } from "../context/useAuth";
 import "./AdminPortal.css";
 
-function AdminPortal({ user }) {
+function AdminPortal() {
+  const { user } = useAuth();
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(user?.is_admin));
   const [error, setError] = useState("");
   const [busyUserId, setBusyUserId] = useState(null);
 
   const isAdmin = Boolean(user?.is_admin);
 
   useEffect(() => {
-    if (!isAdmin) {
-      setLoading(false);
-      return;
-    }
+    if (!isAdmin) return;
 
-    loadUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let isMounted = true;
+    adminListUsers()
+      .then((data) => {
+        if (isMounted) setUsers(data);
+      })
+      .catch((err) => {
+        if (isMounted) setError(err.message || "Could not load users.");
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [isAdmin]);
-
-  const loadUsers = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await adminListUsers();
-      setUsers(data);
-    } catch (err) {
-      setError(err.message || "Could not load users.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const runAction = async (userId, updates) => {
     setBusyUserId(userId);
@@ -129,7 +128,7 @@ function AdminPortal({ user }) {
               </thead>
               <tbody>
                 {users.map((item) => {
-                  const isSelf = item.id === user.id;
+                  const isSelf = item.id === user?.id;
                   const isBusy = busyUserId === item.id;
 
                   return (

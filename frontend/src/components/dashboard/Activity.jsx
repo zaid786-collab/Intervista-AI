@@ -37,20 +37,22 @@ const activities = [
   }
 ];
 
-function Activity() {
+function Activity({ activities: propActivities }) {
+  const list = propActivities && propActivities.length > 0 ? propActivities : activities;
+
   return (
     <div className="activity">
 
       <h2>Recent Activity</h2>
 
-      {activities.map((item, index) => (
+      {list.map((item, index) => (
         <div className="activity-item" key={index}>
 
           <div
             className="activity-icon"
-            style={{ background: item.color }}
+            style={{ background: item.color || "#2563eb" }}
           >
-            {item.icon}
+            {item.icon || <FaCheckCircle />}
           </div>
 
           <div className="activity-info">

@@ -11,8 +11,9 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:postgres@localhost:5432/intervista_ai",
 )
 
-# pool_pre_ping avoids "server closed the connection" errors on idle connections
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True if not DATABASE_URL.startswith("sqlite") else False)
+
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

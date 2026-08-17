@@ -75,3 +75,28 @@ export function adminUpdateUser(userId, updates) {
 export function adminDeleteUser(userId) {
   return request(`/api/admin/users/${userId}`, { method: "DELETE", auth: true });
 }
+
+// ---------- Dashboard ----------
+
+export function fetchDashboardData() {
+  return request("/api/dashboard", { auth: true });
+}
+
+// ---------- Resources ----------
+
+export function fetchResources(params = {}) {
+  const query = new URLSearchParams();
+  if (params.search) query.set("search", params.search);
+  if (params.difficulty && params.difficulty !== "All") query.set("difficulty", params.difficulty);
+
+  const queryString = query.toString() ? `?${query.toString()}` : "";
+  return request(`/api/resources${queryString}`);
+}
+
+export function fetchSolvedResources() {
+  return request("/api/resources/solved", { auth: true });
+}
+
+export function toggleSolvedResource(title) {
+  return request("/api/resources/toggle-solved", { method: "POST", auth: true, body: { title } });
+}

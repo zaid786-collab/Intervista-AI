@@ -1,4 +1,9 @@
-import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { AuthProvider } from "./context/AuthProvider";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer/Footer";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 import Home from "./pages/Home";
 import Pricing from "./pages/Pricing";
@@ -9,151 +14,66 @@ import Companies from "./pages/Companies";
 import Profile from "./pages/Profile";
 import AdminPortal from "./pages/AdminPortal";
 import Dashboard from "./components/dashboard/Dashboard";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer/Footer";
-import { fetchCurrentUser, getToken, clearToken } from "./api";
 
-function App() {
+import "./App.css";
 
-  const [page, setPage] = useState("home");
-  const [user, setUser] = useState(null);
-  const [checkingSession, setCheckingSession] = useState(true);
+function ScrollToTop() {
+  const { pathname } = useLocation();
 
-  // On first load, if a token is saved, ask the backend who it belongs to.
-  // This keeps the user logged in across page refreshes without trusting
-  // whatever a client might have stashed in localStorage.
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setCheckingSession(false);
-      return;
-    }
-
-    fetchCurrentUser()
-      .then((currentUser) => setUser(currentUser))
-      .catch(() => clearToken())
-      .finally(() => setCheckingSession(false));
-  }, []);
-
-  const goToPage = (targetPage) => {
-    setPage(targetPage);
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
-  };
+  }, [pathname]);
 
-  const navigation = {
-    onOpenHome: () => goToPage("home"),
+  return null;
+}
 
-    onOpenResources: () => goToPage("resources"),
+function AppLayout() {
+  const location = useLocation();
+  const path = location.pathname;
 
-    onOpenDashboard: () => goToPage("dashboard"),
-
-    onOpenCompanies: () => goToPage("companies"),
-
-    onOpenPricing: () => goToPage("pricing"),
-
-    onOpenFaq: () => goToPage("faq"),
-
-    onOpenLogin: () => goToPage("login"),
-
-    onOpenSignup: () => goToPage("signup"),
-
-    onOpenProfile: () => setPage("profile"),
-
-    onOpenAdmin: () => setPage("admin"),
-
-    onAuth: (authenticatedUser) => {
-      setUser(authenticatedUser);
-      goToPage("home");
-    },
-
-    onLogout: () => {
-      clearToken();
-      setUser(null);
-      goToPage("home");
-    },
-
-    user,
-  };
-
-  if (checkingSession) {
-    return null;
-  }
+  const hideFooter = ["/login", "/signup", "/profile", "/admin", "/dashboard"].includes(path);
 
   return (
     <>
-      {/* Navbar */}
-      {page !== "login" && page !== "signup" && (
-        <Navbar
-          {...navigation}
-          currentPage={page}
+      <ScrollToTop />
+      <Navbar />
+
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/resources" element={<Resources />} />
+        <Route path="/companies" element={<Companies />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/faq" element={<FAQ />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requireAdmin={true}>
+              <AdminPortal />
+            </ProtectedRoute>
+          }
         />
-      )}
+        <Route path="/login" element={<AuthPage mode="login" />} />
+        <Route path="/signup" element={<AuthPage mode="signup" />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
-      {/* Home */}
-      {page === "home" && (
-        <Home {...navigation} />
-      )}
-
-      {/* Resources */}
-      {page === "resources" && (
-        <Resources {...navigation} />
-      )}
-
-      {/* Companies */}
-      {page === "companies" && (
-        <Companies {...navigation} />
-      )}
-
-      {/* Pricing */}
-      {page === "pricing" && (
-        <Pricing {...navigation} />
-      )}
-
-      {/* FAQ */}
-      {page === "faq" && (
-        <FAQ {...navigation} />
-      )}
-
-      {/* Dashboard */}
-      {page === "dashboard" && (
-        <Dashboard {...navigation} />
-      )}
-
-      {/* {Profile Page} */}
-      {page === "profile" && (
-        <Profile user={user} onUserUpdate={setUser} />
-      )}
-
-      {/* Admin Portal */}
-      {page === "admin" && (
-        <AdminPortal user={user} {...navigation} />
-      )}
-
-      {/* Login */}
-      {page === "login" && (
-        <AuthPage
-          mode="login"
-          {...navigation}
-        />
-      )}
-
-      {/* Signup */}
-      {page === "signup" && (
-        <AuthPage
-          mode="signup"
-          {...navigation}
-        />
-      )}
-
-      {/* Footer */}
-      {page !== "login" &&
-        page !== "signup" && page !== "profile" && page !== "admin" && (
-          <Footer />
-        )}
+      {!hideFooter && <Footer />}
     </>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppLayout />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

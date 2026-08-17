@@ -1,143 +1,121 @@
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/useAuth";
 import "./Navbar.css";
 
-function Navbar({
-  onOpenHome,
-  onOpenResources,
-  onOpenDashboard,
-  onOpenCompanies,
-  onOpenPricing,
-  onOpenFaq,
-  onOpenLogin,
-  onOpenSignup,
-  onOpenProfile,
-  onOpenAdmin,
-  user,
-  onLogout,
-  currentPage,
-}) {
+function Navbar() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const path = location.pathname;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
   return (
     <nav className="navbar">
-
       {/* Logo */}
-      <button
-        type="button"
-        className="logo"
-        onClick={onOpenHome}
-      >
+      <Link to="/" className="logo">
         <div className="logoBox">✦</div>
         <h2>Intervista AI</h2>
-      </button>
+      </Link>
 
       <div className="navMenu">
-
         {/* Navigation Links */}
         <ul className="navLinks">
-
-          <li className={currentPage === "resources" ? "active-page" : ""}>
-            <button
-              type="button"
+          <li className={path === "/resources" ? "active-page" : ""}>
+            <Link
+              to="/resources"
               className="navLinkButton"
-              onClick={onOpenResources}
             >
               Resources
-            </button>
+            </Link>
           </li>
 
-          <li className={currentPage === "dashboard" ? "active-page" : ""}>
-            <button
-              type="button"
+          <li className={path === "/dashboard" ? "active-page" : ""}>
+            <Link
+              to="/dashboard"
               className="navLinkButton"
-              onClick={onOpenDashboard}
             >
               Dashboard
-            </button>
+            </Link>
           </li>
 
-          <li className={currentPage === "companies" ? "active-page" : ""}>
-            <button
-              type="button"
+          <li className={path === "/companies" ? "active-page" : ""}>
+            <Link
+              to="/companies"
               className="navLinkButton"
-              onClick={onOpenCompanies}
             >
               Companies
-            </button>
+            </Link>
           </li>
 
-          <li className={currentPage === "pricing" ? "active-page" : ""}>
-            <button
-              type="button"
+          <li className={path === "/pricing" ? "active-page" : ""}>
+            <Link
+              to="/pricing"
               className="navLinkButton"
-              onClick={onOpenPricing}
             >
               Pricing
-            </button>
+            </Link>
           </li>
 
-          <li className={currentPage === "faq" ? "active-page" : ""}>
-            <button
-              type="button"
+          <li className={path === "/faq" ? "active-page" : ""}>
+            <Link
+              to="/faq"
               className="navLinkButton"
-              onClick={onOpenFaq}
             >
               FAQ
-            </button>
+            </Link>
           </li>
 
           {user?.is_admin && (
-            <li className={currentPage === "admin" ? "active-page" : ""}>
-              <button
-                type="button"
+            <li className={path === "/admin" ? "active-page" : ""}>
+              <Link
+                to="/admin"
                 className="navLinkButton"
-                onClick={onOpenAdmin}
               >
                 Admin
-              </button>
+              </Link>
             </li>
           )}
-
         </ul>
 
+        <div className="navRight">
+          {/* Profile button */}
+          <Link
+            to="/profile"
+            className={path === "/profile" ? "profileBtn active-page" : "profileBtn"}
+          >
+            Profile
+          </Link>
 
-<div className="navRight">
+          {user ? (
+            <button
+              type="button"
+              className="loginBtn"
+              onClick={handleLogout}
+            >
+              Log out
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className={path === "/login" ? "loginBtn active-page" : "loginBtn"}
+            >
+              Log in
+            </Link>
+          )}
 
- <button
-type="button"
-  className="startBtn"
-  onClick={onOpenProfile}
->
-  Profile
-</button>
-
-  {user ? (
-    <button
-      type="button"
-      className="loginBtn"
-      onClick={onLogout}
-    >
-      Log out
-    </button>
-  ) : (
-    <button
-      type="button"
-      className="loginBtn"
-      onClick={onOpenLogin}
-    >
-      Log in
-    </button>
-  )}
-
-  <button
-    type="button"
-    className="startBtn"
-    onClick={onOpenSignup}
-  >
-    Start free interview
-  </button>
-
-</div>
-
+          {/* Start Interview button */}
+          <Link
+            to={user ? "/dashboard" : "/signup"}
+            className={path === "/signup" ? "startBtn active-page" : "startBtn"}
+          >
+            Start Interview
+          </Link>
+        </div>
       </div>
-
     </nav>
   );
 }

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { fetchResources, fetchSolvedResources, toggleSolvedResource } from "../api";
 import "./Resources.css";
 
 const dsaTopics = [
@@ -306,6 +307,21 @@ const dsaTopics = [
     problemCount: 40,
     problems: [
       {
+        name: "Valid Palindrome",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/valid-palindrome/",
+      },
+      {
+        name: "Move Zeroes",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/move-zeroes/",
+      },
+      {
+        name: "Remove Duplicates from Sorted Array",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/remove-duplicates-from-sorted-array/",
+      },
+      {
         name: "Two Sum II - Input Array Is Sorted",
         difficulty: "Medium",
         leetcode:
@@ -323,6 +339,11 @@ const dsaTopics = [
           "https://leetcode.com/problems/container-with-most-water/",
       },
       {
+        name: "4Sum",
+        difficulty: "Medium",
+        leetcode: "https://leetcode.com/problems/4sum/",
+      },
+      {
         name: "Trapping Rain Water",
         difficulty: "Hard",
         leetcode:
@@ -338,6 +359,21 @@ const dsaTopics = [
       "Subarrays, substrings, frequency tracking and window optimization.",
     problemCount: 45,
     problems: [
+      {
+        name: "Best Time to Buy and Sell Stock",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/",
+      },
+      {
+        name: "Contains Duplicate II",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/contains-duplicate-ii/",
+      },
+      {
+        name: "Maximum Average Subarray I",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/maximum-average-subarray-i/",
+      },
       {
         name: "Longest Substring Without Repeating Characters",
         difficulty: "Medium",
@@ -362,6 +398,11 @@ const dsaTopics = [
         leetcode:
           "https://leetcode.com/problems/minimum-window-substring/",
       },
+      {
+        name: "Sliding Window Maximum",
+        difficulty: "Hard",
+        leetcode: "https://leetcode.com/problems/sliding-window-maximum/",
+      },
     ],
   },
 
@@ -376,6 +417,16 @@ const dsaTopics = [
         name: "Binary Search",
         difficulty: "Easy",
         leetcode: "https://leetcode.com/problems/binary-search/",
+      },
+      {
+        name: "First Bad Version",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/first-bad-version/",
+      },
+      {
+        name: "Search a 2D Matrix",
+        difficulty: "Medium",
+        leetcode: "https://leetcode.com/problems/search-a-2d-matrix/",
       },
       {
         name: "Search in Rotated Sorted Array",
@@ -401,6 +452,11 @@ const dsaTopics = [
         leetcode:
           "https://leetcode.com/problems/median-of-two-sorted-arrays/",
       },
+      {
+        name: "Split Array Largest Sum",
+        difficulty: "Hard",
+        leetcode: "https://leetcode.com/problems/split-array-largest-sum/",
+      },
     ],
   },
 
@@ -411,6 +467,16 @@ const dsaTopics = [
       "Top K problems, scheduling, median finding and priority-based algorithms.",
     problemCount: 45,
     problems: [
+      {
+        name: "Kth Largest Element in a Stream",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/kth-largest-element-in-a-stream/",
+      },
+      {
+        name: "Last Stone Weight",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/last-stone-weight/",
+      },
       {
         name: "Kth Largest Element in an Array",
         difficulty: "Medium",
@@ -424,16 +490,26 @@ const dsaTopics = [
           "https://leetcode.com/problems/top-k-frequent-elements/",
       },
       {
+        name: "Task Scheduler",
+        difficulty: "Medium",
+        leetcode:
+          "https://leetcode.com/problems/task-scheduler/",
+      },
+      {
+        name: "Find K Closest Elements",
+        difficulty: "Medium",
+        leetcode: "https://leetcode.com/problems/find-k-closest-elements/",
+      },
+      {
         name: "Find Median from Data Stream",
         difficulty: "Hard",
         leetcode:
           "https://leetcode.com/problems/find-median-from-data-stream/",
       },
       {
-        name: "Task Scheduler",
-        difficulty: "Medium",
-        leetcode:
-          "https://leetcode.com/problems/task-scheduler/",
+        name: "Merge k Sorted Lists",
+        difficulty: "Hard",
+        leetcode: "https://leetcode.com/problems/merge-k-sorted-lists/",
       },
     ],
   },
@@ -457,16 +533,36 @@ const dsaTopics = [
         leetcode: "https://leetcode.com/problems/valid-anagram/",
       },
       {
+        name: "Two Sum",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/two-sum/",
+      },
+      {
+        name: "Isomorphic Strings",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/isomorphic-strings/",
+      },
+      {
         name: "Group Anagrams",
         difficulty: "Medium",
         leetcode:
           "https://leetcode.com/problems/group-anagrams/",
       },
       {
+        name: "Top K Frequent Elements",
+        difficulty: "Medium",
+        leetcode: "https://leetcode.com/problems/top-k-frequent-elements/",
+      },
+      {
         name: "Longest Consecutive Sequence",
         difficulty: "Medium",
         leetcode:
           "https://leetcode.com/problems/longest-consecutive-sequence/",
+      },
+      {
+        name: "First Missing Positive",
+        difficulty: "Hard",
+        leetcode: "https://leetcode.com/problems/first-missing-positive/",
       },
     ],
   },
@@ -479,6 +575,16 @@ const dsaTopics = [
     problemCount: 45,
     problems: [
       {
+        name: "Assign Cookies",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/assign-cookies/",
+      },
+      {
+        name: "Lemonade Change",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/lemonade-change/",
+      },
+      {
         name: "Best Time to Buy and Sell Stock II",
         difficulty: "Medium",
         leetcode:
@@ -490,6 +596,11 @@ const dsaTopics = [
         leetcode: "https://leetcode.com/problems/jump-game/",
       },
       {
+        name: "Jump Game II",
+        difficulty: "Medium",
+        leetcode: "https://leetcode.com/problems/jump-game-ii/",
+      },
+      {
         name: "Gas Station",
         difficulty: "Medium",
         leetcode: "https://leetcode.com/problems/gas-station/",
@@ -499,6 +610,11 @@ const dsaTopics = [
         difficulty: "Medium",
         leetcode:
           "https://leetcode.com/problems/partition-labels/",
+      },
+      {
+        name: "Candy",
+        difficulty: "Hard",
+        leetcode: "https://leetcode.com/problems/candy/",
       },
     ],
   },
@@ -526,9 +642,29 @@ const dsaTopics = [
         leetcode: "https://leetcode.com/problems/counting-bits/",
       },
       {
+        name: "Reverse Bits",
+        difficulty: "Easy",
+        leetcode: "https://leetcode.com/problems/reverse-bits/",
+      },
+      {
         name: "Missing Number",
         difficulty: "Easy",
         leetcode: "https://leetcode.com/problems/missing-number/",
+      },
+      {
+        name: "Sum of Two Integers",
+        difficulty: "Medium",
+        leetcode: "https://leetcode.com/problems/sum-of-two-integers/",
+      },
+      {
+        name: "Single Number II",
+        difficulty: "Medium",
+        leetcode: "https://leetcode.com/problems/single-number-ii/",
+      },
+      {
+        name: "Minimum Number of Flips to Convert Binary Matrix to Zero Matrix",
+        difficulty: "Hard",
+        leetcode: "https://leetcode.com/problems/minimum-number-of-flips-to-convert-binary-matrix-to-zero-matrix/",
       },
     ],
   },
@@ -561,6 +697,11 @@ const dsaQuestions = {
       difficulty: "Medium",
       leetcode: "https://leetcode.com/problems/container-with-most-water/",
     },
+    {
+      title: "First Missing Positive",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/first-missing-positive/",
+    },
   ],
 
   Strings: [
@@ -586,6 +727,16 @@ const dsaQuestions = {
       leetcode:
         "https://leetcode.com/problems/longest-palindromic-substring/",
     },
+    {
+      title: "Group Anagrams",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/group-anagrams/",
+    },
+    {
+      title: "Minimum Window Substring",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/minimum-window-substring/",
+    },
   ],
 
   "Linked List": [
@@ -605,10 +756,20 @@ const dsaQuestions = {
       leetcode: "https://leetcode.com/problems/linked-list-cycle/",
     },
     {
+      title: "Add Two Numbers",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/add-two-numbers/",
+    },
+    {
       title: "Remove Nth Node From End of List",
       difficulty: "Medium",
       leetcode:
         "https://leetcode.com/problems/remove-nth-node-from-end-of-list/",
+    },
+    {
+      title: "Merge k Sorted Lists",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/merge-k-sorted-lists/",
     },
   ],
 
@@ -619,14 +780,29 @@ const dsaQuestions = {
       leetcode: "https://leetcode.com/problems/valid-parentheses/",
     },
     {
+      title: "Implement Queue using Stacks",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/implement-queue-using-stacks/",
+    },
+    {
       title: "Min Stack",
       difficulty: "Medium",
       leetcode: "https://leetcode.com/problems/min-stack/",
     },
     {
+      title: "Evaluate Reverse Polish Notation",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/evaluate-reverse-polish-notation/",
+    },
+    {
       title: "Daily Temperatures",
       difficulty: "Medium",
       leetcode: "https://leetcode.com/problems/daily-temperatures/",
+    },
+    {
+      title: "Largest Rectangle in Histogram",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/largest-rectangle-in-histogram/",
     },
   ],
 
@@ -644,6 +820,11 @@ const dsaQuestions = {
         "https://leetcode.com/problems/maximum-depth-of-binary-tree/",
     },
     {
+      title: "Invert Binary Tree",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/invert-binary-tree/",
+    },
+    {
       title: "Validate Binary Search Tree",
       difficulty: "Medium",
       leetcode:
@@ -655,9 +836,24 @@ const dsaQuestions = {
       leetcode:
         "https://leetcode.com/problems/binary-tree-level-order-traversal/",
     },
+    {
+      title: "Lowest Common Ancestor of a BST",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/",
+    },
+    {
+      title: "Binary Tree Maximum Path Sum",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/binary-tree-maximum-path-sum/",
+    },
   ],
 
   Graphs: [
+    {
+      title: "Find if Path Exists in Graph",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/find-if-path-exists-in-graph/",
+    },
     {
       title: "Number of Islands",
       difficulty: "Medium",
@@ -672,6 +868,21 @@ const dsaQuestions = {
       title: "Course Schedule",
       difficulty: "Medium",
       leetcode: "https://leetcode.com/problems/course-schedule/",
+    },
+    {
+      title: "Rotting Oranges",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/rotting-oranges/",
+    },
+    {
+      title: "Pacific Atlantic Water Flow",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/pacific-atlantic-water-flow/",
+    },
+    {
+      title: "Word Ladder",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/word-ladder/",
     },
   ],
 
@@ -697,6 +908,21 @@ const dsaQuestions = {
       leetcode:
         "https://leetcode.com/problems/longest-increasing-subsequence/",
     },
+    {
+      title: "Word Break",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/word-break/",
+    },
+    {
+      title: "Unique Paths",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/unique-paths/",
+    },
+    {
+      title: "Edit Distance",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/edit-distance/",
+    },
   ],
 
   "Recursion & Backtracking": [
@@ -716,74 +942,435 @@ const dsaQuestions = {
       leetcode: "https://leetcode.com/problems/combination-sum/",
     },
     {
+      title: "Word Search",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/word-search/",
+    },
+    {
+      title: "Palindrome Partitioning",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/palindrome-partitioning/",
+    },
+    {
       title: "N-Queens",
       difficulty: "Hard",
       leetcode: "https://leetcode.com/problems/n-queens/",
     },
+    {
+      title: "Sudoku Solver",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/sudoku-solver/",
+    },
+  ],
+
+  "Two Pointers": [
+    {
+      title: "Valid Palindrome",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/valid-palindrome/",
+    },
+    {
+      title: "Move Zeroes",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/move-zeroes/",
+    },
+    {
+      title: "Remove Duplicates from Sorted Array",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/remove-duplicates-from-sorted-array/",
+    },
+    {
+      title: "Two Sum II - Input Array Is Sorted",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/",
+    },
+    {
+      title: "3Sum",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/3sum/",
+    },
+    {
+      title: "Container With Most Water",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/container-with-most-water/",
+    },
+    {
+      title: "4Sum",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/4sum/",
+    },
+    {
+      title: "Trapping Rain Water",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/trapping-rain-water/",
+    },
+  ],
+
+  "Sliding Window": [
+    {
+      title: "Best Time to Buy and Sell Stock",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/",
+    },
+    {
+      title: "Contains Duplicate II",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/contains-duplicate-ii/",
+    },
+    {
+      title: "Maximum Average Subarray I",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/maximum-average-subarray-i/",
+    },
+    {
+      title: "Longest Substring Without Repeating Characters",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/longest-substring-without-repeating-characters/",
+    },
+    {
+      title: "Longest Repeating Character Replacement",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/longest-repeating-character-replacement/",
+    },
+    {
+      title: "Permutation in String",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/permutation-in-string/",
+    },
+    {
+      title: "Minimum Window Substring",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/minimum-window-substring/",
+    },
+    {
+      title: "Sliding Window Maximum",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/sliding-window-maximum/",
+    },
+  ],
+
+  "Binary Search": [
+    {
+      title: "Binary Search",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/binary-search/",
+    },
+    {
+      title: "First Bad Version",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/first-bad-version/",
+    },
+    {
+      title: "Search a 2D Matrix",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/search-a-2d-matrix/",
+    },
+    {
+      title: "Search in Rotated Sorted Array",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/search-in-rotated-sorted-array/",
+    },
+    {
+      title: "Find Minimum in Rotated Sorted Array",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/",
+    },
+    {
+      title: "Koko Eating Bananas",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/koko-eating-bananas/",
+    },
+    {
+      title: "Median of Two Sorted Arrays",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/median-of-two-sorted-arrays/",
+    },
+    {
+      title: "Split Array Largest Sum",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/split-array-largest-sum/",
+    },
+  ],
+
+  "Heap & Priority Queue": [
+    {
+      title: "Kth Largest Element in a Stream",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/kth-largest-element-in-a-stream/",
+    },
+    {
+      title: "Last Stone Weight",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/last-stone-weight/",
+    },
+    {
+      title: "Kth Largest Element in an Array",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/kth-largest-element-in-an-array/",
+    },
+    {
+      title: "Top K Frequent Elements",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/top-k-frequent-elements/",
+    },
+    {
+      title: "Task Scheduler",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/task-scheduler/",
+    },
+    {
+      title: "Find K Closest Elements",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/find-k-closest-elements/",
+    },
+    {
+      title: "Find Median from Data Stream",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/find-median-from-data-stream/",
+    },
+    {
+      title: "Merge k Sorted Lists",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/merge-k-sorted-lists/",
+    },
+  ],
+
+  Hashing: [
+    {
+      title: "Contains Duplicate",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/contains-duplicate/",
+    },
+    {
+      title: "Valid Anagram",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/valid-anagram/",
+    },
+    {
+      title: "Two Sum",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/two-sum/",
+    },
+    {
+      title: "Isomorphic Strings",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/isomorphic-strings/",
+    },
+    {
+      title: "Group Anagrams",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/group-anagrams/",
+    },
+    {
+      title: "Top K Frequent Elements",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/top-k-frequent-elements/",
+    },
+    {
+      title: "Longest Consecutive Sequence",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/longest-consecutive-sequence/",
+    },
+    {
+      title: "First Missing Positive",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/first-missing-positive/",
+    },
+  ],
+
+  Greedy: [
+    {
+      title: "Assign Cookies",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/assign-cookies/",
+    },
+    {
+      title: "Lemonade Change",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/lemonade-change/",
+    },
+    {
+      title: "Best Time to Buy and Sell Stock II",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/best-time-to-buy-and-sell-stock-ii/",
+    },
+    {
+      title: "Jump Game",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/jump-game/",
+    },
+    {
+      title: "Jump Game II",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/jump-game-ii/",
+    },
+    {
+      title: "Gas Station",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/gas-station/",
+    },
+    {
+      title: "Partition Labels",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/partition-labels/",
+    },
+    {
+      title: "Candy",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/candy/",
+    },
+  ],
+
+  "Bit Manipulation": [
+    {
+      title: "Single Number",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/single-number/",
+    },
+    {
+      title: "Number of 1 Bits",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/number-of-1-bits/",
+    },
+    {
+      title: "Counting Bits",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/counting-bits/",
+    },
+    {
+      title: "Reverse Bits",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/reverse-bits/",
+    },
+    {
+      title: "Missing Number",
+      difficulty: "Easy",
+      leetcode: "https://leetcode.com/problems/missing-number/",
+    },
+    {
+      title: "Sum of Two Integers",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/sum-of-two-integers/",
+    },
+    {
+      title: "Single Number II",
+      difficulty: "Medium",
+      leetcode: "https://leetcode.com/problems/single-number-ii/",
+    },
+    {
+      title: "Minimum Number of Flips to Convert Binary Matrix to Zero Matrix",
+      difficulty: "Hard",
+      leetcode: "https://leetcode.com/problems/minimum-number-of-flips-to-convert-binary-matrix-to-zero-matrix/",
+    },
   ],
 };
 
-function Resources({
-  onOpenDashboard,
-  onOpenPricing,
-  onOpenFaq,
-  onOpenLogin,
-  onOpenSignup,
-  user,
-  onLogout,
-}) {
+function Resources() {
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-const [difficultyFilter, setDifficultyFilter] = useState("All");
-const [solvedQuestions, setSolvedQuestions] = useState(() => {
-  try {
-    return JSON.parse(
-      localStorage.getItem("intervista-solved-questions")
-    ) || [];
-  } catch {
-    return [];
-  }
-});
-  const [difficulty, setDifficulty] = useState("All");
+  const [difficultyFilter, setDifficultyFilter] = useState("All");
+  const [apiTopics, setApiTopics] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [solvedQuestions, setSolvedQuestions] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("intervista-solved-questions")
+      ) || [];
+    } catch {
+      return [];
+    }
+  });
 
-  const selectedData =
-    selectedTopic !== null ? dsaTopics[selectedTopic] : null;
+  const activeTopics = apiTopics || dsaTopics;
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    fetchResources({ search: searchQuery, difficulty: difficultyFilter })
+      .then((data) => {
+        if (isMounted && data && data.length > 0) {
+          setApiTopics(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [searchQuery, difficultyFilter]);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchSolvedResources()
+      .then((solvedList) => {
+        if (isMounted && Array.isArray(solvedList)) {
+          setSolvedQuestions(solvedList);
+          localStorage.setItem("intervista-solved-questions", JSON.stringify(solvedList));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const selectedData = selectedTopic !== null ? activeTopics[selectedTopic] : null;
 
   const filteredProblems =
     selectedData?.problems.filter((problem) => {
-      if (difficulty === "All") return true;
-
-      return problem.difficulty === difficulty;
+      if (difficultyFilter === "All") return true;
+      return problem.difficulty === difficultyFilter;
     }) || [];
 
   const openTopic = (index) => {
     setSelectedTopic(index);
-    setDifficulty("All");
+    setSearchQuery("");
+    setDifficultyFilter("All");
 
     setTimeout(() => {
-      document
-        .getElementById("problem-section")
-        ?.scrollIntoView({
+      const target =
+        document.getElementById("questions-section") ||
+        document.getElementById("problem-section");
+
+      if (target) {
+        target.scrollIntoView({
           behavior: "smooth",
           block: "start",
         });
-    }, 100);
+      }
+    }, 120);
   };
 
   const toggleSolved = (questionTitle) => {
-  setSolvedQuestions((prev) => {
-    const updated = prev.includes(questionTitle)
-      ? prev.filter((title) => title !== questionTitle)
-      : [...prev, questionTitle];
+    // Optimistic update locally
+    setSolvedQuestions((prev) => {
+      const updated = prev.includes(questionTitle)
+        ? prev.filter((title) => title !== questionTitle)
+        : [...prev, questionTitle];
 
-    localStorage.setItem(
-      "intervista-solved-questions",
-      JSON.stringify(updated)
-    );
+      localStorage.setItem(
+        "intervista-solved-questions",
+        JSON.stringify(updated)
+      );
 
-    return updated;
-  });
-};
+      return updated;
+    });
+
+    // Sync with backend if logged in
+    toggleSolvedResource(questionTitle)
+      .then((res) => {
+        if (res && res.solved_titles) {
+          setSolvedQuestions(res.solved_titles);
+          localStorage.setItem("intervista-solved-questions", JSON.stringify(res.solved_titles));
+        }
+      })
+      .catch(() => {});
+  };
+
 
 const filteredQuestions =
   dsaQuestions[dsaTopics[selectedTopic]?.title]
@@ -914,7 +1501,7 @@ const filteredQuestions =
 
         <div className="dsa-grid">
 
-          {dsaTopics.map((topic, index) => (
+          {activeTopics.map((topic, index) => (
 
             <div
               className={`dsa-card ${
@@ -957,7 +1544,7 @@ const filteredQuestions =
         </div>
 
         {selectedTopic !== null && (
-  <div className="questions-panel">
+  <div className="questions-panel" id="questions-section">
     <div className="questions-header">
       <div>
         <span className="resource-badge">PRACTICE SET</span>
@@ -979,6 +1566,46 @@ const filteredQuestions =
       >
         ✕
       </button>
+    </div>
+
+    {/* Search and Difficulty Filter Controls */}
+    <div style={{ display: "flex", gap: "12px", margin: "16px 0", flexWrap: "wrap" }}>
+      <input
+        type="text"
+        placeholder="Search questions in this topic..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        style={{
+          flex: 1,
+          minWidth: "200px",
+          padding: "10px 14px",
+          borderRadius: "8px",
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          color: "#fff",
+          outline: "none"
+        }}
+      />
+      <div style={{ display: "flex", gap: "8px" }}>
+        {["All", "Easy", "Medium", "Hard"].map((level) => (
+          <button
+            key={level}
+            type="button"
+            onClick={() => setDifficultyFilter(level)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "8px",
+              border: difficultyFilter === level ? "1px solid #3b82f6" : "1px solid rgba(255,255,255,0.12)",
+              background: difficultyFilter === level ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)",
+              color: difficultyFilter === level ? "#60a5fa" : "#94a3b8",
+              cursor: "pointer",
+              fontWeight: 500
+            }}
+          >
+            {level}
+          </button>
+        ))}
+      </div>
     </div>
 
     {/* <div className="questions-list">
@@ -1120,11 +1747,11 @@ const filteredQuestions =
                   key={level}
                   type="button"
                   className={
-                    difficulty === level
+                    difficultyFilter === level
                       ? "difficulty-btn active"
                       : "difficulty-btn"
                   }
-                  onClick={() => setDifficulty(level)}
+                  onClick={() => setDifficultyFilter(level)}
                 >
                   {level}
                 </button>
@@ -1140,7 +1767,7 @@ const filteredQuestions =
             {filteredProblems.length === 0 ? (
 
               <div className="no-problems">
-                No {difficulty} problems available
+                No {difficultyFilter} problems available
                 for this topic yet.
               </div>
 
