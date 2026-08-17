@@ -3,7 +3,7 @@ import "./Pricing.css";
 const plans = [
   {
     name: "Starter",
-    price: "₹99",
+    price: "$9 USD",
     features: [
       "5 AI Interviews",
       "Basic Feedback",
@@ -14,7 +14,7 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "₹499",
+    price: "$49 USD",
     features: [
       "Unlimited Interviews",
       "AI Performance Analysis",
@@ -27,7 +27,7 @@ const plans = [
   },
   {
     name: "Team",
-    price: "₹999",
+    price: "$99 USD",
     features: [
       "Team Dashboard",
       "Recruiter Analytics",
