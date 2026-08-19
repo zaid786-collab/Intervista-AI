@@ -17,7 +17,7 @@ const faqData = [
   {
     question: "How long is a practice interview?",
     answer:
-      "Practice interviews usually last between 15–45 minutes depending on the selected interview type.",
+      "Practice interviews usually last between 15-45 minutes depending on the selected interview type.",
   },
   {
     question: "Can I repeat an interview?",

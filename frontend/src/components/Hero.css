@@ -10,8 +10,7 @@
   color: #ffffff;
 
   overflow: hidden;
-padding-top: 140px;
-
+  padding-top: 140px;
 }
 
 /* LEFT CONTENT */
@@ -50,6 +49,7 @@ padding-top: 140px;
     #379de5 45%,
     #0bade3 100%
   );
+  background-clip: text;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -281,8 +281,7 @@ padding-top: 140px;
   .hero {
     flex-direction: column;
     gap: 60px;
-
-    padding: 50px 25px;
+    padding: 120px 25px 60px;
   }
 
   .hero .left,
@@ -300,8 +299,59 @@ padding-top: 140px;
     line-height: 30px;
   }
 
+  .hero .buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero .primary,
+  .hero .secondary {
+    width: 100%;
+    padding: 16px 20px;
+  }
+
   .hero .right {
     transform: scale(0.75);
+  }
+}
+
+@media (max-width: 540px) {
+  .hero {
+    padding: 105px 18px 48px;
+  }
+
+  .hero .badge {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .hero .left h1 {
+    font-size: 2.5rem;
+    letter-spacing: -1.4px;
+  }
+
+  .hero .left p {
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+
+  .hero .voiceCircle {
+    width: 300px;
+    height: 300px;
+  }
+
+  .hero .voiceCircle::before {
+    width: 220px;
+    height: 220px;
+  }
+
+  .hero .innerCircle {
+    width: 150px;
+    height: 150px;
+  }
+
+  .hero .bars span {
+    width: 6px;
   }
 }
 
@@ -609,7 +659,8 @@ padding-top: 140px;
     #25d6ff
   );
 
-  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-background-clip: text; 
   -webkit-text-fill-color: transparent;
 }
 

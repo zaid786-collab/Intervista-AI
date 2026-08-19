@@ -10,6 +10,7 @@
 
   display: flex;
   align-items: center;
+  justify-content: space-between;
 
   padding: 0 60px;
 
@@ -18,176 +19,127 @@
   -webkit-backdrop-filter: blur(14px);
 
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-
   isolation: isolate;
 }
-
-
-/* ================= LOGO ================= */
 
 .logo {
   display: flex;
   align-items: center;
   gap: 10px;
-
   background: none;
   border: none;
   padding: 0;
   margin: 0;
-
   color: inherit;
   cursor: pointer;
   font: inherit;
-
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .logo:hover {
   background: none;
 }
 
+.logoBox {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #356dff, #25d6ff);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 8px 22px rgba(37, 214, 255, 0.35);
+}
 
-/* ================= NAV MENU ================= */
+.logo h2 {
+  font-size: clamp(1.1rem, 1.6vw, 1.8rem);
+  margin: 0;
+}
 
 .navMenu {
   flex: 1;
-
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   margin-left: 70px;
 }
-
-
-/* ================= NAV LINKS ================= */
 
 .navLinks {
   display: flex;
   align-items: center;
-  gap: 42px;
-
+  gap: 18px;
   list-style: none;
   margin: 0;
   padding: 0;
+  flex-wrap: wrap;
 }
-
-
-/* Individual nav item */
 
 .navLinks li {
   position: relative;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  height: 44px;
+  min-height: 44px;
   padding: 0 16px;
-
   color: #b7bfd3;
   font-size: 18px;
   font-weight: 500;
-
   cursor: pointer;
-
   border-radius: 12px;
-
-  transition:
-    color 0.3s ease,
-    background 0.3s ease,
-    box-shadow 0.3s ease;
+  transition: color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
 }
-
-
-/* Hover */
 
 .navLinks li:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.04);
-
   backdrop-filter: blur(8px);
 }
 
-
-/* ================= ANIMATED UNDERLINE ================= */
-
 .navLinks li::after {
   content: "";
-
   position: absolute;
-
   left: 50%;
   bottom: -6px;
-
   transform: translateX(-50%);
-
   width: 0;
   height: 2px;
-
   border-radius: 20px;
-
-  background: linear-gradient(
-    90deg,
-    #356dff,
-    #25d6ff
-  );
-
+  background: linear-gradient(90deg, #356dff, #25d6ff);
   transition: width 0.35s ease;
-
-  /* IMPORTANT */
   pointer-events: none;
 }
-
-
-/* Hover underline */
 
 .navLinks li:hover::after {
   width: 70%;
 }
 
-
-/* ================= NAV BUTTON ================= */
-
 .navLinkButton {
   border: none;
   background: transparent;
-
   color: inherit;
   font: inherit;
-
   cursor: pointer;
-
   padding: 0;
   margin: 0;
-
   width: 100%;
   height: 100%;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   position: relative;
-
-  /* Keep button above every decorative element */
   z-index: 10;
-
-  /* Make browser focus styling predictable */
   outline: none;
 }
-
-
-/* ================= ACTIVE PAGE ================= */
 
 .navLinks li.active-page {
   color: #ffffff;
   background: rgba(53, 109, 255, 0.18);
   border: 1px solid rgba(37, 214, 255, 0.45);
-  box-shadow:
-    0 0 22px rgba(37, 214, 255, 0.3),
-    inset 0 0 10px rgba(53, 109, 255, 0.25);
+  box-shadow: 0 0 22px rgba(37, 214, 255, 0.3), inset 0 0 10px rgba(53, 109, 255, 0.25);
   animation: navActiveGlow 3s ease-in-out infinite alternate;
 }
 
@@ -202,7 +154,6 @@
   }
 }
 
-/* Permanent underline */
 .navLinks li.active-page::after {
   width: 75%;
   height: 3px;
@@ -210,99 +161,59 @@
   box-shadow: 0 0 12px #25d6ff;
 }
 
-/* Active button */
 .navLinks li.active-page .navLinkButton {
   color: #ffffff;
   font-weight: 600;
   text-shadow: 0 0 10px rgba(37, 214, 255, 0.5);
 }
 
-/* Profile active state */
-.profileBtn.active-page {
-  border-color: #25d6ff !important;
-  background: rgba(37, 214, 255, 0.15) !important;
-  box-shadow: 0 0 25px rgba(37, 214, 255, 0.4), inset 0 0 10px rgba(53, 109, 255, 0.3) !important;
-  color: #ffffff !important;
-  animation: navActiveGlow 3s ease-in-out infinite alternate;
-}
-
-/* Login button active state */
-.loginBtn.active-page {
-  border-color: #25d6ff !important;
-  background: rgba(37, 214, 255, 0.15) !important;
-  box-shadow: 0 0 25px rgba(37, 214, 255, 0.4) !important;
-  animation: navActiveGlow 3s ease-in-out infinite alternate;
-}
-
-/* Start button active state */
+.profileBtn.active-page,
+.loginBtn.active-page,
 .startBtn.active-page {
-  box-shadow: 0 0 35px rgba(38, 171, 255, 0.8), inset 0 0 12px rgba(255, 255, 255, 0.4) !important;
-  animation: navActiveGlow 3s ease-in-out infinite alternate;
+  border-color: #25d6ff !important;
+  box-shadow: 0 0 25px rgba(37, 214, 255, 0.4), inset 0 0 10px rgba(53, 109, 255, 0.3) !important;
 }
-
-
-/* ================= RIGHT SIDE ================= */
 
 .navRight {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
-
-/* ================= LOGIN ================= */
+.loginBtn,
+.profileBtn,
+.startBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  transition: all 0.35s ease;
+  text-decoration: none;
+}
 
 .loginBtn {
   position: relative;
   overflow: hidden;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
   width: 110px;
   height: 56px;
-
-  border-radius: 16px;
-
-  text-decoration: none;
-
   color: #ffffff;
-
   font-size: 17px;
   font-weight: 600;
-
   background: #11151f;
-
   border: 1px solid rgba(255, 255, 255, 0.12);
-
   cursor: pointer;
-
-  transition: 0.35s;
-
   z-index: 10;
 }
 
 .loginBtn::before {
   content: "";
-
   position: absolute;
-
   top: 0;
   left: -150%;
-
   width: 60%;
   height: 100%;
-
-  background: linear-gradient(
-    120deg,
-    transparent,
-    rgba(255, 255, 255, 0.8),
-    transparent
-  );
-
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.8), transparent);
   transform: skewX(-25deg);
-
   pointer-events: none;
 }
 
@@ -312,85 +223,50 @@
 
 .loginBtn:hover {
   border-color: #2ac8ff;
-
-  box-shadow:
-    0 0 20px rgba(42, 200, 255, 0.35);
+  box-shadow: 0 0 20px rgba(42, 200, 255, 0.35);
 }
-
-
-/* ================= START BUTTON ================= */
 
 .startBtn {
   height: 56px;
-
   padding: 0 32px;
-
   border: none;
-  border-radius: 16px;
-
-  background: linear-gradient(
-    90deg,
-    #356dff,
-    #25d6ff
-  );
-
+  background: linear-gradient(90deg, #356dff, #25d6ff);
   color: #ffffff;
-
   font-size: 18px;
   font-weight: 600;
-
   cursor: pointer;
-
-  transition: 0.35s;
-
   position: relative;
   z-index: 10;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  
 }
 
 .startBtn:hover {
   transform: translateY(-2px);
-
-  box-shadow:
-    0 12px 35px rgba(38, 171, 255, 0.45);
+  box-shadow: 0 12px 35px rgba(38, 171, 255, 0.45);
 }
 
+.profileBtn {
+  height: 56px;
+  padding: 0 20px;
+  background: #11151f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+}
 
-/* ================= USER ================= */
+.profileBtn:hover {
+  background: rgba(53, 109, 255, 0.12);
+  border-color: rgba(53, 109, 255, 0.45);
+  box-shadow: 0 0 20px rgba(53, 109, 255, 0.18);
+  transform: translateY(-1px);
+}
 
 .navUser {
   color: #9ecbff;
-
   font-size: 0.9rem;
-
   white-space: nowrap;
 }
 
-
-/* ================= ANIMATION ================= */
-
-@keyframes shine {
-  0% {
-    left: -150%;
-  }
-
-  100% {
-    left: 180%;
-  }
-}
-
-/* ================= NAVBAR CLICK FIX ================= */
-
-.navbar {
-  position: fixed;
-  z-index: 999999;
-  pointer-events: auto;
-}
-
-/* Make sure navigation stays clickable */
+.navbar,
 .navMenu,
 .navLinks,
 .navLinks li,
@@ -398,143 +274,147 @@
 .navRight,
 .logo,
 .loginBtn,
-.startBtn {
+.startBtn,
+.profileBtn {
   pointer-events: auto;
 }
 
-/* Navigation buttons should always be above page content */
 .navLinkButton {
   position: relative;
   z-index: 1000000;
 }
 
-/* Active/hover effects */
 .navLinks li {
   position: relative;
   z-index: 100000;
 }
 
-/* ================= PROFILE BUTTON ================= */
-
-.profileBtn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  height: 56px;
-  padding: 5px 14px 5px 7px;
-
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 16px;
-
-  background: rgba(255, 255, 255, 0.04);
-
-  color: #fff;
-
-  cursor: pointer;
-
-  transition: all 0.3s ease;
-}
-
-.profileBtn:hover {
-  background: rgba(53, 109, 255, 0.12);
-
-  border-color: rgba(53, 109, 255, 0.45);
-
-  box-shadow: 0 0 20px rgba(53, 109, 255, 0.18);
-
-  transform: translateY(-1px);
-}
-
-
-/* Profile circle */
-
-.profileIcon {
-  width: 40px;
-  height: 40px;
-
-  display: flex;
-  align-items: center;
+.navToggle {
+  display: none;
+  flex-direction: column;
   justify-content: center;
-
-  border-radius: 50%;
-
-  background: linear-gradient(
-    135deg,
-    #356dff,
-    #25d6ff
-  );
-
-  color: white;
-
-  font-size: 17px;
-  font-weight: 700;
-
+  gap: 5px;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(17, 21, 31, 0.9);
+  cursor: pointer;
   flex-shrink: 0;
 }
 
-
-/* Profile text */
-
-.profileInfo {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-
-  line-height: 1.2;
+.navToggle span {
+  width: 22px;
+  height: 2px;
+  background: #fff;
+  border-radius: 99px;
+  margin: 0 auto;
+  transition: transform 0.25s ease, opacity 0.25s ease;
 }
 
-.profileName {
-  color: #ffffff;
-
-  font-size: 14px;
-  font-weight: 600;
-
-  white-space: nowrap;
+.navToggle.open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
 }
 
-.profileRole {
-  color: #8d98b3;
-
-  font-size: 11px;
-
-  margin-top: 3px;
-
-  white-space: nowrap;
+.navToggle.open span:nth-child(2) {
+  opacity: 0;
 }
 
-
-
-.profileBtn {
-  height: 56px;
-  padding: 0 20px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  border-radius: 16px;
-
-  background: #11151f;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-
-  color: #ffffff;
-  font-size: 17px;
-  font-weight: 600;
-
-  cursor: pointer;
-
-  transition: all 0.35s ease;
+.navToggle.open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
 }
 
-.profileBtn:hover {
-  border-color: #2ac8ff;
-  background: rgba(42, 200, 255, 0.08);
-  box-shadow: 0 0 20px rgba(42, 200, 255, 0.25);
-  transform: translateY(-2px);
+@keyframes shine {
+  0% {
+    left: -150%;
+  }
+  100% {
+    left: 180%;
+  }
 }
 
-.profileIcon {
-  font-size: 18px;
+@media (max-width: 1080px) {
+  .navbar {
+    padding: 0 24px;
+  }
+
+  .navMenu {
+    margin-left: 20px;
+  }
+
+  .navLinks {
+    gap: 10px;
+  }
+
+  .navRight {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 940px) {
+  .navbar {
+    height: auto;
+    min-height: 90px;
+    padding: 14px 20px;
+    flex-wrap: wrap;
+  }
+
+  .navToggle {
+    display: flex;
+  }
+
+  .navMenu {
+    display: none;
+    flex: 1 1 100%;
+    margin-left: 0;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    padding-top: 10px;
+  }
+
+  .navMenu.open {
+    display: flex;
+  }
+
+  .navLinks,
+  .navRight {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .navLinks li,
+  .navLinkButton,
+  .navRight a,
+  .navRight button {
+    width: 100%;
+  }
+
+  .navLinks li {
+    min-height: 52px;
+  }
+
+  .loginBtn,
+  .profileBtn,
+  .startBtn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .logo h2 {
+    font-size: 1.05rem;
+  }
+
+  .logoBox {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+  }
+
+  .navbar {
+    padding: 12px 16px;
+  }
 }
