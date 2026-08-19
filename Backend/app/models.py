@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 
 from app.database import Base
 
@@ -17,11 +17,19 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
 
+    # Candidate profile attributes
+    bio = Column(String(500), nullable=True, default="Aspiring Software Engineer preparing for top tech interviews.")
+    target_role = Column(String(120), nullable=True, default="Full Stack Developer")
+    skills = Column(String(500), nullable=True, default="DSA, JavaScript, React.js, Node.js, Python, System Design")
+
     # The very first user to sign up becomes an admin automatically.
     is_admin = Column(Boolean, default=False, nullable=False)
 
     # Overall progress percentage (0-100).
-    progress = Column(Integer, default=0, nullable=False)
+    progress = Column(Integer, default=15, nullable=False)
+
+    # Accumulated XP points
+    xp = Column(Integer, default=250, nullable=False)
 
     is_active = Column(Boolean, default=True, nullable=False)
 
@@ -63,6 +71,16 @@ class UserSolvedResource(Base):
     solved_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
+class UserCompanySolved(Base):
+    __tablename__ = "user_company_solved"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=False)
+    company_name = Column(String(120), index=True, nullable=False)
+    question_title = Column(String(255), index=True, nullable=False)
+    solved_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
 class Interview(Base):
     __tablename__ = "interviews"
 
@@ -77,6 +95,7 @@ class Interview(Base):
     date = Column(String(50), nullable=True)
     time = Column(String(50), nullable=True)
     mode = Column(String(50), nullable=True)  # Virtual, Online Coding, In-Person
+    feedback = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
@@ -125,4 +144,39 @@ class DashboardMetric(Base):
     best_score = Column(String(20), default="92%", nullable=False)
     practice_time = Column(String(20), default="18 hrs", nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
-
+
+
+class ResumeAnalysisRecord(Base):
+    __tablename__ = "resume_analyses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    target_role = Column(String(120), nullable=False)
+    ats_score = Column(Integer, nullable=False)
+    strengths = Column(Text, nullable=True)
+    suggestions = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class DailyChallenge(Base):
+    __tablename__ = "daily_challenges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    difficulty = Column(String(20), default="Medium", nullable=False)
+    description = Column(Text, nullable=False)
+    time_limit = Column(String(50), default="45 mins", nullable=False)
+    xp_reward = Column(Integer, default=150, nullable=False)
+    tags = Column(String(255), default="DSA, Problem Solving", nullable=True)
+    sample_input = Column(Text, nullable=True)
+    sample_output = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class UserSolvedChallenge(Base):
+    __tablename__ = "user_solved_challenges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=False)
+    challenge_id = Column(Integer, index=True, nullable=False)
+    solved_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)

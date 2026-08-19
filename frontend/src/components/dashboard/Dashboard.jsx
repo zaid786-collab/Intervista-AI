@@ -148,8 +148,12 @@ function Dashboard() {
           className="dashboard-row"
           id="analytics-section"
         >
-          <Analytics performanceData={dashboardData?.weekly_performance} />
-          <AIInsights />
+          <Analytics
+            performanceData={dashboardData?.weekly_performance}
+            recentInterviews={dashboardData?.recent_interviews}
+            upcomingInterviews={dashboardData?.upcoming_interviews}
+          />
+          <AIInsights metrics={metrics} />
         </div>
 
         {/* Feedback */}
@@ -158,7 +162,7 @@ function Dashboard() {
           id="feedback-section"
         >
           <Recent interviews={dashboardData?.recent_interviews} />
-          <Upcoming />
+          <Upcoming interviews={dashboardData?.upcoming_interviews} />
         </div>
 
         <div className="dashboard-row">
@@ -171,7 +175,7 @@ function Dashboard() {
           <Leaderboard />
         </div>
 
-        <div className="dashboard-row">
+        <div className="dashboard-row" id="notifications-section">
           <Notifications notifications={dashboardData?.notifications} />
           <Schedule interviews={dashboardData?.upcoming_interviews} />
         </div>

@@ -1,0 +1,26 @@
+{
+  "name": "intervista-ai-root",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Intervista AI - AI Mock Interview & Preparation Platform",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "start": "npm --prefix frontend run dev",
+    "dev:all": "concurrently \"npm --prefix frontend run dev\" \"npm run backend\"",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "frontend": "npm --prefix frontend run dev",
+    "backend": "cd Backend && .\\venv\\Scripts\\uvicorn app.main:app --reload --port 8000"
+  },
+  "keywords": [
+    "intervista-ai",
+    "mock-interviews",
+    "fastapi",
+    "react"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

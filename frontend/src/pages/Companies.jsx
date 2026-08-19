@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./Companies.css";
 import companyData from "./companyData";
+import { fetchCompanySolved, toggleCompanySolved } from "../api";
 
 const defaultCompany = {
   stats: ["50+", "30+", "10+"],
@@ -43,16 +44,39 @@ function Companies() {
   const [activeSection, setActiveSection] =
     useState("dsa");
 
+  useEffect(() => {
+    let isMounted = true;
+    fetchCompanySolved(selectedCompany)
+      .then((solvedList) => {
+        if (isMounted && Array.isArray(solvedList)) {
+          const map = {};
+          solvedList.forEach((title) => {
+            map[`${selectedCompany}-${title}`] = true;
+          });
+          setSolvedQuestions((prev) => ({ ...prev, ...map }));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCompany]);
+
   const data =
     companyData[selectedCompany] || defaultCompany;
 
   const toggleSolved = (questionTitle) => {
     const key = `${selectedCompany}-${questionTitle}`;
+    const newState = !solvedQuestions[key];
 
     setSolvedQuestions((prev) => ({
       ...prev,
-      [key]: !prev[key],
+      [key]: newState,
     }));
+
+    // Sync with backend
+    toggleCompanySolved(selectedCompany, questionTitle).catch(() => {});
   };
 
   const isSolved = (questionTitle) => {

@@ -1,6 +1,7 @@
 from app.database import SessionLocal, engine, Base
 from app import models
 from app.routers.resources import DEFAULT_DSA_TOPICS
+from app.routers.challenges import DEFAULT_CHALLENGES
 
 DEFAULT_WEEKLY_PERFORMANCE = [
     {"day_name": "Mon", "score": 70},
@@ -40,6 +41,7 @@ DEFAULT_NOTIFICATIONS = [
     {"title": "New Coding Challenge", "desc": "Today's DSA question is available", "color": "#22c55e", "time": "1 hour ago", "is_read": False},
     {"title": "Interview Completed", "desc": "Feedback report is ready", "color": "#f59e0b", "time": "Yesterday", "is_read": False},
 ]
+
 
 def seed_db():
     Base.metadata.create_all(bind=engine)
@@ -103,6 +105,24 @@ def seed_db():
             db.commit()
             print("Notifications seeded!")
 
+        # Seed Daily Challenges
+        if db.query(models.DailyChallenge).count() == 0:
+            print("Seeding daily challenges...")
+            for ch in DEFAULT_CHALLENGES:
+                db.add(models.DailyChallenge(
+                    id=ch["id"],
+                    title=ch["title"],
+                    difficulty=ch["difficulty"],
+                    description=ch["description"],
+                    time_limit=ch["time_limit"],
+                    xp_reward=ch["xp_reward"],
+                    tags=ch["tags"],
+                    sample_input=ch.get("sample_input"),
+                    sample_output=ch.get("sample_output"),
+                ))
+            db.commit()
+            print("Daily challenges seeded!")
+
         print("Database seed complete!")
 
     except Exception as e:
@@ -110,6 +130,7 @@ def seed_db():
         print(f"Error seeding database: {e}")
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     seed_db()
