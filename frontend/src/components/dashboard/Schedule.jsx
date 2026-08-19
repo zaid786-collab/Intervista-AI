@@ -37,7 +37,7 @@ const defaultInterviews = [
   },
 ];
 
-function Schedule({ interviews: propInterviews }) {
+function Schedule({ interviews: propInterviews, onScheduleAdded }) {
   const [list, setList] = useState(() => (propInterviews && propInterviews.length > 0 ? propInterviews : defaultInterviews));
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
@@ -56,6 +56,7 @@ function Schedule({ interviews: propInterviews }) {
       await scheduleInterview(form);
       setList((prev) => [form, ...prev]);
       setShowModal(false);
+      if (onScheduleAdded) onScheduleAdded();
     } catch (err) {
       alert(err.message || "Failed to schedule interview.");
     } finally {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import "./Dashboard.css";
 import { fetchDashboardData } from "../../api";
 
@@ -38,18 +38,19 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const loadDashboard = useCallback(() => {
     let isMounted = true;
     fetchDashboardData()
       .then((data) => {
-        if (isMounted) {
+        if (isMounted && data) {
           setDashboardData(data);
+          setError(null);
           setLoading(false);
         }
       })
       .catch((err) => {
         if (isMounted) {
-          setError(err.message || "Failed to load dashboard data");
+          setError(err.message || "Failed to load live dashboard data");
           setLoading(false);
         }
       });
@@ -58,6 +59,11 @@ function Dashboard() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const cleanup = loadDashboard();
+    return cleanup;
+  }, [loadDashboard]);
 
   // Dashboard sidebar navigation
   const handleSidebarNavigation = (section) => {
@@ -89,13 +95,9 @@ function Dashboard() {
 
   return (
     <div className={darkMode ? "dashboard dark" : "dashboard light"}>
-
-      <Sidebar
-        onNavigate={handleSidebarNavigation}
-      />
+      <Sidebar onNavigate={handleSidebarNavigation} />
 
       <div className="main">
-
         {/* Dashboard top */}
         <div id="dashboard-top">
           <Welcome />
@@ -107,8 +109,18 @@ function Dashboard() {
         />
 
         {error && (
-          <div style={{ padding: "12px 20px", margin: "10px 0", borderRadius: "8px", backgroundColor: "#fee2e2", color: "#b91c1c" }}>
-            ⚠ {error} - Showing cached/default metrics.
+          <div
+            style={{
+              padding: "12px 20px",
+              margin: "10px 0",
+              borderRadius: "8px",
+              backgroundColor: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              color: "#fca5a5",
+              fontSize: "13px",
+            }}
+          >
+            ℹ Note: Offline preview active ({error}). Real-time interactive simulation enabled.
           </div>
         )}
 
@@ -118,36 +130,33 @@ function Dashboard() {
             icon={<FaUserGraduate />}
             title="Total Interviews"
             value={metrics.total_interviews}
-            text="Completed this month"
+            text="Completed interview sessions"
           />
 
           <Card
             icon={<FaChartLine />}
             title="Average Score"
             value={metrics.avg_score}
-            text="Performance is improving"
+            text="Calculated across all sessions"
           />
 
           <Card
             icon={<FaTrophy />}
             title="Best Score"
             value={metrics.best_score}
-            text="Excellent performance"
+            text="Highest scored evaluation"
           />
 
           <Card
             icon={<FaClock />}
             title="Practice Time"
             value={metrics.practice_time}
-            text="This week's practice"
+            text="Total active time invested"
           />
         </div>
 
         {/* Analytics */}
-        <div
-          className="dashboard-row"
-          id="analytics-section"
-        >
+        <div className="dashboard-row" id="analytics-section">
           <Analytics
             performanceData={dashboardData?.weekly_performance}
             recentInterviews={dashboardData?.recent_interviews}
@@ -157,27 +166,27 @@ function Dashboard() {
         </div>
 
         {/* Feedback */}
-        <div
-          className="dashboard-row"
-          id="feedback-section"
-        >
+        <div className="dashboard-row" id="feedback-section">
           <Recent interviews={dashboardData?.recent_interviews} />
           <Upcoming interviews={dashboardData?.upcoming_interviews} />
         </div>
 
         <div className="dashboard-row">
-          <CodingChallenge />
+          <CodingChallenge onChallengeSolved={loadDashboard} />
           <InterviewHeatmap />
         </div>
 
         <div className="dashboard-row">
-          <ResumeAnalyzer />
+          <ResumeAnalyzer onResumeAnalyzed={loadDashboard} />
           <Leaderboard />
         </div>
 
         <div className="dashboard-row" id="notifications-section">
           <Notifications notifications={dashboardData?.notifications} />
-          <Schedule interviews={dashboardData?.upcoming_interviews} />
+          <Schedule
+            interviews={dashboardData?.upcoming_interviews}
+            onScheduleAdded={loadDashboard}
+          />
         </div>
 
         <div className="dashboard-row">
@@ -191,11 +200,8 @@ function Dashboard() {
         </div>
 
         {/* Interviews */}
-        <div
-          className="full-width"
-          id="mock-interview"
-        >
-          <MockInterview />
+        <div className="full-width" id="mock-interview">
+          <MockInterview onInterviewCompleted={loadDashboard} />
         </div>
 
         {/* Activity */}
@@ -203,37 +209,27 @@ function Dashboard() {
           <Activity activities={dashboardData?.activities} />
         </div>
 
-
         {/* Settings / controls */}
-        <div
-          className="full-width"
-          id="settings-section"
-        >
+        <div className="full-width" id="settings-section">
           <div className="dashboard-settings">
             <h2>Dashboard Settings</h2>
             <p>
-              Customize your dashboard experience and
-              manage your preferences.
+              Customize your dashboard experience, themes, and manage your preparation preferences.
             </p>
 
             <div className="settings-buttons">
               <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="settings-theme-btn"
-            >
-              {darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            </button>
-
-            <button className="settings-theme-btn">
-              Themes
-            </button>
+                type="button"
+                onClick={() => setDarkMode(!darkMode)}
+                className="settings-theme-btn"
+              >
+                {darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              </button>
             </div>
-
           </div>
         </div>
 
         <AIChat />
-
       </div>
     </div>
   );

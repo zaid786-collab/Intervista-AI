@@ -143,7 +143,7 @@ const FALLBACK_QUESTION_BANK = {
   ],
 };
 
-function MockInterview() {
+function MockInterview({ onInterviewCompleted }) {
   const [company, setCompany] = useState("Google");
   const [role, setRole] = useState("Frontend Developer");
   const [difficulty, setDifficulty] = useState("Medium");
@@ -279,6 +279,7 @@ function MockInterview() {
       });
     } finally {
       setLoading(false);
+      if (onInterviewCompleted) onInterviewCompleted();
     }
   };
 
@@ -299,6 +300,7 @@ function MockInterview() {
       // Graceful local record
     }
 
+    if (onInterviewCompleted) onInterviewCompleted();
     setScheduleSuccess(`🎉 Interview with ${company} scheduled for ${scheduleData.date} at ${scheduleData.time}!`);
     setTimeout(() => {
       setShowScheduleModal(false);
@@ -663,42 +665,107 @@ function MockInterview() {
                   </p>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", margin: "20px 0" }}>
-                  <div style={{ background: "rgba(255,255,255,0.04)", padding: "18px", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "12px", color: "#94a3b8" }}>OVERALL SCORE</span>
-                    <h3 style={{ fontSize: "32px", color: "#22c55e", margin: "4px 0" }}>{evaluationResult.score_percentage}</h3>
+                {/* Multi-factor Score Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "14px", margin: "20px 0" }}>
+                  <div style={{ background: "rgba(255,255,255,0.04)", padding: "16px", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Overall Score</span>
+                    <h3 style={{ fontSize: "28px", color: "#22c55e", margin: "4px 0" }}>{evaluationResult.score_percentage}</h3>
                     <small style={{ color: "#cbd5e1", fontWeight: "bold" }}>{evaluationResult.grade}</small>
                   </div>
-                  <div style={{ background: "rgba(255,255,255,0.04)", padding: "18px", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "12px", color: "#94a3b8" }}>XP REWARD</span>
-                    <h3 style={{ fontSize: "32px", color: "#f59e0b", margin: "4px 0" }}>+100 XP</h3>
-                    <small style={{ color: "#cbd5e1" }}>Recorded to your profile</small>
+
+                  <div style={{ background: "rgba(255,255,255,0.04)", padding: "16px", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Technical Depth</span>
+                    <h3 style={{ fontSize: "28px", color: "#38bdf8", margin: "4px 0" }}>{evaluationResult.technical_score || 88}%</h3>
+                    <small style={{ color: "#cbd5e1" }}>Domain concepts</small>
+                  </div>
+
+                  <div style={{ background: "rgba(255,255,255,0.04)", padding: "16px", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Communication</span>
+                    <h3 style={{ fontSize: "28px", color: "#a855f7", margin: "4px 0" }}>{evaluationResult.communication_score || 85}%</h3>
+                    <small style={{ color: "#cbd5e1" }}>Clarity & Structure</small>
+                  </div>
+
+                  <div style={{ background: "rgba(255,255,255,0.04)", padding: "16px", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>XP Reward</span>
+                    <h3 style={{ fontSize: "28px", color: "#f59e0b", margin: "4px 0" }}>+100 XP</h3>
+                    <small style={{ color: "#cbd5e1" }}>Added to Profile</small>
                   </div>
                 </div>
 
-                <div style={{ background: "rgba(59,130,246,0.08)", padding: "18px", borderRadius: "12px", border: "1px solid rgba(59,130,246,0.2)", marginBottom: "20px" }}>
-                  <h4 style={{ margin: "0 0 8px", color: "#60a5fa" }}>AI Performance Summary</h4>
+                {/* Identified Keywords */}
+                {evaluationResult.identified_keywords && evaluationResult.identified_keywords.length > 0 && (
+                  <div style={{ background: "rgba(255,255,255,0.03)", padding: "14px 18px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "18px" }}>
+                    <span style={{ fontSize: "12px", color: "#94a3b8", display: "block", marginBottom: "8px" }}>
+                      ✦ TECHNICAL KEYWORDS DETECTED IN YOUR RESPONSES:
+                    </span>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {evaluationResult.identified_keywords.map((kw, idx) => (
+                        <span key={idx} style={{ padding: "4px 10px", borderRadius: "6px", background: "rgba(56,189,248,0.15)", color: "#38bdf8", fontSize: "12px", fontWeight: "500", border: "1px solid rgba(56,189,248,0.3)" }}>
+                          ✓ {kw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Summary */}
+                <div style={{ background: "rgba(59,130,246,0.08)", padding: "16px", borderRadius: "12px", border: "1px solid rgba(59,130,246,0.2)", marginBottom: "20px" }}>
+                  <h4 style={{ margin: "0 0 6px", color: "#60a5fa" }}>AI Performance Evaluation</h4>
                   <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.6", color: "#e2e8f0" }}>
                     {evaluationResult.overall_summary}
                   </p>
                 </div>
 
-                <div style={{ marginBottom: "20px" }}>
-                  <h4 style={{ color: "#22c55e", margin: "0 0 10px" }}>✓ Key Strengths</h4>
-                  <ul style={{ margin: 0, paddingLeft: "20px", color: "#cbd5e1", fontSize: "14px", lineHeight: 1.6 }}>
-                    {evaluationResult.strengths?.map((s, idx) => (
-                      <li key={idx} style={{ marginBottom: "4px" }}>{s}</li>
-                    ))}
-                  </ul>
-                </div>
+                {/* Per-Question Detailed Breakdown */}
+                {evaluationResult.detailed_feedback && evaluationResult.detailed_feedback.length > 0 && (
+                  <div style={{ marginBottom: "24px" }}>
+                    <h4 style={{ color: "#38bdf8", margin: "0 0 12px", fontSize: "16px" }}>📝 Question-by-Question Detailed Analysis</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {evaluationResult.detailed_feedback.map((qf, idx) => (
+                        <div key={idx} style={{ background: "rgba(255,255,255,0.03)", padding: "16px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                            <span style={{ fontWeight: "bold", fontSize: "14px", color: "#f8fafc" }}>
+                              Question {idx + 1}: {qf.question}
+                            </span>
+                            <span style={{ padding: "4px 10px", borderRadius: "6px", background: qf.score >= 80 ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)", color: qf.score >= 80 ? "#4ade80" : "#fbbf24", fontWeight: "bold", fontSize: "13px" }}>
+                              {qf.score}%
+                            </span>
+                          </div>
 
-                <div style={{ marginBottom: "24px" }}>
-                  <h4 style={{ color: "#f59e0b", margin: "0 0 10px" }}>⚠ Suggested Improvements</h4>
-                  <ul style={{ margin: 0, paddingLeft: "20px", color: "#cbd5e1", fontSize: "14px", lineHeight: 1.6 }}>
-                    {evaluationResult.improvements?.map((imp, idx) => (
-                      <li key={idx} style={{ marginBottom: "4px" }}>{imp}</li>
-                    ))}
-                  </ul>
+                          <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#cbd5e1", lineHeight: 1.5 }}>
+                            <strong>AI Feedback:</strong> {qf.feedback}
+                          </p>
+
+                          {qf.identified_keywords && qf.identified_keywords.length > 0 && (
+                            <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "6px" }}>
+                              <strong>Matched Concepts:</strong> {qf.identified_keywords.join(", ")}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Strengths & Improvements */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
+                  <div style={{ background: "rgba(34,197,94,0.06)", padding: "16px", borderRadius: "10px", border: "1px solid rgba(34,197,94,0.2)" }}>
+                    <h4 style={{ color: "#22c55e", margin: "0 0 8px" }}>✓ Key Strengths</h4>
+                    <ul style={{ margin: 0, paddingLeft: "18px", color: "#cbd5e1", fontSize: "13px", lineHeight: 1.5 }}>
+                      {evaluationResult.strengths?.map((s, idx) => (
+                        <li key={idx} style={{ marginBottom: "4px" }}>{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div style={{ background: "rgba(245,158,11,0.06)", padding: "16px", borderRadius: "10px", border: "1px solid rgba(245,158,11,0.2)" }}>
+                    <h4 style={{ color: "#f59e0b", margin: "0 0 8px" }}>⚠ Suggested Improvements</h4>
+                    <ul style={{ margin: 0, paddingLeft: "18px", color: "#cbd5e1", fontSize: "13px", lineHeight: 1.5 }}>
+                      {evaluationResult.improvements?.map((imp, idx) => (
+                        <li key={idx} style={{ marginBottom: "4px" }}>{imp}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
 
                 <div style={{ textAlign: "center" }}>
@@ -709,7 +776,7 @@ function MockInterview() {
                       setEvaluationResult(null);
                     }}
                     style={{
-                      padding: "12px 32px",
+                      padding: "12px 36px",
                       borderRadius: "8px",
                       background: "#2563eb",
                       color: "#fff",

@@ -11,7 +11,7 @@ import {
 } from "react-icons/fa";
 import { fetchDailyChallenge, solveDailyChallenge } from "../../api";
 
-function CodingChallenge() {
+function CodingChallenge({ onChallengeSolved }) {
   const [challenge, setChallenge] = useState({
     id: 1,
     title: "Longest Consecutive Sequence",
@@ -56,6 +56,7 @@ function CodingChallenge() {
 
       setSolveResult(res);
       setChallenge((prev) => ({ ...prev, is_solved: true }));
+      if (onChallengeSolved) onChallengeSolved();
     } catch (err) {
       alert(err.message || "Failed to submit challenge.");
     } finally {

@@ -20,7 +20,7 @@ Experience:
 - Maintained 95%+ test coverage using PyTest and Jest with automated CI/CD pipelines in GitHub Actions.
 Links: github.com/candidate, linkedin.com/in/candidate`;
 
-function ResumeAnalyzer() {
+function ResumeAnalyzer({ onResumeAnalyzed }) {
   const [showModal, setShowModal] = useState(false);
   const [resumeText, setResumeText] = useState(SAMPLE_RESUME);
   const [targetRole, setTargetRole] = useState("Full Stack Developer");
@@ -62,6 +62,7 @@ function ResumeAnalyzer() {
 
       setAnalysis(data);
       setShowModal(false);
+      if (onResumeAnalyzed) onResumeAnalyzed();
     } catch (err) {
       alert(err.message || "Failed to analyze resume.");
     } finally {

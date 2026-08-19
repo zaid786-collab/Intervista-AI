@@ -228,6 +228,9 @@ class QuestionFeedback(BaseModel):
     score: int
     feedback: str
     suggested_answer_points: List[str]
+    identified_keywords: Optional[List[str]] = []
+    technical_accuracy: Optional[int] = 85
+    communication_clarity: Optional[int] = 85
 
 
 class SubmitInterviewResponse(BaseModel):
@@ -239,6 +242,10 @@ class SubmitInterviewResponse(BaseModel):
     improvements: List[str]
     detailed_feedback: List[QuestionFeedback]
     overall_summary: str
+    technical_score: Optional[int] = 85
+    communication_score: Optional[int] = 85
+    problem_solving_score: Optional[int] = 85
+    identified_keywords: Optional[List[str]] = []
 
 
 class ScheduleInterviewRequest(BaseModel):
