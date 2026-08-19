@@ -1,3 +1,38 @@
+:root {
+    --accent-primary: #2563eb;
+    --accent-secondary: #0ea5e9;
+    --accent-glow: rgba(37, 99, 235, 0.4);
+    --accent-gradient: linear-gradient(135deg, #2563eb, #0ea5e9);
+}
+
+.theme-cyber {
+    --accent-primary: #2563eb;
+    --accent-secondary: #0ea5e9;
+    --accent-glow: rgba(37, 99, 235, 0.4);
+    --accent-gradient: linear-gradient(135deg, #2563eb, #0ea5e9);
+}
+
+.theme-purple {
+    --accent-primary: #7c3aed;
+    --accent-secondary: #ec4899;
+    --accent-glow: rgba(124, 58, 237, 0.4);
+    --accent-gradient: linear-gradient(135deg, #7c3aed, #ec4899);
+}
+
+.theme-emerald {
+    --accent-primary: #059669;
+    --accent-secondary: #10b981;
+    --accent-glow: rgba(16, 185, 129, 0.4);
+    --accent-gradient: linear-gradient(135deg, #059669, #10b981);
+}
+
+.theme-amber {
+    --accent-primary: #ea580c;
+    --accent-secondary: #f59e0b;
+    --accent-glow: rgba(245, 158, 11, 0.4);
+    --accent-gradient: linear-gradient(135deg, #ea580c, #f59e0b);
+}
+
 .dark{
     --bg-main: 
     radial-gradient(circle at 80% 15%, rgba(37, 121, 255, 0.12), transparent 30%),
@@ -16,19 +51,19 @@
 
     --table-hover:#294d85;
 }
-/* 
+
 .light{
-    --bg-main:#f4f7fc;
+    --bg-main:#f8fafc;
     --bg-sidebar:#ffffff;
     --bg-card:#ffffff;
-    --bg-card-hover:#e2e8f0;
+    --bg-card-hover:#f1f5f9;
     --bg-section:#ffffff;
 
-    --text-main:#111827;
+    --text-main:#0f172a;
     --text-secondary:#475569;
 
     --table-hover:#f1f5f9;
-} */
+}
 
 *{
     margin:0;
@@ -232,7 +267,68 @@
     display:grid;
     grid-template-columns:repeat(4,1fr);
     gap:20px;
-    margin-top:30px;
+    margin-top:20px;
+}
+
+/* Dashboard View Switcher Navigation */
+.dashboard-view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 25px 0 20px 0;
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dashboard-view-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.dashboard-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-tab-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dashboard-tab-btn.active {
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+}
+
+.dashboard-view-content {
+  animation: fadeInDashboard 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeInDashboard {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .card{
@@ -2453,7 +2549,7 @@ grid-template-columns:1fr;
 .dashboard .notifications,
 .dashboard .jobs,
 .dashboard .heatmap {
-  background: rgba(12, 17, 30, 0.88) !important;
+  background: rgba(12, 17, 30, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow:
     0 10px 35px rgba(0, 0, 0, 0.25),
@@ -2470,7 +2566,7 @@ grid-template-columns:1fr;
 .dashboard .achievement-card,
 .dashboard .mock-card,
 .dashboard .device-status div {
-  background: rgba(12, 17, 30, 0.88) !important;
+  background: rgba(12, 17, 30, 0.88);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow:
@@ -2484,7 +2580,7 @@ grid-template-columns:1fr;
 .dashboard .notification-card:hover,
 .dashboard .achievement-card:hover,
 .dashboard .mock-card:hover {
-  background: rgba(16, 24, 42, 0.95) !important;
+  background: rgba(16, 24, 42, 0.95);
   border-color: rgba(37, 214, 255, 0.22);
   box-shadow:
     0 15px 40px rgba(0, 0, 0, 0.32),
@@ -2715,6 +2811,441 @@ grid-template-columns:1fr;
 .dashboard-settings {
   width: 100%;
   padding: 30px;
+  background:
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(37, 214, 255, 0.08),
+      transparent 35%
+    ),
+    #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  box-shadow:
+    0 10px 35px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  margin-top: 10px;
+}
+
+.dashboard-settings h2 {
+  margin: 0 0 8px;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.dashboard-settings p {
+  margin: 0 0 25px;
+  color: #9da7b6;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.settings-card-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.settings-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.settings-card-header h3 {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+}
+
+.settings-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.settings-card-desc {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.settings-theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 22px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 20px rgba(37, 150, 255, 0.18);
+}
+
+.settings-theme-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(37, 150, 255, 0.3);
+}
+
+.theme-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.theme-palette-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-palette-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.theme-palette-chip.active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.18);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
+.color-dots-preview {
+  display: flex;
+  gap: 4px;
+}
+
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* =====================================================
+   CLEAN LIGHT THEME OVERRIDES (ONLY APPLIES WHEN .light)
+===================================================== */
+
+.dashboard.light {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.dashboard.light .main {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.dashboard.light .sidebar {
+  background: #ffffff !important;
+  border-right: 1px solid #e2e8f0;
+  color: #0f172a !important;
+}
+
+.dashboard.light .sidebar .sidebar-brand h2,
+.dashboard.light .sidebar-logo {
+  color: #0f172a !important;
+}
+
+.dashboard.light .sidebar-label {
+  color: #94a3b8 !important;
+}
+
+.dashboard.light .sidebar li {
+  color: #475569 !important;
+}
+
+.dashboard.light .sidebar li span {
+  color: #475569 !important;
+}
+
+.dashboard.light .sidebar li:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.dashboard.light .sidebar li:hover span {
+  color: #0f172a !important;
+}
+
+.dashboard.light .sidebar li.active {
+  background: rgba(37, 99, 235, 0.1) !important;
+  color: #2563eb !important;
+}
+
+.dashboard.light .sidebar li.active span {
+  color: #2563eb !important;
+}
+
+.dashboard.light h1,
+.dashboard.light h2,
+.dashboard.light h3,
+.dashboard.light h4,
+.dashboard.light h5,
+.dashboard.light h6 {
+  color: #0f172a !important;
+}
+
+.dashboard.light p,
+.dashboard.light small {
+  color: #475569 !important;
+}
+
+.dashboard.light strong {
+  color: #0f172a !important;
+}
+
+.dashboard.light .welcome h1 span,
+.dashboard.light .welcome p span {
+  background: linear-gradient(90deg, #1e40af 0%, #0284c7 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.dashboard.light .card,
+.dashboard.light .recent,
+.dashboard.light .chart,
+.dashboard.light .analytics,
+.dashboard.light .pie-chart,
+.dashboard.light .pie-placeholder,
+.dashboard.light .upcoming,
+.dashboard.light .activity,
+.dashboard.light .quick-actions,
+.dashboard.light .progress-tracker,
+.dashboard.light .leaderboard,
+.dashboard.light .schedule,
+.dashboard.light .ai-insights,
+.dashboard.light .resume,
+.dashboard.light .challenge,
+.dashboard.light .achievements,
+.dashboard.light .mock-interview,
+.dashboard.light .notifications,
+.dashboard.light .jobs,
+.dashboard.light .heatmap,
+.dashboard.light .dashboard-settings,
+.dashboard.light .schedule-card,
+.dashboard.light .job-card,
+.dashboard.light .notification-card,
+.dashboard.light .achievement-card,
+.dashboard.light .mock-card,
+.dashboard.light .action-btn {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+}
+
+.dashboard.light .card h4,
+.dashboard.light .card h2,
+.dashboard.light .card h3,
+.dashboard.light .card p,
+.dashboard.light .card-value {
+  color: #0f172a !important;
+}
+
+.dashboard.light .card-text,
+.dashboard.light .interview-card p,
+.dashboard.light .job-info p,
+.dashboard.light .job-info small {
+  color: #64748b !important;
+}
+
+.dashboard.light table {
+  color: #0f172a !important;
+}
+
+.dashboard.light th {
+  color: #64748b !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  background: #f8fafc !important;
+}
+
+.dashboard.light td {
+  color: #0f172a !important;
+  border-top: 1px solid #f1f5f9 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.dashboard.light tr:hover {
+  background: #f8fafc !important;
+}
+
+.dashboard.light .dashboard-view-tabs {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04) !important;
+}
+
+.dashboard.light .dashboard-tab-btn {
+  color: #64748b !important;
+}
+
+.dashboard.light .dashboard-tab-btn:hover {
+  color: #0f172a !important;
+  background: #f1f5f9 !important;
+}
+
+.dashboard.light .dashboard-tab-btn.active {
+  background: linear-gradient(135deg, #2563eb, #0ea5e9) !important;
+  color: #ffffff !important;
+}
+
+.dashboard.light .floating-btn {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+}
+
+.dashboard.light .settings-card-item {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.dashboard.light .settings-card-header h3 {
+  color: #0f172a !important;
+}
+
+.dashboard.light .theme-palette-chip {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.dashboard.light .theme-palette-chip.active {
+  background: rgba(37, 99, 235, 0.12) !important;
+  border-color: #2563eb !important;
+  color: #2563eb !important;
+}
+
+.dashboard.light .theme-palette-chip.active h4,
+.dashboard.light .theme-palette-chip.active div {
+  color: #2563eb !important;
+}
+
+.dashboard.light input,
+.dashboard.light select,
+.dashboard.light textarea {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+@media (max-width: 768px) {
+  .dashboard-settings {
+    padding: 20px;
+  }
+  .theme-options-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-theme-btn {
+    width: 100%;
+  }
+}
+
+.dashboard .ai-message {
+  background: rgba(53, 109, 255, 0.20);
+}
+
+.dashboard .user-message {
+  background: linear-gradient(
+    90deg,
+    #356dff,
+    #25d6ff
+  );
+}
+
+/* ================= FLOATING CONTROLS ================= */
+
+.dashboard .floating-btn,
+.dashboard .floating-profile {
+  background: rgba(12, 17, 30, 0.90);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboard .floating-btn:hover,
+.dashboard .floating-profile:hover {
+  background: #356dff;
+}
+
+/* ================= SCROLLBAR ================= */
+
+.dashboard::-webkit-scrollbar,
+.dashboard .sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dashboard::-webkit-scrollbar-track,
+.dashboard .sidebar::-webkit-scrollbar-track {
+  background: #05070f;
+}
+
+.dashboard::-webkit-scrollbar-thumb,
+.dashboard .sidebar::-webkit-scrollbar-thumb {
+  background: #1d3150;
+  border-radius: 20px;
+}
+
+.dashboard::-webkit-scrollbar-thumb:hover,
+.dashboard .sidebar::-webkit-scrollbar-thumb:hover {
+  background: #356dff;
+}
+
+#dashboard-top,
+#analytics-section,
+#feedback-section,
+#mock-interview,
+#settings-section {
+  scroll-margin-top: 30px;
+}
+
+/* =====================================================
+   DASHBOARD SETTINGS
+===================================================== */
+
+.dashboard-settings {
+  width: 100%;
+  padding: 30px;
 
   background:
     radial-gradient(
@@ -2800,23 +3331,121 @@ grid-template-columns:1fr;
 
 .settings-theme-btn:hover {
   transform: translateY(-3px);
-
-  box-shadow:
-    0 12px 30px rgba(37, 150, 255, 0.3);
+  box-shadow: 0 12px 30px rgba(37, 150, 255, 0.3);
 }
-
 
 .settings-theme-btn:active {
   transform: translateY(0);
 }
 
-.light .dashboard-settings {
-  border: 1px solid rgba(15, 23, 42, 0.08);
-
-  box-shadow:
-    0 10px 30px rgba(15, 23, 42, 0.08);
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
 }
 
+.settings-card-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.settings-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.settings-card-header h3 {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+}
+
+.settings-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.settings-card-desc {
+  font-size: 13px;
+  color: var(--text-secondary, #94a3b8);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+.theme-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.theme-palette-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-palette-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.theme-palette-chip.active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.18);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
+.color-dots-preview {
+  display: flex;
+  gap: 4px;
+}
+
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.light .dashboard-settings {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.light .settings-card-item {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+.light .settings-card-header h3 {
+  color: #0f172a;
+}
 
 @media (max-width: 768px) {
   .dashboard-settings {
@@ -2829,5 +3458,9 @@ grid-template-columns:1fr;
 
   .settings-theme-btn {
     width: 100%;
+  }
+
+  .theme-options-grid {
+    grid-template-columns: 1fr;
   }
 }

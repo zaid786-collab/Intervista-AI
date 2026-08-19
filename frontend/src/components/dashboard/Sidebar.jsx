@@ -1,19 +1,14 @@
-import { useState } from "react";
-
 import {
   FaHome,
   FaMicrophone,
   FaChartLine,
-  FaComments,
+  FaBriefcase,
+  FaCalendarAlt,
   FaCog,
 } from "react-icons/fa";
 
-function Sidebar({ onNavigate }) {
-  const [activeItem, setActiveItem] = useState("dashboard");
-
+function Sidebar({ activeSection = "dashboard", onNavigate }) {
   const handleClick = (item) => {
-    setActiveItem(item);
-
     if (onNavigate) {
       onNavigate(item);
     }
@@ -21,7 +16,6 @@ function Sidebar({ onNavigate }) {
 
   return (
     <aside className="sidebar">
-
       {/* Logo */}
       <div className="sidebar-brand">
         <span className="sidebar-logo">✦</span>
@@ -33,50 +27,55 @@ function Sidebar({ onNavigate }) {
         <p className="sidebar-label">MAIN MENU</p>
 
         <ul>
-
           <li
-            className={activeItem === "dashboard" ? "active" : ""}
+            className={activeSection === "dashboard" ? "active" : ""}
             onClick={() => handleClick("dashboard")}
           >
             <FaHome className="sidebar-icon" />
-            <span>Dashboard</span>
+            <span>Overview</span>
           </li>
 
           <li
-            className={activeItem === "interviews" ? "active" : ""}
+            className={activeSection === "interviews" ? "active" : ""}
             onClick={() => handleClick("interviews")}
           >
             <FaMicrophone className="sidebar-icon" />
-            <span>Interviews</span>
+            <span>Mock Room</span>
           </li>
 
           <li
-            className={activeItem === "analytics" ? "active" : ""}
+            className={activeSection === "analytics" ? "active" : ""}
             onClick={() => handleClick("analytics")}
           >
             <FaChartLine className="sidebar-icon" />
-            <span>Analytics</span>
+            <span>Analytics & Skills</span>
           </li>
 
           <li
-            className={activeItem === "feedback" ? "active" : ""}
-            onClick={() => handleClick("feedback")}
+            className={activeSection === "schedule" ? "active" : ""}
+            onClick={() => handleClick("schedule")}
           >
-            <FaComments className="sidebar-icon" />
-            <span>Feedback</span>
+            <FaCalendarAlt className="sidebar-icon" />
+            <span>Schedule & Feed</span>
           </li>
 
           <li
-            className={activeItem === "settings" ? "active" : ""}
+            className={activeSection === "career" ? "active" : ""}
+            onClick={() => handleClick("career")}
+          >
+            <FaBriefcase className="sidebar-icon" />
+            <span>Career Prep</span>
+          </li>
+
+          <li
+            className={activeSection === "settings" ? "active" : ""}
             onClick={() => handleClick("settings")}
           >
             <FaCog className="sidebar-icon" />
             <span>Settings</span>
           </li>
-
         </ul>
       </nav>
-
     </aside>
   );
 }

@@ -5,51 +5,59 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip
+  Tooltip,
 } from "recharts";
 
 import "./Dashboard.css";
 
-const data = [
-  { name: "Mon", score: 70 },
-  { name: "Tue", score: 82 },
-  { name: "Wed", score: 75 },
-  { name: "Thu", score: 90 },
-  { name: "Fri", score: 88 },
-  { name: "Sat", score: 95 },
-  { name: "Sun", score: 80 }
+const defaultZeroData = [
+  { name: "Mon", score: 0 },
+  { name: "Tue", score: 0 },
+  { name: "Wed", score: 0 },
+  { name: "Thu", score: 0 },
+  { name: "Fri", score: 0 },
+  { name: "Sat", score: 0 },
+  { name: "Sun", score: 0 },
 ];
 
 function Chart({ performanceData }) {
-  const chartData = performanceData && performanceData.length > 0 ? performanceData : data;
+  const chartData =
+    performanceData && performanceData.length > 0
+      ? performanceData
+      : defaultZeroData;
+
+  const hasAnyScore = chartData.some((d) => d.score > 0);
 
   return (
     <div className="chart">
-
-      <h2>Weekly Performance</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+        <h2>Weekly Performance</h2>
+        <span style={{ fontSize: "12px", color: hasAnyScore ? "#22c55e" : "#94a3b8", fontWeight: "600" }}>
+          {hasAnyScore ? "● Active Weekly Scores" : "○ 0 Interviews This Week"}
+        </span>
+      </div>
 
       <ResponsiveContainer width="100%" height={300}>
-
-        <BarChart data={chartData}>
-
-          <CartesianGrid strokeDasharray="3 3" />
-
-          <XAxis dataKey="name" />
-
-          <YAxis />
-
-          <Tooltip />
-
+        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+          <XAxis dataKey="name" stroke="#94a3b8" />
+          <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} stroke="#94a3b8" />
+          <Tooltip
+            formatter={(value) => [`${value}%`, "Performance Score"]}
+            contentStyle={{
+              background: "#1e293b",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: "8px",
+              color: "#fff",
+            }}
+          />
           <Bar
             dataKey="score"
-            fill="#1b5fcb"
-            radius={[20, 20, 0, 0]}
+            fill="#3b82f6"
+            radius={[6, 6, 0, 0]}
           />
-
         </BarChart>
-
       </ResponsiveContainer>
-
     </div>
   );
 }

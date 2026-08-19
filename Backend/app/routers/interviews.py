@@ -267,20 +267,21 @@ def submit_mock_interview(
         current_user.xp = (current_user.xp or 0) + 100
         current_user.progress = min((current_user.progress or 0) + 5, 100)
 
-        day_abbr = datetime.now().strftime("%a")
-        perf = db.query(models.WeeklyPerformance).filter(
-            models.WeeklyPerformance.user_id == current_user.id,
-            models.WeeklyPerformance.day_name == day_abbr,
-        ).first()
+    day_abbr = datetime.now().strftime("%a")
+    perf_filter = (models.WeeklyPerformance.user_id == user_id) if user_id else models.WeeklyPerformance.user_id.is_(None)
+    perf = db.query(models.WeeklyPerformance).filter(
+        perf_filter,
+        models.WeeklyPerformance.day_name == day_abbr,
+    ).first()
 
-        if perf:
-            perf.score = round((perf.score + final_score) / 2)
-        else:
-            db.add(models.WeeklyPerformance(
-                user_id=current_user.id,
-                day_name=day_abbr,
-                score=final_score,
-            ))
+    if perf:
+        perf.score = round((perf.score + final_score) / 2)
+    else:
+        db.add(models.WeeklyPerformance(
+            user_id=user_id,
+            day_name=day_abbr,
+            score=final_score,
+        ))
 
     db.commit()
 

@@ -1,7 +1,7 @@
 import { FaMoon, FaSun, FaBell } from "react-icons/fa";
 import "./Dashboard.css";
 
-function FloatingControls({ darkMode, setDarkMode }) {
+function FloatingControls({ darkMode, setDarkMode, onOpenNotifications, notificationCount = 0 }) {
   return (
     <div className="floating-controls">
       {setDarkMode && (
@@ -14,9 +14,15 @@ function FloatingControls({ darkMode, setDarkMode }) {
         </button>
       )}
 
-      <button className="floating-btn notification-btn" title="Notifications">
+      <button
+        className="floating-btn notification-btn"
+        title="View Notifications & Schedule"
+        onClick={onOpenNotifications}
+      >
         <FaBell />
-        <span className="notification-dot">3</span>
+        {notificationCount > 0 && (
+          <span className="notification-dot">{notificationCount}</span>
+        )}
       </button>
     </div>
   );

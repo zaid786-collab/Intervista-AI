@@ -71,38 +71,8 @@ def seed_db():
             db.commit()
             print("DSA topics seeded!")
 
-        # Seed Interviews
-        if db.query(models.Interview).count() == 0:
-            print("Seeding interview records...")
-            for item in DEFAULT_INTERVIEWS:
-                db.add(models.Interview(**item))
-            db.commit()
-            print("Interview records seeded!")
-
-        # Seed Weekly Performance
-        if db.query(models.WeeklyPerformance).count() == 0:
-            print("Seeding weekly performance records...")
-            for item in DEFAULT_WEEKLY_PERFORMANCE:
-                db.add(models.WeeklyPerformance(**item))
-            db.commit()
-            print("Weekly performance seeded!")
-
-        # Seed Activities
-        if db.query(models.Activity).count() == 0:
-            print("Seeding activity records...")
-            for item in DEFAULT_ACTIVITIES:
-                db.add(models.Activity(**item))
-            db.commit()
-            print("Activities seeded!")
-
-        # Seed Notifications
-        if db.query(models.Notification).count() == 0:
-            print("Seeding notification records...")
-            for item in DEFAULT_NOTIFICATIONS:
-                db.add(models.Notification(**item))
-            db.commit()
-            print("Notifications seeded!")
-
+        # Note: Interview, Activity, Notification and WeeklyPerformance records are created
+        # dynamically as users practice and complete mock interviews.
         print("Database seed complete!")
 
     except Exception as e:

@@ -14,7 +14,7 @@ import {
   FaTimes,
   FaSpinner,
 } from "react-icons/fa";
-import { getToken } from "../../api";
+import { getToken, recordLocalInterviewSession, recordLocalScheduledInterview } from "../../api";
 
 const COMPANIES = [
   "Google",
@@ -140,7 +140,8 @@ function MockInterview({ onInterviewCompleted }) {
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showHint, setShowHint] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(45 * 60); // 45 minutes
+  const [timeLeft, setTimeLeft] = useState(45 * 60); // 45 minutes max
+  const [sessionStartTime, setSessionStartTime] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
 
   // Scheduling modal states
@@ -176,6 +177,7 @@ function MockInterview({ onInterviewCompleted }) {
     setCurrentQIndex(0);
     setShowHint(false);
     setTimeLeft(45 * 60);
+    setSessionStartTime(Date.now());
 
     const token = getToken();
     const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
@@ -224,12 +226,19 @@ function MockInterview({ onInterviewCompleted }) {
     });
     setAnswers(initialAns);
     setInterviewActive(true);
+    setSessionStartTime(Date.now());
     setLoading(false);
   };
 
   // 2. SUBMIT INTERVIEW HANDLER
   const handleSubmitInterview = async () => {
     setLoading(true);
+
+    // Calculate actual active time spent by user in seconds rounded to nearest 1 minute
+    const elapsedSeconds = sessionStartTime
+      ? Math.max(Math.floor((Date.now() - sessionStartTime) / 1000), 1)
+      : Math.max(45 * 60 - timeLeft, 1);
+    const activeMinutes = Math.max(Math.round(elapsedSeconds / 60), 1);
 
     const answersPayload = sessionQuestions.map((q) => ({
       question_id: q.id,
@@ -254,7 +263,7 @@ function MockInterview({ onInterviewCompleted }) {
             company,
             role,
             difficulty,
-            duration_minutes: 45,
+            duration_minutes: activeMinutes,
             answers: answersPayload,
           }),
         });
@@ -360,6 +369,22 @@ function MockInterview({ onInterviewCompleted }) {
       };
     }
 
+    // Save session in local mirror cache for resilient offline and instant reactive state
+    recordLocalInterviewSession({
+      id: evalData.interview_id || Date.now(),
+      company,
+      role,
+      difficulty,
+      score: evalData.score || evalData.score_percentage,
+      score_num: evalData.score,
+      duration_minutes: activeMinutes,
+      status: "Completed",
+      feedback: evalData.overall_summary,
+      technical_score: evalData.technical_score,
+      communication_score: evalData.communication_score,
+      problem_solving_score: evalData.problem_solving_score,
+    });
+
     setEvaluationResult(evalData);
     setLoading(false);
 
@@ -403,6 +428,14 @@ function MockInterview({ onInterviewCompleted }) {
         // fallback
       }
     }
+
+    recordLocalScheduledInterview({
+      company,
+      role,
+      date: scheduleDate,
+      time: scheduleTime,
+      mode: scheduleMode,
+    });
 
     setScheduleSuccess(`✓ Successfully scheduled ${company} (${role}) on ${scheduleDate} at ${scheduleTime}!`);
     setLoading(false);

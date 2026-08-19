@@ -3,68 +3,52 @@ import {
   FaCheckCircle,
   FaRobot,
   FaCalendarAlt,
-  FaCode
+  FaCode,
+  FaStream,
 } from "react-icons/fa";
 
-const activities = [
-  {
-    icon: <FaCheckCircle />,
-    title: "Interview Completed",
-    company: "Google",
-    time: "2 hours ago",
-    color: "#22c55e"
-  },
-  {
-    icon: <FaRobot />,
-    title: "AI Feedback Generated",
-    company: "Score: 92%",
-    time: "Yesterday",
-    color: "#2563eb"
-  },
-  {
-    icon: <FaCalendarAlt />,
-    title: "Interview Scheduled",
-    company: "Microsoft",
-    time: "Tomorrow 11:00 AM",
-    color: "#f59e0b"
-  },
-  {
-    icon: <FaCode />,
-    title: "Coding Challenge Completed",
-    company: "LeetCode",
-    time: "Today",
-    color: "#a855f7"
-  }
-];
-
-function Activity({ activities: propActivities }) {
-  const list = propActivities && propActivities.length > 0 ? propActivities : activities;
+function Activity({ activities: propActivities = [] }) {
+  const list = propActivities || [];
 
   return (
     <div className="activity">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+        <h2>Recent Activity</h2>
+        {list.length > 0 && (
+          <span style={{ fontSize: "12px", color: "var(--text-muted, #94a3b8)" }}>
+            {list.length} event{list.length > 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
 
-      <h2>Recent Activity</h2>
-
-      {list.map((item, index) => (
-        <div className="activity-item" key={index}>
-
-          <div
-            className="activity-icon"
-            style={{ background: item.color || "#2563eb" }}
-          >
-            {item.icon || <FaCheckCircle />}
-          </div>
-
-          <div className="activity-info">
-            <h4>{item.title}</h4>
-            <p>{item.company}</p>
-          </div>
-
-          <span>{item.time}</span>
-
+      {list.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "30px 15px", color: "var(--text-muted, #94a3b8)" }}>
+          <p style={{ fontSize: "14px", marginBottom: "6px", fontWeight: "600", color: "#fff" }}>
+            No Recent Activity
+          </p>
+          <p style={{ fontSize: "13px" }}>
+            Your interview completions, score reports, and schedule changes will appear in this real-time stream.
+          </p>
         </div>
-      ))}
+      ) : (
+        list.map((item, index) => (
+          <div className="activity-item" key={item.id || index}>
+            <div
+              className="activity-icon"
+              style={{ background: item.color || "#2563eb" }}
+            >
+              {item.icon || <FaCheckCircle />}
+            </div>
 
+            <div className="activity-info">
+              <h4>{item.title}</h4>
+              <p>{item.company}</p>
+            </div>
+
+            <span>{item.time || "Recent"}</span>
+          </div>
+        ))
+      )}
     </div>
   );
 }

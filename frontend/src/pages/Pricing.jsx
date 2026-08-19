@@ -3,7 +3,7 @@ import "./Pricing.css";
 const plans = [
   {
     name: "Starter",
-    price: "$9 USD",
+    price: "Free",
     features: [
       "5 AI Interviews",
       "Basic Feedback",
