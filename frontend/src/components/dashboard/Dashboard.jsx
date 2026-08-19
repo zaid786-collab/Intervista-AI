@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import "./Dashboard.css";
 import { fetchDashboardData } from "../../api";
 
@@ -38,19 +38,18 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const loadDashboard = useCallback(() => {
+  useEffect(() => {
     let isMounted = true;
     fetchDashboardData()
       .then((data) => {
-        if (isMounted && data) {
+        if (isMounted) {
           setDashboardData(data);
-          setError(null);
           setLoading(false);
         }
       })
       .catch((err) => {
         if (isMounted) {
-          setError(err.message || "Failed to load live dashboard data");
+          setError(err.message || "Failed to load dashboard data");
           setLoading(false);
         }
       });
@@ -59,11 +58,6 @@ function Dashboard() {
       isMounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    const cleanup = loadDashboard();
-    return cleanup;
-  }, [loadDashboard]);
 
   // Dashboard sidebar navigation
   const handleSidebarNavigation = (section) => {
@@ -95,9 +89,13 @@ function Dashboard() {
 
   return (
     <div className={darkMode ? "dashboard dark" : "dashboard light"}>
-      <Sidebar onNavigate={handleSidebarNavigation} />
+
+      <Sidebar
+        onNavigate={handleSidebarNavigation}
+      />
 
       <div className="main">
+
         {/* Dashboard top */}
         <div id="dashboard-top">
           <Welcome />
@@ -109,18 +107,8 @@ function Dashboard() {
         />
 
         {error && (
-          <div
-            style={{
-              padding: "12px 20px",
-              margin: "10px 0",
-              borderRadius: "8px",
-              backgroundColor: "rgba(239, 68, 68, 0.15)",
-              border: "1px solid rgba(239, 68, 68, 0.3)",
-              color: "#fca5a5",
-              fontSize: "13px",
-            }}
-          >
-            ℹ Note: Offline preview active ({error}). Real-time interactive simulation enabled.
+          <div style={{ padding: "12px 20px", margin: "10px 0", borderRadius: "8px", backgroundColor: "#fee2e2", color: "#b91c1c" }}>
+            ⚠ {error} - Showing cached/default metrics.
           </div>
         )}
 
@@ -130,63 +118,62 @@ function Dashboard() {
             icon={<FaUserGraduate />}
             title="Total Interviews"
             value={metrics.total_interviews}
-            text="Completed interview sessions"
+            text="Completed this month"
           />
 
           <Card
             icon={<FaChartLine />}
             title="Average Score"
             value={metrics.avg_score}
-            text="Calculated across all sessions"
+            text="Performance is improving"
           />
 
           <Card
             icon={<FaTrophy />}
             title="Best Score"
             value={metrics.best_score}
-            text="Highest scored evaluation"
+            text="Excellent performance"
           />
 
           <Card
             icon={<FaClock />}
             title="Practice Time"
             value={metrics.practice_time}
-            text="Total active time invested"
+            text="This week's practice"
           />
         </div>
 
         {/* Analytics */}
-        <div className="dashboard-row" id="analytics-section">
-          <Analytics
-            performanceData={dashboardData?.weekly_performance}
-            recentInterviews={dashboardData?.recent_interviews}
-            upcomingInterviews={dashboardData?.upcoming_interviews}
-          />
-          <AIInsights metrics={metrics} />
+        <div
+          className="dashboard-row"
+          id="analytics-section"
+        >
+          <Analytics performanceData={dashboardData?.weekly_performance} />
+          <AIInsights />
         </div>
 
         {/* Feedback */}
-        <div className="dashboard-row" id="feedback-section">
+        <div
+          className="dashboard-row"
+          id="feedback-section"
+        >
           <Recent interviews={dashboardData?.recent_interviews} />
-          <Upcoming interviews={dashboardData?.upcoming_interviews} />
+          <Upcoming />
         </div>
 
         <div className="dashboard-row">
-          <CodingChallenge onChallengeSolved={loadDashboard} />
+          <CodingChallenge />
           <InterviewHeatmap />
         </div>
 
         <div className="dashboard-row">
-          <ResumeAnalyzer onResumeAnalyzed={loadDashboard} />
+          <ResumeAnalyzer />
           <Leaderboard />
         </div>
 
-        <div className="dashboard-row" id="notifications-section">
+        <div className="dashboard-row">
           <Notifications notifications={dashboardData?.notifications} />
-          <Schedule
-            interviews={dashboardData?.upcoming_interviews}
-            onScheduleAdded={loadDashboard}
-          />
+          <Schedule interviews={dashboardData?.upcoming_interviews} />
         </div>
 
         <div className="dashboard-row">
@@ -200,8 +187,11 @@ function Dashboard() {
         </div>
 
         {/* Interviews */}
-        <div className="full-width" id="mock-interview">
-          <MockInterview onInterviewCompleted={loadDashboard} />
+        <div
+          className="full-width"
+          id="mock-interview"
+        >
+          <MockInterview />
         </div>
 
         {/* Activity */}
@@ -209,27 +199,37 @@ function Dashboard() {
           <Activity activities={dashboardData?.activities} />
         </div>
 
+
         {/* Settings / controls */}
-        <div className="full-width" id="settings-section">
+        <div
+          className="full-width"
+          id="settings-section"
+        >
           <div className="dashboard-settings">
             <h2>Dashboard Settings</h2>
             <p>
-              Customize your dashboard experience, themes, and manage your preparation preferences.
+              Customize your dashboard experience and
+              manage your preferences.
             </p>
 
             <div className="settings-buttons">
               <button
-                type="button"
-                onClick={() => setDarkMode(!darkMode)}
-                className="settings-theme-btn"
-              >
-                {darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              </button>
+              onClick={() => setDarkMode(!darkMode)}
+              className="settings-theme-btn"
+            >
+              {darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            </button>
+
+            <button className="settings-theme-btn">
+              Themes
+            </button>
             </div>
+
           </div>
         </div>
 
         <AIChat />
+
       </div>
     </div>
   );

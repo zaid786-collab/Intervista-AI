@@ -10,12 +10,14 @@ lerna-debug.log*
 # Dependencies
 node_modules
 .npm-cache
-venv
-env
-.venv
+**/node_modules/
 
-# Python
-__pycache__/
+# Python Virtual Environments & Caches
+venv/
+.venv/
+env/
+Backend/venv/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.db
@@ -25,6 +27,7 @@ __pycache__/
 # Build output
 dist
 dist-ssr
+**/dist/
 
 # Local environment/config files
 *.local

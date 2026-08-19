@@ -2,13 +2,6 @@ import { FaMoon, FaSun, FaBell } from "react-icons/fa";
 import "./Dashboard.css";
 
 function FloatingControls({ darkMode, setDarkMode }) {
-  const handleScrollToNotifications = () => {
-    const el = document.getElementById("notifications-section");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
   return (
     <div className="floating-controls">
       {setDarkMode && (
@@ -16,20 +9,14 @@ function FloatingControls({ darkMode, setDarkMode }) {
           className="floating-btn"
           onClick={() => setDarkMode(!darkMode)}
           title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          type="button"
         >
           {darkMode ? <FaSun /> : <FaMoon />}
         </button>
       )}
 
-      <button
-        className="floating-btn notification-btn"
-        title="View Notifications"
-        onClick={handleScrollToNotifications}
-        type="button"
-      >
+      <button className="floating-btn notification-btn" title="Notifications">
         <FaBell />
-        <span className="notification-dot">4</span>
+        <span className="notification-dot">3</span>
       </button>
     </div>
   );
