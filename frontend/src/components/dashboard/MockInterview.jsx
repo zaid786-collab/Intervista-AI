@@ -13,7 +13,15 @@ import {
   FaAward,
   FaTimes,
   FaSpinner,
+  FaFilePdf,
+  FaDownload,
+  FaRobot,
+  FaKey,
+  FaSlidersH,
 } from "react-icons/fa";
+import { useAuth } from "../../context/useAuth";
+import { generateInterviewPDF } from "../../utils/pdfGenerator";
+import { evaluateInterview } from "../../utils/evaluator";
 import { getToken, recordLocalInterviewSession, recordLocalScheduledInterview } from "../../api";
 
 const COMPANIES = [
@@ -129,10 +137,13 @@ const TECH_KEYWORDS = [
 ];
 
 function MockInterview({ onInterviewCompleted }) {
+  const { user } = useAuth();
   const [company, setCompany] = useState("Google");
   const [role, setRole] = useState("Frontend Developer");
   const [difficulty, setDifficulty] = useState("Medium");
   const [loading, setLoading] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [pdfSuccess, setPdfSuccess] = useState(false);
 
   // Live session modal states
   const [interviewActive, setInterviewActive] = useState(false);
@@ -143,6 +154,32 @@ function MockInterview({ onInterviewCompleted }) {
   const [timeLeft, setTimeLeft] = useState(45 * 60); // 45 minutes max
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
+
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("intervista_gemini_api_key") || "");
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [keyInput, setKeyInput] = useState("");
+
+  const handleDownloadPDF = () => {
+    if (!evaluationResult) return;
+    setDownloadingPdf(true);
+    try {
+      const payload = {
+        ...evaluationResult,
+        company,
+        role,
+        difficulty,
+        duration_minutes: evaluationResult.duration_minutes || 45,
+        date: evaluationResult.date || new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+      };
+      generateInterviewPDF(payload, user?.name || "Interview Candidate");
+      setPdfSuccess(true);
+      setTimeout(() => setPdfSuccess(false), 3500);
+    } catch (err) {
+      console.error("Failed to generate PDF:", err);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   // Scheduling modal states
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -250,6 +287,7 @@ function MockInterview({ onInterviewCompleted }) {
     const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
     let evalData = null;
 
+    // 1. Try Backend API evaluation
     for (const base of candidateBases) {
       try {
         const url = base ? `${base}/api/interviews/submit` : `/api/interviews/submit`;
@@ -277,96 +315,9 @@ function MockInterview({ onInterviewCompleted }) {
       }
     }
 
-    // Local Rubric Evaluator Fallback
+    // 2. High-precision semantic & live Gemini LLM evaluator
     if (!evalData) {
-      let totalTech = 0;
-      let totalComm = 0;
-      let totalProb = 0;
-      const allKeywords = new Set();
-      const detailed = [];
-
-      answersPayload.forEach((item) => {
-        const text = item.answer.trim();
-        const lower = text.toLowerCase();
-        const words = text.split(/\s+/).filter(Boolean).length;
-
-        const matched = TECH_KEYWORDS.filter((kw) => lower.includes(kw));
-        matched.forEach((kw) => allKeywords.add(kw));
-
-        const hasComplexity = ["o(", "complexity", "big-o", "time", "space", "memory"].some((c) => lower.includes(c));
-        const hasTradeoffs = ["trade-off", "tradeoff", "pros", "cons", "scale", "bottleneck", "edge case"].some((t) => lower.includes(t));
-
-        let baseTech = Math.min(40 + matched.length * 14 + (hasTradeoffs ? 15 : 0), 98);
-        if (words < 12) baseTech = Math.max(baseTech - 35, 35);
-
-        let baseComm = Math.min(50 + (words >= 30 ? 15 : 5) + (text.includes("\n") || text.includes("-") ? 15 : 5), 98);
-        if (words < 10) baseComm = 40;
-
-        let baseProb = Math.min(45 + (hasComplexity ? 20 : 5) + (hasTradeoffs ? 20 : 5), 96);
-
-        const qScore = Math.round(0.5 * baseTech + 0.3 * baseComm + 0.2 * baseProb);
-        totalTech += baseTech;
-        totalComm += baseComm;
-        totalProb += baseProb;
-
-        let qFeedback = "Solid answer covering core fundamentals. State Big-O complexity and edge-case failure modes to reach Senior tier.";
-        if (qScore >= 88) {
-          qFeedback = `Outstanding technical articulation! Matched ${matched.length} key concepts (${matched.slice(0, 3).join(", ") || "core principles"}). Clear trade-off evaluation.`;
-        } else if (qScore < 60) {
-          qFeedback = "Answer was too brief. Elaborate on the algorithm, memory footprints, and practical code implementation details.";
-        }
-
-        detailed.push({
-          question_id: item.question_id,
-          question: item.question,
-          score: qScore,
-          feedback: qFeedback,
-          identified_keywords: matched.slice(0, 5),
-          suggested_answer_points: [
-            "Clearly state assumptions and constraints upfront",
-            "Explicitly state time and space complexity",
-            "Detail production failure modes and caching strategies",
-          ],
-        });
-      });
-
-      const count = Math.max(answersPayload.length, 1);
-      const avgTech = Math.round(totalTech / count);
-      const avgComm = Math.round(totalComm / count);
-      const avgProb = Math.round(totalProb / count);
-      const finalScore = Math.round(0.5 * avgTech + 0.3 * avgComm + 0.2 * avgProb);
-
-      const grade =
-        finalScore >= 90
-          ? "A+ (Strong Hire • Outstanding)"
-          : finalScore >= 80
-          ? "A (Hire • Strong Performance)"
-          : finalScore >= 70
-          ? "B+ (Leaning Hire • Good Fundamentals)"
-          : "Needs Targeted Practice";
-
-      evalData = {
-        interview_id: Date.now(),
-        score: finalScore,
-        score_percentage: `${finalScore}%`,
-        grade,
-        technical_score: avgTech,
-        communication_score: avgComm,
-        problem_solving_score: avgProb,
-        identified_keywords: Array.from(allKeywords),
-        strengths: [
-          `Solid grasp of ${role} engineering fundamentals.`,
-          `Effectively incorporated ${allKeywords.size} core domain terms.`,
-          `Demonstrated structured problem-solving alignment with ${company} standards.`,
-        ],
-        improvements: [
-          "State Big-O time and space complexity in your initial thought process.",
-          "Discuss potential failure modes and caching/indexing strategies.",
-          "Highlight edge cases (null inputs, scale bottlenecks, race conditions).",
-        ],
-        detailed_feedback: detailed,
-        overall_summary: `Candidate achieved an overall interview performance score of ${finalScore}% (${grade}) for ${company}'s ${role} position. Technical Depth: ${avgTech}%, Communication: ${avgComm}%, Problem Solving: ${avgProb}%.`,
-      };
+      evalData = await evaluateInterview(company, role, difficulty, answersPayload, apiKey);
     }
 
     // Save session in local mirror cache for resilient offline and instant reactive state
@@ -383,6 +334,11 @@ function MockInterview({ onInterviewCompleted }) {
       technical_score: evalData.technical_score,
       communication_score: evalData.communication_score,
       problem_solving_score: evalData.problem_solving_score,
+      grade: evalData.grade,
+      strengths: evalData.strengths,
+      improvements: evalData.improvements,
+      detailed_feedback: evalData.detailed_feedback,
+      identified_keywords: evalData.identified_keywords,
     });
 
     setEvaluationResult(evalData);
@@ -454,10 +410,38 @@ function MockInterview({ onInterviewCompleted }) {
     <div className="mock-interview">
       <div className="mock-header">
         <h2>🎤 AI Mock Interview Room</h2>
-        <span className="live-status">
-          <FaCircle />
-          AI Online
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button
+            type="button"
+            onClick={() => {
+              setKeyInput(apiKey);
+              setShowApiKeyModal(true);
+            }}
+            title="Configure AI Model & API Key"
+            style={{
+              background: apiKey ? "rgba(34,197,94,0.15)" : "rgba(56,189,248,0.12)",
+              border: `1px solid ${apiKey ? "rgba(34,197,94,0.35)" : "rgba(56,189,248,0.35)"}`,
+              color: apiKey ? "#4ade80" : "#38bdf8",
+              padding: "5px 12px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              fontWeight: "600",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <FaRobot />
+            {apiKey ? "Gemini LLM (Active)" : "AI Engine: Neural Rubric"}
+            <FaSlidersH style={{ fontSize: "10px", marginLeft: "2px" }} />
+          </button>
+
+          <span className="live-status">
+            <FaCircle />
+            AI Online
+          </span>
+        </div>
       </div>
 
       <div className="mock-grid">
@@ -815,9 +799,31 @@ function MockInterview({ onInterviewCompleted }) {
                     <FaAward />
                   </div>
                   <h2 style={{ fontSize: "22px", margin: "0 0 6px" }}>Interview Report & AI Feedback</h2>
-                  <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0 }}>
+                  <p style={{ color: "#94a3b8", fontSize: "14px", margin: "0 0 12px" }}>
                     {company} • {role} ({difficulty})
                   </p>
+                  <button
+                    type="button"
+                    onClick={handleDownloadPDF}
+                    disabled={downloadingPdf}
+                    style={{
+                      padding: "8px 20px",
+                      borderRadius: "8px",
+                      background: pdfSuccess ? "#16a34a" : "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                      color: "#fff",
+                      border: "none",
+                      fontWeight: "600",
+                      fontSize: "13px",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: "0 4px 14px rgba(37,99,235,0.35)",
+                    }}
+                  >
+                    <FaFilePdf />
+                    {pdfSuccess ? "✓ PDF Report Saved!" : downloadingPdf ? "Generating PDF..." : "Download Official PDF Report"}
+                  </button>
                 </div>
 
                 {/* Multi-factor Score Grid */}
@@ -923,7 +929,30 @@ function MockInterview({ onInterviewCompleted }) {
                   </div>
                 </div>
 
-                <div style={{ textAlign: "center" }}>
+                <div style={{ display: "flex", justifyContent: "center", gap: "14px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={handleDownloadPDF}
+                    disabled={downloadingPdf}
+                    style={{
+                      padding: "12px 26px",
+                      borderRadius: "8px",
+                      background: pdfSuccess ? "#16a34a" : "linear-gradient(135deg, #059669, #10b981)",
+                      color: "#fff",
+                      border: "none",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: "0 4px 12px rgba(16,185,129,0.3)",
+                    }}
+                  >
+                    <FaDownload />
+                    {pdfSuccess ? "✓ PDF Downloaded!" : "Download Evaluation PDF"}
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -931,14 +960,14 @@ function MockInterview({ onInterviewCompleted }) {
                       setEvaluationResult(null);
                     }}
                     style={{
-                      padding: "12px 36px",
+                      padding: "12px 32px",
                       borderRadius: "8px",
                       background: "#2563eb",
                       color: "#fff",
                       border: "none",
                       fontWeight: "bold",
                       cursor: "pointer",
-                      fontSize: "15px",
+                      fontSize: "14px",
                     }}
                   >
                     Done & Return to Dashboard
@@ -1093,6 +1122,135 @@ function MockInterview({ onInterviewCompleted }) {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+      {/* ================= AI MODEL SETTINGS MODAL ================= */}
+      {showApiKeyModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(10, 15, 29, 0.82)",
+            backdropFilter: "blur(6px)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "#0f172a",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "520px",
+              padding: "26px",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.6)",
+              color: "#fff",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <FaRobot style={{ color: "#38bdf8", fontSize: "20px" }} />
+                <h3 style={{ margin: 0, fontSize: "18px" }}>AI Evaluation Engine Settings</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowApiKeyModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "18px", cursor: "pointer" }}
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div style={{ background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "18px", fontSize: "13px", lineHeight: "1.5", color: "#cbd5e1" }}>
+              <strong style={{ color: "#38bdf8", display: "block", marginBottom: "4px" }}>✦ Supported AI Engines:</strong>
+              1. <strong>Live Google Gemini 1.5 Flash</strong>: Enter your free API key from Google AI Studio below for live generative assessment.<br/>
+              2. <strong>Neural Semantic Rubric Engine</strong>: Built-in strict multi-factor evaluator that scores domain depth, Big-O complexity, and trade-offs.
+            </div>
+
+            <div style={{ marginBottom: "18px" }}>
+              <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "6px", fontWeight: "bold" }}>
+                Google Gemini API Key (Optional for Live LLM):
+              </label>
+              <input
+                type="password"
+                placeholder="AIzaSy..."
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  background: "#020617",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  color: "#fff",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  fontFamily: "monospace",
+                }}
+              />
+              <small style={{ color: "#64748b", fontSize: "11px", display: "block", marginTop: "4px" }}>
+                Keys are saved securely in your local browser storage and never shared.
+              </small>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const val = keyInput.trim();
+                  setApiKey(val);
+                  if (val) {
+                    localStorage.setItem("intervista_gemini_api_key", val);
+                  } else {
+                    localStorage.removeItem("intervista_gemini_api_key");
+                  }
+                  setShowApiKeyModal(false);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: "8px",
+                  background: "#2563eb",
+                  color: "#fff",
+                  border: "none",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                }}
+              >
+                Save AI Settings
+              </button>
+
+              {apiKey && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setApiKey("");
+                    setKeyInput("");
+                    localStorage.removeItem("intervista_gemini_api_key");
+                    setShowApiKeyModal(false);
+                  }}
+                  style={{
+                    padding: "10px 16px",
+                    borderRadius: "8px",
+                    background: "rgba(239,68,68,0.15)",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    color: "#f87171",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear Key
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

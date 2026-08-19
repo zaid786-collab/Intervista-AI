@@ -75,12 +75,17 @@ class Interview(Base):
     company = Column(String(120), nullable=False)
     score = Column(String(20), nullable=True)
     score_num = Column(Integer, nullable=True)  # Numeric score for AVG/MAX SQL aggregations
+    technical_score = Column(Integer, nullable=True)
+    communication_score = Column(Integer, nullable=True)
+    problem_solving_score = Column(Integer, nullable=True)
+    grade = Column(String(50), nullable=True)
     duration_minutes = Column(Integer, default=45, nullable=False)
     status = Column(String(50), nullable=False, default="Completed")  # Completed, Pending, Scheduled
     date = Column(String(50), nullable=True)
     time = Column(String(50), nullable=True)
     mode = Column(String(50), nullable=True)  # Virtual, Online Coding, In-Person
     feedback = Column(Text, nullable=True)
+    report_data = Column(Text, nullable=True)  # JSON string of detailed feedback & marks
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 

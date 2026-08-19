@@ -25,10 +25,28 @@ load_dotenv()
 # Creates any tables that don't exist yet
 Base.metadata.create_all(bind=engine)
 
+def ensure_db_columns():
+    """Idempotently adds missing columns to existing SQLite/Postgres tables."""
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        for col, col_type in [
+            ("technical_score", "INTEGER"),
+            ("communication_score", "INTEGER"),
+            ("problem_solving_score", "INTEGER"),
+            ("grade", "VARCHAR(50)"),
+            ("report_data", "TEXT"),
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE interviews ADD COLUMN {col} {col_type}"))
+                conn.commit()
+            except Exception:
+                pass
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: seed default mock data if database is empty
+    # Ensure all columns exist and seed default mock data if empty
+    ensure_db_columns()
     seed_db()
     yield
 

@@ -72,10 +72,17 @@ def get_dashboard_data(
             "role": item.role,
             "company": item.company,
             "score": item.score,
+            "score_num": item.score_num,
+            "technical_score": item.technical_score,
+            "communication_score": item.communication_score,
+            "problem_solving_score": item.problem_solving_score,
+            "grade": item.grade,
             "status": item.status,
             "date": item.date,
             "time": item.time,
             "mode": item.mode,
+            "feedback": item.feedback,
+            "duration_minutes": item.duration_minutes,
         }
         for item in recent_db
     ]
@@ -92,10 +99,13 @@ def get_dashboard_data(
             "role": item.role,
             "company": item.company,
             "score": item.score,
+            "score_num": item.score_num,
             "status": item.status,
             "date": item.date,
             "time": item.time,
             "mode": item.mode,
+            "feedback": item.feedback,
+            "duration_minutes": item.duration_minutes,
         }
         for item in upcoming_db
     ]

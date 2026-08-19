@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+import { fetchDashboardData, getLocalDashboardData } from "../api";
 import "./Profile.css";
 
 function Profile() {
@@ -10,8 +12,28 @@ function Profile() {
   const accountType = user?.is_admin ? "Admin" : "Free Member";
   const memberSince = user?.created_at
     ? new Date(user.created_at).getFullYear()
-    : "—";
+    : "2026";
   const progress = user?.progress ?? 0;
+
+  const [dashboardStats, setDashboardStats] = useState(() => getLocalDashboardData()?.metrics || {
+    total_interviews: 0,
+    avg_score: "0%",
+    best_score: "0%",
+    practice_time: "0 mins",
+  });
+
+  useEffect(() => {
+    fetchDashboardData()
+      .then((data) => {
+        if (data && data.metrics) {
+          setDashboardStats(data.metrics);
+        }
+      })
+      .catch(() => {
+        const local = getLocalDashboardData();
+        if (local && local.metrics) setDashboardStats(local.metrics);
+      });
+  }, []);
 
   return (
     <main className="profile-page">
@@ -39,8 +61,8 @@ function Profile() {
             </p>
           </div>
 
-          <button className="edit-profile-btn">
-            ✎ Edit Profile
+          <button className="edit-profile-btn" onClick={() => navigate("/dashboard")}>
+            ⚙ Open Dashboard
           </button>
 
         </section>
@@ -142,25 +164,25 @@ function Profile() {
 
             <div className="profile-stat">
               <div className="stat-icon">🎤</div>
-              <strong>24</strong>
+              <strong>{dashboardStats.total_interviews}</strong>
               <span>Interviews Completed</span>
             </div>
 
             <div className="profile-stat">
               <div className="stat-icon">◈</div>
-              <strong>78%</strong>
+              <strong>{dashboardStats.avg_score}</strong>
               <span>Average Score</span>
             </div>
 
             <div className="profile-stat">
               <div className="stat-icon">🏆</div>
-              <strong>92%</strong>
+              <strong>{dashboardStats.best_score}</strong>
               <span>Best Score</span>
             </div>
 
             <div className="profile-stat">
               <div className="stat-icon">◷</div>
-              <strong>18h</strong>
+              <strong>{dashboardStats.practice_time}</strong>
               <span>Practice Time</span>
             </div>
 
@@ -220,12 +242,8 @@ function Profile() {
 
           <div className="account-buttons">
 
-            <button className="profile-action-btn">
-              ⚙ Account Settings
-            </button>
-
-            <button className="profile-action-btn danger">
-              🗑 Delete Account
+            <button className="profile-action-btn" onClick={() => navigate("/dashboard")}>
+              ⚙ Dashboard Settings
             </button>
 
           </div>

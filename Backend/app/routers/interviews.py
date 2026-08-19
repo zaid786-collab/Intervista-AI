@@ -1,25 +1,17 @@
-import random
+import json
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app import models, schemas
 from app.dependencies import get_current_user_optional
+from app.services.llm_evaluator import evaluate_interview_submission
+from app.services.pdf_generator import generate_interview_pdf_report
 
-router = APIRouter(prefix="/api/interviews", tags=["Mock Interviews"])
-
-TECH_KEYWORDS = [
-    "virtual dom", "reconciliation", "fiber", "hooks", "closure", "useeffect", "usecallback", "usememo",
-    "debouncing", "throttling", "lcp", "cls", "inp", "tree shaking", "code splitting", "lazy loading",
-    "b-tree", "hash index", "indexing", "postgresql", "mysql", "acid", "mvcc", "isolation levels",
-    "cache-aside", "redis", "bloom filter", "cache stampede", "distributed lock", "mutex", "deadlock",
-    "rate limiting", "token bucket", "sliding window", "jwt", "refresh token", "httponly", "csrf", "xss",
-    "kafka", "rabbitmq", "transactional outbox", "idempotency", "microservices", "rest api", "graphql",
-    "transformer", "self-attention", "rag", "embeddings", "vector database", "quantization", "vllm",
-    "o(1)", "o(n)", "o(log n)", "o(n log n)", "time complexity", "space complexity", "hash map", "two pointers",
-    "dynamic programming", "sliding window", "binary search", "recursion", "memoization"
-]
+router = APIRouter(prefix="/api/interviews", tags=["Mock Interviews & AI Evaluation"])
 
 DEFAULT_QUESTION_BANK = {
     "Frontend Developer": [
@@ -133,140 +125,103 @@ def submit_mock_interview(
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
-    detailed_feedback = []
-    total_tech_score = 0
-    total_comm_score = 0
-    total_problem_score = 0
-    all_matched_keywords = set()
+    # 1. Run LLM & Rubric Evaluation
+    answers_dicts = [
+        {
+            "question_id": a.question_id,
+            "question": a.question,
+            "answer": a.answer,
+        }
+        for a in payload.answers
+    ]
+    eval_result = evaluate_interview_submission(
+        company=payload.company,
+        role=payload.role,
+        difficulty=payload.difficulty,
+        answers=answers_dicts,
+    )
 
-    for item in payload.answers:
-        answer_text = item.answer.strip()
-        lower_answer = answer_text.lower()
-        word_count = len(answer_text.split())
+    final_score = int(eval_result.get("overall_score", 75))
+    tech_score = int(eval_result.get("technical_score", final_score))
+    comm_score = int(eval_result.get("communication_score", final_score))
+    prob_score = int(eval_result.get("problem_solving_score", final_score))
+    grade = eval_result.get("grade", "A (Strong Performance)")
+    strengths = eval_result.get("strengths", [])
+    improvements = eval_result.get("improvements", [])
+    overall_summary = eval_result.get("overall_summary", "")
+    identified_keywords = eval_result.get("identified_keywords", [])
+    raw_detailed = eval_result.get("detailed_feedback", [])
 
-        # 1. Detect matched technical keywords
-        matched_kw = [kw for kw in TECH_KEYWORDS if kw in lower_answer]
-        all_matched_keywords.update(matched_kw)
-
-        # 2. Check complexity and trade-off considerations
-        has_complexity = any(c in lower_answer for c in ["o(", "complexity", "big-o", "time", "space", "memory"])
-        has_tradeoffs = any(t in lower_answer for t in ["trade-off", "tradeoff", "advantage", "disadvantage", "pros", "cons", "scale", "bottleneck", "edge case"])
-
-        # 3. Multi-factor rubric calculations
-        base_tech = min(40 + len(matched_kw) * 14 + (15 if has_tradeoffs else 0), 98)
-        if word_count < 12:
-            base_tech = max(base_tech - 35, 35)
-
-        base_comm = min(50 + (15 if word_count >= 30 else 5) + (15 if "\n" in answer_text or "-" in answer_text or "1." in answer_text else 5), 98)
-        if word_count < 10:
-            base_comm = 40
-
-        base_prob = min(45 + (20 if has_complexity else 5) + (20 if has_tradeoffs else 5), 96)
-
-        q_score = round(0.50 * base_tech + 0.30 * base_comm + 0.20 * base_prob)
-
-        total_tech_score += base_tech
-        total_comm_score += base_comm
-        total_problem_score += base_prob
-
-        if q_score >= 88:
-            q_feedback = f"Outstanding technical articulation! Matched {len(matched_kw)} key concepts ({', '.join(matched_kw[:3]) if matched_kw else 'core principles'}). Clear trade-off evaluation."
-        elif q_score >= 75:
-            q_feedback = f"Solid answer with good fundamentals. To elevate to Staff/Senior tier, state precise Big-O complexity and mention edge-case failure modes."
-        elif q_score >= 60:
-            q_feedback = "Covers introductory concepts. Elaborate more on architecture internals, data structures, and production trade-offs."
-        else:
-            q_feedback = "Answer was too brief. Flesh out the algorithm, memory footprints, and practical code implementation details."
-
-        detailed_feedback.append(
-            schemas.QuestionFeedback(
-                question_id=item.question_id,
-                question=item.question,
-                score=q_score,
-                feedback=q_feedback,
-                suggested_answer_points=[
-                    "Clearly state assumptions and problem constraints upfront",
-                    "Explicitly articulate asymptotic time and space complexities",
-                    "Detail production failure modes and caching/indexing strategies",
-                ],
-                identified_keywords=matched_kw[:5],
-                technical_accuracy=base_tech,
-                communication_clarity=base_comm,
-            )
+    detailed_feedback = [
+        schemas.QuestionFeedback(
+            question_id=qf.get("question_id", idx + 1),
+            question=qf.get("question", f"Question {idx + 1}"),
+            score=int(qf.get("score", 75)),
+            feedback=qf.get("feedback", "Good answer."),
+            suggested_answer_points=qf.get("suggested_answer_points", []),
+            identified_keywords=qf.get("identified_keywords", []),
+            technical_accuracy=int(qf.get("technical_accuracy", tech_score)),
+            communication_clarity=int(qf.get("communication_clarity", comm_score)),
         )
-
-    num_answers = max(len(payload.answers), 1)
-    avg_tech = round(total_tech_score / num_answers)
-    avg_comm = round(total_comm_score / num_answers)
-    avg_prob = round(total_problem_score / num_answers)
-    final_score = round(0.50 * avg_tech + 0.30 * avg_comm + 0.20 * avg_prob)
-
-    grade = (
-        "A+ (Strong Hire • Outstanding)" if final_score >= 90
-        else "A (Hire • Strong Performance)" if final_score >= 80
-        else "B+ (Leaning Hire • Good Fundamentals)" if final_score >= 70
-        else "Needs Targeted Practice"
-    )
-
-    strengths = [
-        f"Demonstrated solid competency in {payload.role} engineering principles.",
-        f"Effectively incorporated {len(all_matched_keywords)} core domain terms ({', '.join(list(all_matched_keywords)[:4]) if all_matched_keywords else 'technical principles'}).",
-        f"Constructive alignment with {payload.company}'s problem-solving rubric.",
+        for idx, qf in enumerate(raw_detailed)
     ]
 
-    improvements = [
-        "Explicitly discuss asymptotic runtime and auxiliary space complexity in initial reasoning.",
-        "Highlight edge cases (e.g. concurrency race conditions, null inputs, scale limits).",
-        "Structure responses using the STAR or Problem-Approach-Complexity framework.",
-    ]
-
-    overall_summary = (
-        f"Candidate achieved an overall interview performance score of {final_score}% ({grade}) for {payload.company}'s {payload.role} position. "
-        f"Technical Depth: {avg_tech}%, Communication: {avg_comm}%, Problem Solving: {avg_prob}%."
-    )
-
-    # Save to database
     user_id = current_user.id if current_user else None
 
+    # 2. Persist Full Evaluation in Database
     interview = models.Interview(
         user_id=user_id,
         role=payload.role,
         company=payload.company,
         score=f"{final_score}%",
         score_num=final_score,
-        duration_minutes=payload.duration_minutes,
+        technical_score=tech_score,
+        communication_score=comm_score,
+        problem_solving_score=prob_score,
+        grade=grade,
+        duration_minutes=payload.duration_minutes or 45,
         status="Completed",
         date=datetime.now().strftime("%d %b %Y"),
         time=datetime.now().strftime("%I:%M %p"),
         mode="Virtual",
         feedback=overall_summary,
+        report_data=json.dumps({
+            "strengths": strengths,
+            "improvements": improvements,
+            "detailed_feedback": [df.dict() for df in detailed_feedback],
+            "identified_keywords": identified_keywords,
+        }),
     )
     db.add(interview)
     db.flush()
 
+    # 3. Add Activity Feed Record
     activity = models.Activity(
         user_id=user_id,
         title=f"Mock Interview Completed: {payload.company}",
-        company=f"Score: {final_score}% • {payload.role}",
+        company=f"Score: {final_score}% ({grade}) • {payload.role}",
         time="Just now",
         color="#22c55e",
     )
     db.add(activity)
 
+    # 4. Add Notification Record
     notif = models.Notification(
         user_id=user_id,
         title=f"{payload.company} Evaluation Report Ready",
-        desc=f"You scored {final_score}% ({grade})",
+        desc=f"You scored {final_score}% ({grade}) on {payload.role}",
         color="#22c55e",
         time="Just now",
         is_read=False,
     )
     db.add(notif)
 
+    # 5. Increment XP and readiness progress
     if current_user:
         current_user.xp = (current_user.xp or 0) + 100
         current_user.progress = min((current_user.progress or 0) + 5, 100)
 
+    # 6. Update Weekly Performance Chart Record
     day_abbr = datetime.now().strftime("%a")
     perf_filter = (models.WeeklyPerformance.user_id == user_id) if user_id else models.WeeklyPerformance.user_id.is_(None)
     perf = db.query(models.WeeklyPerformance).filter(
@@ -294,10 +249,61 @@ def submit_mock_interview(
         improvements=improvements,
         detailed_feedback=detailed_feedback,
         overall_summary=overall_summary,
-        technical_score=avg_tech,
-        communication_score=avg_comm,
-        problem_solving_score=avg_prob,
-        identified_keywords=list(all_matched_keywords),
+        technical_score=tech_score,
+        communication_score=comm_score,
+        problem_solving_score=prob_score,
+        identified_keywords=identified_keywords,
+    )
+
+@router.get("/{interview_id}/pdf")
+def download_interview_pdf(
+    interview_id: int,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+):
+    """Generates and downloads the Official PDF Assessment Report for a completed interview."""
+    interview = db.query(models.Interview).filter(models.Interview.id == interview_id).first()
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview record not found.")
+
+    report_payload = {}
+    if interview.report_data:
+        try:
+            report_payload = json.loads(interview.report_data)
+        except Exception:
+            report_payload = {}
+
+    interview_data = {
+        "id": interview.id,
+        "company": interview.company,
+        "role": interview.role,
+        "score_num": interview.score_num or int(interview.score.replace("%", "")) if interview.score else 75,
+        "score": interview.score or f"{interview.score_num}%",
+        "technical_score": interview.technical_score or interview.score_num or 80,
+        "communication_score": interview.communication_score or interview.score_num or 80,
+        "problem_solving_score": interview.problem_solving_score or interview.score_num or 80,
+        "grade": interview.grade or "A (Strong Performance)",
+        "duration_minutes": interview.duration_minutes or 45,
+        "date": interview.date or datetime.now().strftime("%d %b %Y"),
+        "feedback": interview.feedback,
+        "strengths": report_payload.get("strengths", []),
+        "improvements": report_payload.get("improvements", []),
+        "detailed_feedback": report_payload.get("detailed_feedback", []),
+    }
+
+    candidate_name = current_user.name if current_user else "Interview Candidate"
+    pdf_buffer = generate_interview_pdf_report(interview_data, candidate_name=candidate_name)
+
+    safe_company = interview.company.replace(" ", "_")
+    safe_role = interview.role.replace(" ", "_")
+    filename = f"Intervista_AI_Report_{safe_company}_{safe_role}_{interview.id}.pdf"
+
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
     )
 
 @router.post("/schedule", status_code=status.HTTP_201_CREATED)

@@ -78,11 +78,17 @@ class InterviewOut(BaseModel):
     role: str
     company: Optional[str] = None
     score: Optional[str] = None
+    score_num: Optional[int] = None
+    technical_score: Optional[int] = None
+    communication_score: Optional[int] = None
+    problem_solving_score: Optional[int] = None
+    grade: Optional[str] = None
     status: str
     date: Optional[str] = None
     time: Optional[str] = None
     mode: Optional[str] = None
     feedback: Optional[str] = None
+    duration_minutes: Optional[int] = 45
 
 
 class ActivityOut(BaseModel):

@@ -172,6 +172,12 @@ export function recordLocalInterviewSession(session) {
     technical_score: session.technical_score,
     communication_score: session.communication_score,
     problem_solving_score: session.problem_solving_score,
+    grade: session.grade,
+    feedback: session.feedback,
+    strengths: session.strengths,
+    improvements: session.improvements,
+    detailed_feedback: session.detailed_feedback,
+    identified_keywords: session.identified_keywords,
   };
 
   const updatedRecent = [newInterview, ...(current.recent_interviews || [])];
