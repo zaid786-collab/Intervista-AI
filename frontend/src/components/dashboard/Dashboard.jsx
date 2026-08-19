@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import "./Dashboard.css";
 import { fetchDashboardData } from "../../api";
 
@@ -36,28 +36,22 @@ function Dashboard() {
   const [darkMode, setDarkMode] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadDashboard = useCallback(() => {
     fetchDashboardData()
       .then((data) => {
-        if (isMounted) {
-          setDashboardData(data);
-          setLoading(false);
-        }
+        if (data) setDashboardData(data);
+        setLoading(false);
       })
       .catch((err) => {
-        if (isMounted) {
-          setError(err.message || "Failed to load dashboard data");
-          setLoading(false);
-        }
+        console.warn("Dashboard sync using offline fallback:", err);
+        setLoading(false);
       });
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
   // Dashboard sidebar navigation
   const handleSidebarNavigation = (section) => {
@@ -89,30 +83,17 @@ function Dashboard() {
 
   return (
     <div className={darkMode ? "dashboard dark" : "dashboard light"}>
-
-      <Sidebar
-        onNavigate={handleSidebarNavigation}
-      />
+      <Sidebar onNavigate={handleSidebarNavigation} />
 
       <div className="main">
-
         {/* Dashboard top */}
         <div id="dashboard-top">
           <Welcome />
         </div>
 
-        <FloatingControls
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
-        />
+        <FloatingControls darkMode={darkMode} setDarkMode={setDarkMode} />
 
-        {error && (
-          <div style={{ padding: "12px 20px", margin: "10px 0", borderRadius: "8px", backgroundColor: "#fee2e2", color: "#b91c1c" }}>
-            ⚠ {error} - Showing cached/default metrics.
-          </div>
-        )}
-
-        {/* Stats */}
+        {/* Stats Cards */}
         <div className="cards">
           <Card
             icon={<FaUserGraduate />}
@@ -143,93 +124,87 @@ function Dashboard() {
           />
         </div>
 
-        {/* Analytics */}
-        <div
-          className="dashboard-row"
-          id="analytics-section"
-        >
-          <Analytics performanceData={dashboardData?.weekly_performance} />
-          <AIInsights />
+        {/* Analytics & AI Insights */}
+        <div className="dashboard-row" id="analytics-section">
+          <Analytics
+            performanceData={dashboardData?.weekly_performance}
+            recentInterviews={dashboardData?.recent_interviews}
+          />
+          <AIInsights
+            avgScore={metrics.avg_score}
+            totalInterviews={metrics.total_interviews}
+          />
         </div>
 
-        {/* Feedback */}
-        <div
-          className="dashboard-row"
-          id="feedback-section"
-        >
+        {/* Feedback & Upcoming */}
+        <div className="dashboard-row" id="feedback-section">
           <Recent interviews={dashboardData?.recent_interviews} />
           <Upcoming />
         </div>
 
+        {/* Coding Challenge & Heatmap */}
         <div className="dashboard-row">
-          <CodingChallenge />
+          <CodingChallenge onChallengeSolved={loadDashboard} />
           <InterviewHeatmap />
         </div>
 
+        {/* Resume Analyzer & Leaderboard */}
         <div className="dashboard-row">
-          <ResumeAnalyzer />
+          <ResumeAnalyzer onResumeAnalyzed={loadDashboard} />
           <Leaderboard />
         </div>
 
-        <div className="dashboard-row">
+        {/* Notifications & Schedule */}
+        <div className="dashboard-row" id="notifications-section">
           <Notifications notifications={dashboardData?.notifications} />
-          <Schedule interviews={dashboardData?.upcoming_interviews} />
+          <Schedule
+            interviews={dashboardData?.upcoming_interviews}
+            onScheduleAdded={loadDashboard}
+          />
         </div>
 
+        {/* Job Recommendations & Achievements */}
         <div className="dashboard-row">
           <JobRecommendations />
           <Achievements />
         </div>
 
+        {/* Quick Actions & Progress Tracker */}
         <div className="dashboard-row">
-          <QuickActions />
+          <QuickActions onAction={handleSidebarNavigation} />
           <ProgressTracker />
         </div>
 
-        {/* Interviews */}
-        <div
-          className="full-width"
-          id="mock-interview"
-        >
-          <MockInterview />
+        {/* Interviews Section */}
+        <div className="full-width" id="mock-interview">
+          <MockInterview onInterviewCompleted={loadDashboard} />
         </div>
 
-        {/* Activity */}
+        {/* Activity Feed */}
         <div className="full-width">
           <Activity activities={dashboardData?.activities} />
         </div>
 
-
         {/* Settings / controls */}
-        <div
-          className="full-width"
-          id="settings-section"
-        >
+        <div className="full-width" id="settings-section">
           <div className="dashboard-settings">
             <h2>Dashboard Settings</h2>
-            <p>
-              Customize your dashboard experience and
-              manage your preferences.
-            </p>
+            <p>Customize your dashboard experience and manage your preferences.</p>
 
             <div className="settings-buttons">
               <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="settings-theme-btn"
-            >
-              {darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            </button>
+                onClick={() => setDarkMode(!darkMode)}
+                className="settings-theme-btn"
+              >
+                {darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              </button>
 
-            <button className="settings-theme-btn">
-              Themes
-            </button>
+              <button className="settings-theme-btn">Themes</button>
             </div>
-
           </div>
         </div>
 
         <AIChat />
-
       </div>
     </div>
   );
