@@ -1,7 +1,7 @@
 // Central place for all calls to the Intervista AI backend.
-// Set VITE_API_URL in a .env file if the backend isn't on localhost:8000.
+// Supports automatic fallback across 127.0.0.1, localhost, and Vite proxy.
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+let activeBaseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 const TOKEN_KEY = "intervista-token";
 
@@ -25,11 +25,39 @@ async function request(path, { method = "GET", body, auth = false } = {}) {
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const payload = body ? JSON.stringify(body) : undefined;
+  let response;
+
+  const candidateBases = [
+    activeBaseUrl,
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "",
+  ];
+
+  let lastError = null;
+
+  for (const base of candidateBases) {
+    try {
+      const url = base ? `${base}${path}` : path;
+      response = await fetch(url, {
+        method,
+        headers,
+        body: payload,
+      });
+
+      if (response) {
+        activeBaseUrl = base; // memorize working base URL
+        break;
+      }
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (!response) {
+    throw new Error(lastError?.message || "Failed to fetch: Cannot connect to Intervista AI backend.");
+  }
 
   // 204 No Content has no body to parse
   const data = response.status === 204 ? null : await response.json().catch(() => null);
@@ -99,4 +127,4 @@ export function fetchSolvedResources() {
 
 export function toggleSolvedResource(title) {
   return request("/api/resources/toggle-solved", { method: "POST", auth: true, body: { title } });
-}
+}
