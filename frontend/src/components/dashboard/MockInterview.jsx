@@ -278,45 +278,89 @@ function MockInterview({ onInterviewCompleted }) {
     }
   }, []);
 
-  // --- INDEPENDENT STREAM REQUEST HANDLERS (NO MUTUAL TERMINATION) ---
+  // --- INDEPENDENT STREAM REQUEST HANDLERS (RESILIENT & NON-BLOCKING) ---
   const requestCamera = async () => {
+    if (cameraStream) {
+      // Toggle off / release camera stream
+      cameraStream.getTracks().forEach((t) => t.stop());
+      setCameraStream(null);
+      setCameraStatus("idle");
+      setIsCameraActive(false);
+      return null;
+    }
+
     try {
       setCameraStatus("requesting");
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+      } catch {
+        // Fallback to generic video constraint
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
       setCameraStream(stream);
       setCameraStatus("granted");
       setIsCameraActive(true);
       return stream;
     } catch (err) {
-      console.error("Camera access error:", err);
-      setCameraStatus("denied");
+      console.warn("Camera access warning:", err);
+      setCameraStatus(err.name === "NotAllowedError" ? "denied" : "idle");
       return null;
     }
   };
 
   const requestMicrophone = async () => {
+    if (micStream) {
+      // Toggle off / release mic stream
+      micStream.getTracks().forEach((t) => t.stop());
+      setMicStream(null);
+      setMicStatus("idle");
+      setIsMicActive(false);
+      setAudioLevel(0);
+      return null;
+    }
+
     try {
       setMicStatus("requesting");
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: false,
-      });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          video: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false,
+        });
+      }
       setMicStream(stream);
       setMicStatus("granted");
       setIsMicActive(true);
       setupAudioAnalyser(stream);
       return stream;
     } catch (err) {
-      console.error("Microphone access error:", err);
-      setMicStatus("denied");
+      console.warn("Microphone access warning:", err);
+      setMicStatus(err.name === "NotAllowedError" ? "denied" : "idle");
       return null;
     }
   };
 
   const requestScreenShare = async () => {
+    if (screenStream) {
+      // Stop sharing
+      screenStream.getTracks().forEach((t) => t.stop());
+      setScreenStream(null);
+      setScreenStatus("idle");
+      return null;
+    }
+
     try {
       setScreenStatus("requesting");
       const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -335,17 +379,60 @@ function MockInterview({ onInterviewCompleted }) {
       }
       return stream;
     } catch (err) {
-      console.error("Screen share access error:", err);
-      setScreenStatus("denied");
+      console.warn("Screen share cancelled or error:", err);
+      // If user simply closed or cancelled the picker dialog, reset to idle
+      if (err.name === "NotAllowedError" || err.name === "AbortError") {
+        setScreenStatus("idle");
+      } else {
+        setScreenStatus("denied");
+      }
       return null;
     }
   };
 
-  // 1-Click to Connect All 3 Compulsory Parameters
-  const requestAllParameters = async () => {
-    await requestCamera();
-    await requestMicrophone();
-    await requestScreenShare();
+  // Connect both Camera & Mic in ONE single browser permission dialog
+  const requestCombinedCamAndMic = async () => {
+    try {
+      setCameraStatus("requesting");
+      setMicStatus("requesting");
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: { echoCancellation: true, noiseSuppression: true },
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+      }
+
+      const videoTracks = stream.getVideoTracks();
+      const audioTracks = stream.getAudioTracks();
+
+      if (videoTracks.length > 0) {
+        const vStream = new MediaStream(videoTracks);
+        setCameraStream(vStream);
+        setCameraStatus("granted");
+        setIsCameraActive(true);
+      }
+
+      if (audioTracks.length > 0) {
+        const aStream = new MediaStream(audioTracks);
+        setMicStream(aStream);
+        setMicStatus("granted");
+        setIsMicActive(true);
+        setupAudioAnalyser(aStream);
+      }
+
+      return stream;
+    } catch (err) {
+      console.warn("Combined Cam/Mic warning:", err);
+      if (!cameraStream) setCameraStatus(err.name === "NotAllowedError" ? "denied" : "idle");
+      if (!micStream) setMicStatus(err.name === "NotAllowedError" ? "denied" : "idle");
+      return null;
+    }
   };
 
   // Toggle Camera Track Mute
@@ -549,15 +636,16 @@ function solution() {
     }
   };
 
-  // --- STRICT COMPULSORY PARAMETERS VALIDATION ---
+  // --- PARAMETERS VALIDATION & TELEMETRY ---
   const isCameraReady = cameraStatus === "granted" && !!cameraStream;
   const isMicReady = micStatus === "granted" && !!micStream;
   const isScreenReady = screenStatus === "granted" && !!screenStream;
   const allParametersReady = isCameraReady && isMicReady && isScreenReady;
+  const anyParameterReady = isCameraReady || isMicReady || isScreenReady;
   const readyCount = (isCameraReady ? 1 : 0) + (isMicReady ? 1 : 0) + (isScreenReady ? 1 : 0);
 
   const handleInitiateInterview = () => {
-    if (!allParametersReady) {
+    if (!anyParameterReady) {
       setShowPreFlightModal(true);
     } else {
       startLiveInterviewSession();
@@ -566,11 +654,6 @@ function solution() {
 
   // 1. START INTERVIEW HANDLER
   const startLiveInterviewSession = async () => {
-    if (!allParametersReady) {
-      setShowPreFlightModal(true);
-      return;
-    }
-
     setShowPreFlightModal(false);
     setLoading(true);
     setEvaluationResult(null);
@@ -873,11 +956,13 @@ function solution() {
           <div className="parameters-title">
             <FaShieldAlt style={{ color: "#38bdf8", fontSize: "20px" }} />
             <div>
-              <h4>Compulsory Parameters for Live Interview (All 3 Required)</h4>
+              <h4>Interview Device & Proctor Parameters</h4>
               <span>
                 {allParametersReady
-                  ? "✓ All 3 required parameters are active and verified!"
-                  : `⚠️ ${readyCount}/3 Parameters Ready — You must turn on Camera, Microphone, and Screen Share to start.`}
+                  ? "✓ All 3 parameters (Camera, Mic & Screen) are active and verified!"
+                  : isCameraReady || isMicReady
+                  ? `✓ ${readyCount}/3 Parameters Active — You are ready to start or select your screen.`
+                  : "Enable your Camera, Microphone, or Screen Share to begin."}
               </span>
             </div>
           </div>
@@ -885,9 +970,10 @@ function solution() {
           <button
             type="button"
             className="verify-all-devices-btn"
-            onClick={requestAllParameters}
+            onClick={requestCombinedCamAndMic}
+            title="Enable Camera and Microphone in a single browser prompt"
           >
-            <FaBolt style={{ color: "#facc15" }} /> ⚡ One-Click Connect All (Cam, Mic & Screen)
+            <FaBolt style={{ color: "#facc15" }} /> ⚡ Quick Allow (Camera + Mic)
           </button>
         </div>
 
@@ -899,7 +985,7 @@ function solution() {
                 <FaVideo />
               </div>
               <div className="device-param-info">
-                <h5>1. Camera (Webcam) <span className="req-tag">*Compulsory</span></h5>
+                <h5>1. Camera (Webcam) <span className="req-tag">Video Feed</span></h5>
                 <p>Live candidate video telemetry</p>
               </div>
             </div>
@@ -911,21 +997,21 @@ function solution() {
                 </span>
               ) : cameraStatus === "denied" ? (
                 <span className="badge-denied">
-                  <FaExclamationTriangle /> Permission Denied
+                  <FaExclamationTriangle /> Permission Blocked
                 </span>
               ) : (
                 <span className="badge-required">
-                  <FaCircle style={{ fontSize: "7px", color: "#f87171" }} /> Required to Run
+                  <FaCircle style={{ fontSize: "7px", color: "#f87171" }} /> Click to Enable
                 </span>
               )}
 
               <button
                 type="button"
-                className="device-action-btn"
+                className={`device-action-btn ${isCameraReady ? "active" : ""}`}
                 onClick={requestCamera}
                 disabled={cameraStatus === "requesting"}
               >
-                {isCameraReady ? "✓ Camera On" : cameraStatus === "requesting" ? "Connecting..." : "Turn On Camera"}
+                {isCameraReady ? "Turn Off" : cameraStatus === "requesting" ? "Connecting..." : "Turn On Camera"}
               </button>
             </div>
           </div>
@@ -937,7 +1023,7 @@ function solution() {
                 <FaMicrophone />
               </div>
               <div className="device-param-info">
-                <h5>2. Microphone <span className="req-tag">*Compulsory</span></h5>
+                <h5>2. Microphone <span className="req-tag">Audio Feed</span></h5>
                 <p>Voice capture & live speech dictation</p>
               </div>
             </div>
@@ -956,21 +1042,21 @@ function solution() {
                 </div>
               ) : micStatus === "denied" ? (
                 <span className="badge-denied">
-                  <FaExclamationTriangle /> Permission Denied
+                  <FaExclamationTriangle /> Permission Blocked
                 </span>
               ) : (
                 <span className="badge-required">
-                  <FaCircle style={{ fontSize: "7px", color: "#f87171" }} /> Required to Run
+                  <FaCircle style={{ fontSize: "7px", color: "#f87171" }} /> Click to Enable
                 </span>
               )}
 
               <button
                 type="button"
-                className="device-action-btn"
+                className={`device-action-btn ${isMicReady ? "active" : ""}`}
                 onClick={requestMicrophone}
                 disabled={micStatus === "requesting"}
               >
-                {isMicReady ? "✓ Mic On" : micStatus === "requesting" ? "Connecting..." : "Turn On Mic"}
+                {isMicReady ? "Turn Off" : micStatus === "requesting" ? "Connecting..." : "Turn On Mic"}
               </button>
             </div>
           </div>
@@ -982,7 +1068,7 @@ function solution() {
                 <FaDesktop />
               </div>
               <div className="device-param-info">
-                <h5>3. Screen Share <span className="req-tag">*Compulsory</span></h5>
+                <h5>3. Screen Share <span className="req-tag">Coding Stream</span></h5>
                 <p>Live coding window / desktop stream</p>
               </div>
             </div>
@@ -994,21 +1080,21 @@ function solution() {
                 </span>
               ) : screenStatus === "denied" ? (
                 <span className="badge-denied">
-                  <FaExclamationTriangle /> Permission Denied
+                  <FaExclamationTriangle /> Permission Blocked
                 </span>
               ) : (
                 <span className="badge-required">
-                  <FaCircle style={{ fontSize: "7px", color: "#f87171" }} /> Required to Run
+                  <FaCircle style={{ fontSize: "7px", color: "#f87171" }} /> Click to Select
                 </span>
               )}
 
               <button
                 type="button"
-                className="device-action-btn"
+                className={`device-action-btn ${isScreenReady ? "active" : ""}`}
                 onClick={requestScreenShare}
                 disabled={screenStatus === "requesting"}
               >
-                {isScreenReady ? "✓ Shared" : screenStatus === "requesting" ? "Selecting..." : "Select Screen"}
+                {isScreenReady ? "Stop Sharing" : screenStatus === "requesting" ? "Selecting..." : "Select Screen"}
               </button>
             </div>
           </div>
@@ -1028,7 +1114,9 @@ function solution() {
             ? "Initializing AI Cockpit..."
             : allParametersReady
             ? "Start Interview Room (All Verified)"
-            : `Set Up Parameters to Start (${readyCount}/3 Ready)`}
+            : isCameraReady || isMicReady
+            ? "Start Interview Room"
+            : `Set Up Devices & Start (${readyCount}/3 Active)`}
         </button>
 
         <button
@@ -1049,8 +1137,8 @@ function solution() {
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <FaShieldAlt style={{ color: "#38bdf8", fontSize: "24px" }} />
                 <div>
-                  <h3>Compulsory Parameters Verification</h3>
-                  <p>All 3 parameters (Camera, Microphone, and Screen Sharing) must be active simultaneously before entering the AI Interview room.</p>
+                  <h3>Device Setup & Telemetry Check</h3>
+                  <p>Enable your Camera and Microphone for the best AI interview proctoring experience.</p>
                 </div>
               </div>
               <button
@@ -1067,9 +1155,9 @@ function solution() {
               <button
                 type="button"
                 className="one-click-setup-btn"
-                onClick={requestAllParameters}
+                onClick={requestCombinedCamAndMic}
               >
-                <FaBolt /> ⚡ One-Click Connect All 3 Parameters (Webcam, Mic & Screen)
+                <FaBolt /> ⚡ Quick Allow Camera & Microphone (1 Prompt)
               </button>
             </div>
 
@@ -1205,14 +1293,15 @@ function solution() {
             <div className="preflight-actions">
               <button
                 type="button"
-                className={`preflight-launch-btn ${!allParametersReady ? "disabled-lock" : "ready-glow"}`}
+                className={`preflight-launch-btn ${!anyParameterReady ? "disabled-lock" : "ready-glow"}`}
                 onClick={startLiveInterviewSession}
-                disabled={!allParametersReady}
               >
-                {!allParametersReady ? <FaLock /> : <FaPlayCircle />}
+                <FaPlayCircle />
                 {allParametersReady
                   ? "🚀 Launch AI Interview Room (All 3 Parameters Ready)"
-                  : `⚠️ All 3 Parameters are Compulsory (${readyCount}/3 Ready)`}
+                  : anyParameterReady
+                  ? `🚀 Launch AI Interview Room (${readyCount}/3 Parameters Configured)`
+                  : "🚀 Launch AI Interview Room"}
               </button>
             </div>
           </div>
