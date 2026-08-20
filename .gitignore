@@ -43,3 +43,5 @@ Backend/venv/
 !**/.env.example
 
 
+
+git status

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-
+from typing import Optional
 from app.database import get_db
 from app.dependencies import get_current_user_optional
 from app import models, schemas
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
 @router.get("", response_model=schemas.DashboardDataOut)
 def get_dashboard_data(
-    current_user: models.User | None = Depends(get_current_user_optional),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     """
