@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "description": "Intervista AI - Complete AI-Powered Interview Preparation Platform",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
+    "install:all": "npm install && npm --prefix frontend install",
+    "postinstall": "npm --prefix frontend install",
     "dev": "npm --prefix frontend run dev",
     "dev:all": "concurrently -k -p \"[{name}]\" -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm run backend\" \"npm run dev\"",
     "build": "npm --prefix frontend run build",
@@ -12,5 +17,10 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8"
   }
 }
+

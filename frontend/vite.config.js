@@ -3,6 +3,9 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: ["jspdf", "jspdf-autotable", "recharts", "react-icons"],
+  },
   server: {
     port: 5173,
     proxy: {
