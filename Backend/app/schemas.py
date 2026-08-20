@@ -185,6 +185,11 @@ class ResumeAnalysisResponse(BaseModel):
     suggestions: List[str]
     formatting_score: int = 88
     technical_depth_score: int = 85
+    impact_score: Optional[int] = 82
+    structure_score: Optional[int] = 90
+    action_verbs: Optional[List[dict]] = None
+    word_count: Optional[int] = None
+    file_name: Optional[str] = None
 
 
 # ---------- Mock Interview Engine ----------
