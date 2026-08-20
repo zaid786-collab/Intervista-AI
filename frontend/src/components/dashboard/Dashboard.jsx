@@ -383,12 +383,16 @@ function Dashboard() {
 
           {activeSection === "career" && (
             <>
-              <div className="dashboard-row">
-                <CodingChallenge onChallengeSolved={loadDashboard} />
-                <ResumeAnalyzer onResumeAnalyzed={loadDashboard} />
+              <div className="career-prep-layout">
+                <div className="career-main-col">
+                  <ResumeAnalyzer onResumeAnalyzed={loadDashboard} />
+                </div>
+                <div className="career-side-col">
+                  <CodingChallenge onChallengeSolved={loadDashboard} compact={true} />
+                </div>
               </div>
 
-              <div className="dashboard-row">
+              <div className="dashboard-row" style={{ marginTop: "24px" }}>
                 <JobRecommendations />
                 <Leaderboard />
               </div>

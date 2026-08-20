@@ -38,7 +38,7 @@ const DEFAULT_CHALLENGE = {
 }`,
 };
 
-function CodingChallenge({ onChallengeSolved }) {
+function CodingChallenge({ onChallengeSolved, compact = false }) {
   const [challenge, setChallenge] = useState(DEFAULT_CHALLENGE);
   const [showModal, setShowModal] = useState(false);
   const [userCode, setUserCode] = useState(DEFAULT_CHALLENGE.starter_code);
@@ -110,36 +110,41 @@ function CodingChallenge({ onChallengeSolved }) {
   };
 
   return (
-    <div className="challenge">
+    <div className={`challenge ${compact ? "challenge-compact-side" : ""}`}>
       <div className="challenge-header">
-        <h2>
-          <FaCode />
-          Daily Coding Challenge
-        </h2>
+        <div className="challenge-title-box">
+          <span className="daily-streak-badge">
+            <FaFire style={{ color: "#f97316" }} /> Daily Problem
+          </span>
+          <h2>
+            <FaCode />
+            {compact ? "Daily DSA Challenge" : "Daily Coding Challenge"}
+          </h2>
+        </div>
 
         <span className={`difficulty ${challenge.difficulty?.toLowerCase() || "medium"}`}>
           {challenge.difficulty || "Medium"}
         </span>
       </div>
 
-      <h3>{challenge.title}</h3>
+      <h3 className="challenge-item-title">{challenge.title}</h3>
 
-      <p>{challenge.description}</p>
+      <p className="challenge-desc-clamp">{challenge.description}</p>
 
       <div className="challenge-details">
-        <div>
+        <div className="detail-pill">
           <FaClock />
           <span>{challenge.time_limit || "30 mins"}</span>
         </div>
 
-        <div>
+        <div className="detail-pill xp">
           <FaFire />
-          <span>{challenge.xp_reward || 150} XP</span>
+          <span>+{challenge.xp_reward || 150} XP</span>
         </div>
       </div>
 
       <button className="solve-btn" type="button" onClick={() => setShowModal(true)}>
-        Solve Now
+        <span>Solve in Editor</span>
         <FaArrowRight />
       </button>
 
