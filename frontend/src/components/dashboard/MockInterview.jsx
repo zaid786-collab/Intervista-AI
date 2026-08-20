@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import "./Dashboard.css";
 import {
   FaVideo,
+  FaVideoSlash,
   FaMicrophone,
+  FaMicrophoneSlash,
   FaLaptopCode,
+  FaDesktop,
   FaPlayCircle,
   FaCircle,
   FaClock,
@@ -16,13 +19,24 @@ import {
   FaFilePdf,
   FaDownload,
   FaRobot,
-  FaKey,
   FaSlidersH,
+  FaExpand,
+  FaCompress,
+  FaShieldAlt,
+  FaExclamationTriangle,
+  FaSyncAlt,
+  FaTv,
+  FaCode,
+  FaFileAlt,
+  FaTrashAlt,
+  FaBolt,
+  FaLock,
 } from "react-icons/fa";
 import { useAuth } from "../../context/useAuth";
 import { generateInterviewPDF } from "../../utils/pdfGenerator";
 import { evaluateInterview } from "../../utils/evaluator";
 import { getToken, recordLocalInterviewSession, recordLocalScheduledInterview } from "../../api";
+import aiBotImage from "../../assets/ai_bot.jpg";
 
 const COMPANIES = [
   "Google",
@@ -124,17 +138,40 @@ const OFFLINE_QUESTION_BANK = {
   ],
 };
 
-const TECH_KEYWORDS = [
-  "virtual dom", "reconciliation", "fiber", "hooks", "closure", "useeffect", "usecallback", "usememo",
-  "debouncing", "throttling", "lcp", "cls", "inp", "tree shaking", "code splitting", "lazy loading",
-  "b-tree", "hash index", "indexing", "postgresql", "mysql", "acid", "mvcc", "isolation levels",
-  "cache-aside", "redis", "bloom filter", "cache stampede", "distributed lock", "mutex", "deadlock",
-  "rate limiting", "token bucket", "sliding window", "jwt", "refresh token", "httponly", "csrf", "xss",
-  "kafka", "rabbitmq", "transactional outbox", "idempotency", "microservices", "rest api", "graphql",
-  "transformer", "self-attention", "rag", "embeddings", "vector database", "quantization", "vllm",
-  "o(1)", "o(n)", "o(log n)", "o(n log n)", "time complexity", "space complexity", "hash map", "two pointers",
-  "dynamic programming", "sliding window", "binary search", "recursion", "memoization"
-];
+// Resilient Video Stream Player Component
+function VideoPlayer({ stream, mirrored = false, style = {}, className = "" }) {
+  const vRef = useRef(null);
+
+  useEffect(() => {
+    const el = vRef.current;
+    if (!el) return;
+    if (stream) {
+      if (el.srcObject !== stream) {
+        el.srcObject = stream;
+      }
+      el.play().catch(() => {});
+    } else {
+      el.srcObject = null;
+    }
+  }, [stream]);
+
+  return (
+    <video
+      ref={vRef}
+      autoPlay
+      playsInline
+      muted
+      className={className}
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: mirrored ? "cover" : "contain",
+        transform: mirrored ? "scaleX(-1)" : "none",
+        ...style,
+      }}
+    />
+  );
+}
 
 function MockInterview({ onInterviewCompleted }) {
   const { user } = useAuth();
@@ -151,13 +188,344 @@ function MockInterview({ onInterviewCompleted }) {
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showHint, setShowHint] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(45 * 60); // 45 minutes max
+  const [timeLeft, setTimeLeft] = useState(45 * 60); // 45 minutes
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
 
+  // Independent Media Stream States
+  const [cameraStatus, setCameraStatus] = useState("idle"); // idle | requesting | granted | denied
+  const [micStatus, setMicStatus] = useState("idle");
+  const [screenStatus, setScreenStatus] = useState("idle");
+  const [cameraStream, setCameraStream] = useState(null);
+  const [micStream, setMicStream] = useState(null);
+  const [screenStream, setScreenStream] = useState(null);
+  const [isCameraActive, setIsCameraActive] = useState(true);
+  const [isMicActive, setIsMicActive] = useState(true);
+  const [cameraMirrored, setCameraMirrored] = useState(true);
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [isDictating, setIsDictating] = useState(false);
+  const [showPreFlightModal, setShowPreFlightModal] = useState(false);
+  const [showScreenExpanded, setShowScreenExpanded] = useState(false);
+  const [aiSpeechState, setAiSpeechState] = useState("observing"); // observing | analyzing | listening
+
+  // AI Key & Settings
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("intervista_gemini_api_key") || "");
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [keyInput, setKeyInput] = useState("");
+
+  // Scheduling modal states
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("10:00 AM");
+  const [scheduleMode, setScheduleMode] = useState("Virtual");
+  const [scheduleSuccess, setScheduleSuccess] = useState("");
+
+  // Audio Context Refs
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  // --- AUDIO ANALYSER SETUP ---
+  const setupAudioAnalyser = useCallback((stream) => {
+    try {
+      if (audioContextRef.current) {
+        try {
+          audioContextRef.current.close();
+        } catch {}
+      }
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const audioCtx = new AudioContextClass();
+      audioContextRef.current = audioCtx;
+
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
+
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      analyser.smoothingTimeConstant = 0.5;
+      analyserRef.current = analyser;
+
+      const source = audioCtx.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+
+      const checkVolume = () => {
+        if (!analyserRef.current) return;
+        analyserRef.current.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        const avg = sum / bufferLength;
+        const normalized = Math.min(Math.round((avg / 128) * 100), 100);
+        setAudioLevel(normalized);
+        animFrameRef.current = requestAnimationFrame(checkVolume);
+      };
+
+      checkVolume();
+    } catch (e) {
+      console.warn("Audio analyser initialization error:", e);
+    }
+  }, []);
+
+  // --- INDEPENDENT STREAM REQUEST HANDLERS (NO MUTUAL TERMINATION) ---
+  const requestCamera = async () => {
+    try {
+      setCameraStatus("requesting");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      setCameraStream(stream);
+      setCameraStatus("granted");
+      setIsCameraActive(true);
+      return stream;
+    } catch (err) {
+      console.error("Camera access error:", err);
+      setCameraStatus("denied");
+      return null;
+    }
+  };
+
+  const requestMicrophone = async () => {
+    try {
+      setMicStatus("requesting");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: false,
+      });
+      setMicStream(stream);
+      setMicStatus("granted");
+      setIsMicActive(true);
+      setupAudioAnalyser(stream);
+      return stream;
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      setMicStatus("denied");
+      return null;
+    }
+  };
+
+  const requestScreenShare = async () => {
+    try {
+      setScreenStatus("requesting");
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: "always" },
+        audio: false,
+      });
+      setScreenStream(stream);
+      setScreenStatus("granted");
+
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          setScreenStream(null);
+          setScreenStatus("idle");
+        };
+      }
+      return stream;
+    } catch (err) {
+      console.error("Screen share access error:", err);
+      setScreenStatus("denied");
+      return null;
+    }
+  };
+
+  // 1-Click to Connect All 3 Compulsory Parameters
+  const requestAllParameters = async () => {
+    await requestCamera();
+    await requestMicrophone();
+    await requestScreenShare();
+  };
+
+  // Toggle Camera Track Mute
+  const toggleCamera = () => {
+    if (cameraStream) {
+      const tracks = cameraStream.getVideoTracks();
+      tracks.forEach((t) => (t.enabled = !isCameraActive));
+      setIsCameraActive(!isCameraActive);
+    }
+  };
+
+  // Toggle Mic Track Mute
+  const toggleMic = () => {
+    if (micStream) {
+      const tracks = micStream.getAudioTracks();
+      tracks.forEach((t) => (t.enabled = !isMicActive));
+      setIsMicActive(!isMicActive);
+    }
+  };
+
+  // Cleanup All Media Streams on Unmount or Session End
+  const stopAllStreams = useCallback(() => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((t) => t.stop());
+      setCameraStream(null);
+      setCameraStatus("idle");
+    }
+    if (micStream) {
+      micStream.getTracks().forEach((t) => t.stop());
+      setMicStream(null);
+      setMicStatus("idle");
+    }
+    if (screenStream) {
+      screenStream.getTracks().forEach((t) => t.stop());
+      setScreenStream(null);
+      setScreenStatus("idle");
+    }
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch {}
+      audioContextRef.current = null;
+    }
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      setIsDictating(false);
+    }
+    setAudioLevel(0);
+  }, [cameraStream, micStream, screenStream]);
+
+  // Clean up on component unmount
+  useEffect(() => {
+    return () => {
+      stopAllStreams();
+    };
+  }, [stopAllStreams]);
+
+  // --- SPEECH RECOGNITION (VOICE-TO-TEXT) ---
+  const toggleVoiceDictation = () => {
+    const SpeechRecognitionClass =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionClass) {
+      alert("Speech-to-Text is not supported by your browser. Please type your answer.");
+      return;
+    }
+
+    if (isDictating) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsDictating(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognitionClass();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
+
+      recognition.onstart = () => {
+        setIsDictating(true);
+        setAiSpeechState("listening");
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        const currentQId = sessionQuestions[currentQIndex]?.id;
+        if (currentQId) {
+          setAnswers((prev) => {
+            const existing = prev[currentQId] || "";
+            return {
+              ...prev,
+              [currentQId]: existing ? `${existing} ${transcript}` : transcript,
+            };
+          });
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.warn("Speech recognition error:", e);
+        setIsDictating(false);
+        setAiSpeechState("observing");
+      };
+
+      recognition.onend = () => {
+        setIsDictating(false);
+        setAiSpeechState("observing");
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (e) {
+      console.error("Speech recognition startup error:", e);
+      setIsDictating(false);
+    }
+  };
+
+  // Helper to insert structured solution scaffolding
+  const handleInsertTemplate = () => {
+    const currentQId = sessionQuestions[currentQIndex]?.id;
+    if (!currentQId) return;
+    const template = `// 1. High-Level Architectural Approach:
+// - Design patterns, algorithmic intuition, and state model.
+
+// 2. Code Implementation:
+function solution() {
+  // Your code logic here
+}
+
+// 3. Time & Space Complexity Analysis:
+// - Time Complexity: O(...)
+// - Space Complexity: O(...)
+
+// 4. Edge Cases & Concurrency Trade-offs:
+// - Boundary conditions, null checks, and caching considerations.
+`;
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQId]: prev[currentQId] ? `${prev[currentQId]}\n\n${template}` : template,
+    }));
+  };
+
+  // Helper to clear current response
+  const handleClearAnswer = () => {
+    const currentQId = sessionQuestions[currentQIndex]?.id;
+    if (!currentQId) return;
+    if (window.confirm("Are you sure you want to clear your current solution?")) {
+      setAnswers((prev) => ({
+        ...prev,
+        [currentQId]: "",
+      }));
+    }
+  };
+
+  // Countdown timer during active interview
+  useEffect(() => {
+    let timer = null;
+    if (interviewActive && !evaluationResult && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => Math.max(prev - 1, 0));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [interviewActive, evaluationResult, timeLeft]);
+
+  const formatTimer = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const handleDownloadPDF = () => {
     if (!evaluationResult) return;
@@ -181,44 +549,39 @@ function MockInterview({ onInterviewCompleted }) {
     }
   };
 
-  // Scheduling modal states
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [scheduleDate, setScheduleDate] = useState("");
-  const [scheduleTime, setScheduleTime] = useState("10:00 AM");
-  const [scheduleMode, setScheduleMode] = useState("Virtual");
-  const [scheduleSuccess, setScheduleSuccess] = useState("");
+  // --- STRICT COMPULSORY PARAMETERS VALIDATION ---
+  const isCameraReady = cameraStatus === "granted" && !!cameraStream;
+  const isMicReady = micStatus === "granted" && !!micStream;
+  const isScreenReady = screenStatus === "granted" && !!screenStream;
+  const allParametersReady = isCameraReady && isMicReady && isScreenReady;
+  const readyCount = (isCameraReady ? 1 : 0) + (isMicReady ? 1 : 0) + (isScreenReady ? 1 : 0);
 
-  // Countdown timer during active interview
-  useEffect(() => {
-    let timer = null;
-    if (interviewActive && !evaluationResult && timeLeft > 0) {
-      timer = setInterval(() => {
-        setTimeLeft((prev) => Math.max(prev - 1, 0));
-      }, 1000);
+  const handleInitiateInterview = () => {
+    if (!allParametersReady) {
+      setShowPreFlightModal(true);
+    } else {
+      startLiveInterviewSession();
     }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [interviewActive, evaluationResult, timeLeft]);
-
-  const formatTimer = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
   // 1. START INTERVIEW HANDLER
-  const handleStartInterview = async () => {
+  const startLiveInterviewSession = async () => {
+    if (!allParametersReady) {
+      setShowPreFlightModal(true);
+      return;
+    }
+
+    setShowPreFlightModal(false);
     setLoading(true);
     setEvaluationResult(null);
     setCurrentQIndex(0);
     setShowHint(false);
     setTimeLeft(45 * 60);
     setSessionStartTime(Date.now());
+    setAiSpeechState("observing");
 
     const token = getToken();
     const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
-
     let fetchedQuestions = null;
 
     for (const base of candidateBases) {
@@ -241,7 +604,7 @@ function MockInterview({ onInterviewCompleted }) {
           }
         }
       } catch {
-        // continue to next base or offline fallback
+        // continue
       }
     }
 
@@ -270,8 +633,8 @@ function MockInterview({ onInterviewCompleted }) {
   // 2. SUBMIT INTERVIEW HANDLER
   const handleSubmitInterview = async () => {
     setLoading(true);
+    setAiSpeechState("analyzing");
 
-    // Calculate actual active time spent by user in seconds rounded to nearest 1 minute
     const elapsedSeconds = sessionStartTime
       ? Math.max(Math.floor((Date.now() - sessionStartTime) / 1000), 1)
       : Math.max(45 * 60 - timeLeft, 1);
@@ -287,7 +650,6 @@ function MockInterview({ onInterviewCompleted }) {
     const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
     let evalData = null;
 
-    // 1. Try Backend API evaluation
     for (const base of candidateBases) {
       try {
         const url = base ? `${base}/api/interviews/submit` : `/api/interviews/submit`;
@@ -311,16 +673,14 @@ function MockInterview({ onInterviewCompleted }) {
           break;
         }
       } catch {
-        // continue fallback
+        // fallback
       }
     }
 
-    // 2. High-precision semantic & live Gemini LLM evaluator
     if (!evalData) {
       evalData = await evaluateInterview(company, role, difficulty, answersPayload, apiKey);
     }
 
-    // Save session in local mirror cache for resilient offline and instant reactive state
     recordLocalInterviewSession({
       id: evalData.interview_id || Date.now(),
       company,
@@ -343,8 +703,8 @@ function MockInterview({ onInterviewCompleted }) {
 
     setEvaluationResult(evalData);
     setLoading(false);
+    setAiSpeechState("observing");
 
-    // Auto-refresh Dashboard metrics
     if (onInterviewCompleted) {
       onInterviewCompleted();
     }
@@ -406,11 +766,31 @@ function MockInterview({ onInterviewCompleted }) {
     }, 2000);
   };
 
+  const handleCloseSession = () => {
+    if (window.confirm("Are you sure you want to end this interview session? Your progress will be saved.")) {
+      setInterviewActive(false);
+      setEvaluationResult(null);
+      stopAllStreams();
+    }
+  };
+
+  // Current answer stats
+  const currentAnswerText = answers[sessionQuestions[currentQIndex]?.id] || "";
+  const wordCount = currentAnswerText.trim() ? currentAnswerText.trim().split(/\s+/).length : 0;
+  const charCount = currentAnswerText.length;
+
   return (
     <div className="mock-interview">
+      {/* Header */}
       <div className="mock-header">
-        <h2>🎤 AI Mock Interview Room</h2>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div>
+          <h2>🎤 AI Mock Interview Cockpit</h2>
+          <p style={{ margin: "4px 0 0", color: "var(--text-secondary)", fontSize: "13px" }}>
+            Proctored AI technical interview with compulsory Camera, Microphone, Screen Sharing & real-time evaluation.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           <button
             type="button"
             onClick={() => {
@@ -418,19 +798,7 @@ function MockInterview({ onInterviewCompleted }) {
               setShowApiKeyModal(true);
             }}
             title="Configure AI Model & API Key"
-            style={{
-              background: apiKey ? "rgba(34,197,94,0.15)" : "rgba(56,189,248,0.12)",
-              border: `1px solid ${apiKey ? "rgba(34,197,94,0.35)" : "rgba(56,189,248,0.35)"}`,
-              color: apiKey ? "#4ade80" : "#38bdf8",
-              padding: "5px 12px",
-              borderRadius: "8px",
-              fontSize: "12px",
-              fontWeight: "600",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
+            className="ai-model-toggle-btn"
           >
             <FaRobot />
             {apiKey ? "Gemini LLM (Active)" : "AI Engine: Neural Rubric"}
@@ -438,30 +806,20 @@ function MockInterview({ onInterviewCompleted }) {
           </button>
 
           <span className="live-status">
-            <FaCircle />
-            AI Online
+            <FaCircle className="pulse-dot" />
+            AI Proctor Online
           </span>
         </div>
       </div>
 
+      {/* Target Role & Configuration Grid */}
       <div className="mock-grid">
-        {/* Company Selector */}
         <div className="mock-card">
-          <h3>Company</h3>
+          <h3>Target Company</h3>
           <select
             value={company}
             onChange={(e) => setCompany(e.target.value)}
-            style={{
-              width: "100%",
-              marginTop: "8px",
-              padding: "8px 12px",
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              color: "#fff",
-              borderRadius: "8px",
-              fontWeight: "600",
-              cursor: "pointer",
-            }}
+            className="mock-select"
           >
             {COMPANIES.map((c) => (
               <option key={c} value={c} style={{ background: "#1e293b", color: "#fff" }}>
@@ -471,23 +829,12 @@ function MockInterview({ onInterviewCompleted }) {
           </select>
         </div>
 
-        {/* Role Selector */}
         <div className="mock-card">
-          <h3>Role</h3>
+          <h3>Domain Role</h3>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            style={{
-              width: "100%",
-              marginTop: "8px",
-              padding: "8px 12px",
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              color: "#fff",
-              borderRadius: "8px",
-              fontWeight: "600",
-              cursor: "pointer",
-            }}
+            className="mock-select"
           >
             {ROLES.map((r) => (
               <option key={r} value={r} style={{ background: "#1e293b", color: "#fff" }}>
@@ -497,23 +844,12 @@ function MockInterview({ onInterviewCompleted }) {
           </select>
         </div>
 
-        {/* Difficulty Selector */}
         <div className="mock-card">
           <h3>Difficulty</h3>
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
-            style={{
-              width: "100%",
-              marginTop: "8px",
-              padding: "8px 12px",
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              color: "#fff",
-              borderRadius: "8px",
-              fontWeight: "600",
-              cursor: "pointer",
-            }}
+            className="mock-select"
           >
             {DIFFICULTIES.map((d) => (
               <option key={d} value={d} style={{ background: "#1e293b", color: "#fff" }}>
@@ -523,36 +859,176 @@ function MockInterview({ onInterviewCompleted }) {
           </select>
         </div>
 
-        {/* Duration Card */}
         <div className="mock-card">
-          <h3>Duration</h3>
+          <h3>Session Length</h3>
           <p style={{ marginTop: "12px", fontWeight: "bold", fontSize: "16px", color: "#38bdf8" }}>
-            45 Minutes
+            45 Minutes Live
           </p>
         </div>
       </div>
 
-      <div className="device-status">
-        <div>
-          <FaVideo /> Camera Ready
+      {/* ================= COMPULSORY PARAMETERS SECTION ================= */}
+      <div className="interview-parameters-section">
+        <div className="parameters-header">
+          <div className="parameters-title">
+            <FaShieldAlt style={{ color: "#38bdf8", fontSize: "20px" }} />
+            <div>
+              <h4>Compulsory Parameters for Live Interview (All 3 Required)</h4>
+              <span>
+                {allParametersReady
+                  ? "✓ All 3 required parameters are active and verified!"
+                  : `⚠️ ${readyCount}/3 Parameters Ready — You must turn on Camera, Microphone, and Screen Share to start.`}
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="verify-all-devices-btn"
+            onClick={requestAllParameters}
+          >
+            <FaBolt style={{ color: "#facc15" }} /> ⚡ One-Click Connect All (Cam, Mic & Screen)
+          </button>
         </div>
-        <div>
-          <FaMicrophone /> Microphone Connected
-        </div>
-        <div>
-          <FaLaptopCode /> Screen Sharing Available
+
+        <div className="device-cards-grid">
+          {/* CAMERA PARAMETER CARD */}
+          <div className={`device-parameter-card ${isCameraReady ? "granted" : cameraStatus === "denied" ? "denied" : ""}`}>
+            <div className="device-param-top">
+              <div className="device-param-icon camera">
+                <FaVideo />
+              </div>
+              <div className="device-param-info">
+                <h5>1. Camera (Webcam) <span className="req-tag">*Compulsory</span></h5>
+                <p>Live candidate video telemetry</p>
+              </div>
+            </div>
+
+            <div className="device-param-status-row">
+              {isCameraReady ? (
+                <span className="badge-granted">
+                  <FaCheckCircle /> Camera Active
+                </span>
+              ) : cameraStatus === "denied" ? (
+                <span className="badge-denied">
+                  <FaExclamationTriangle /> Permission Denied
+                </span>
+              ) : (
+                <span className="badge-required">
+                  <FaCircle style={{ fontSize: "7px", color: "#f87171" }} /> Required to Run
+                </span>
+              )}
+
+              <button
+                type="button"
+                className="device-action-btn"
+                onClick={requestCamera}
+                disabled={cameraStatus === "requesting"}
+              >
+                {isCameraReady ? "✓ Camera On" : cameraStatus === "requesting" ? "Connecting..." : "Turn On Camera"}
+              </button>
+            </div>
+          </div>
+
+          {/* MICROPHONE PARAMETER CARD */}
+          <div className={`device-parameter-card ${isMicReady ? "granted" : micStatus === "denied" ? "denied" : ""}`}>
+            <div className="device-param-top">
+              <div className="device-param-icon mic">
+                <FaMicrophone />
+              </div>
+              <div className="device-param-info">
+                <h5>2. Microphone <span className="req-tag">*Compulsory</span></h5>
+                <p>Voice capture & live speech dictation</p>
+              </div>
+            </div>
+
+            <div className="device-param-status-row">
+              {isMicReady ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span className="badge-granted">
+                    <FaCheckCircle /> Mic Active
+                  </span>
+                  <div className="mini-audio-meter" title={`Audio Level: ${audioLevel}%`}>
+                    <span style={{ height: `${Math.max(audioLevel * 0.8, 15)}%` }}></span>
+                    <span style={{ height: `${Math.max(audioLevel * 1.0, 30)}%` }}></span>
+                    <span style={{ height: `${Math.max(audioLevel * 0.6, 20)}%` }}></span>
+                  </div>
+                </div>
+              ) : micStatus === "denied" ? (
+                <span className="badge-denied">
+                  <FaExclamationTriangle /> Permission Denied
+                </span>
+              ) : (
+                <span className="badge-required">
+                  <FaCircle style={{ fontSize: "7px", color: "#f87171" }} /> Required to Run
+                </span>
+              )}
+
+              <button
+                type="button"
+                className="device-action-btn"
+                onClick={requestMicrophone}
+                disabled={micStatus === "requesting"}
+              >
+                {isMicReady ? "✓ Mic On" : micStatus === "requesting" ? "Connecting..." : "Turn On Mic"}
+              </button>
+            </div>
+          </div>
+
+          {/* SCREEN SHARING PARAMETER CARD */}
+          <div className={`device-parameter-card ${isScreenReady ? "granted" : screenStatus === "denied" ? "denied" : ""}`}>
+            <div className="device-param-top">
+              <div className="device-param-icon screen">
+                <FaDesktop />
+              </div>
+              <div className="device-param-info">
+                <h5>3. Screen Share <span className="req-tag">*Compulsory</span></h5>
+                <p>Live coding window / desktop stream</p>
+              </div>
+            </div>
+
+            <div className="device-param-status-row">
+              {isScreenReady ? (
+                <span className="badge-granted">
+                  <FaCheckCircle /> Screen Active
+                </span>
+              ) : screenStatus === "denied" ? (
+                <span className="badge-denied">
+                  <FaExclamationTriangle /> Permission Denied
+                </span>
+              ) : (
+                <span className="badge-required">
+                  <FaCircle style={{ fontSize: "7px", color: "#f87171" }} /> Required to Run
+                </span>
+              )}
+
+              <button
+                type="button"
+                className="device-action-btn"
+                onClick={requestScreenShare}
+                disabled={screenStatus === "requesting"}
+              >
+                {isScreenReady ? "✓ Shared" : screenStatus === "requesting" ? "Selecting..." : "Select Screen"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Action Buttons */}
       <div className="interview-actions">
         <button
           className="start-interview"
-          onClick={handleStartInterview}
+          onClick={handleInitiateInterview}
           disabled={loading}
           type="button"
         >
           {loading ? <FaSpinner className="fa-spin" /> : <FaPlayCircle />}
-          {loading ? "Initializing AI Engine..." : "Start Interview"}
+          {loading
+            ? "Initializing AI Cockpit..."
+            : allParametersReady
+            ? "Start Interview Room (All Verified)"
+            : `Set Up Parameters to Start (${readyCount}/3 Ready)`}
         </button>
 
         <button
@@ -565,261 +1041,600 @@ function MockInterview({ onInterviewCompleted }) {
         </button>
       </div>
 
-      {/* ================= INTERVIEW SESSION MODAL ================= */}
-      {interviewActive && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(10, 15, 29, 0.92)",
-            backdropFilter: "blur(8px)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              background: "#0f172a",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: "16px",
-              width: "100%",
-              maxWidth: "850px",
-              maxHeight: "92vh",
-              overflowY: "auto",
-              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.6)",
-              padding: "28px",
-              color: "#fff",
-            }}
-          >
-            {!evaluationResult ? (
-              <>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "16px" }}>
-                  <div>
-                    <span style={{ color: "#38bdf8", fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "bold" }}>
-                      ✦ {company} • {role} ({difficulty})
-                    </span>
-                    <h2 style={{ margin: "4px 0 0", fontSize: "20px" }}>Live Technical AI Interview</h2>
-                  </div>
+      {/* ================= PRE-FLIGHT COMPULSORY VERIFICATION MODAL ================= */}
+      {showPreFlightModal && (
+        <div className="interview-modal-backdrop">
+          <div className="preflight-modal-box">
+            <div className="preflight-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <FaShieldAlt style={{ color: "#38bdf8", fontSize: "24px" }} />
+                <div>
+                  <h3>Compulsory Parameters Verification</h3>
+                  <p>All 3 parameters (Camera, Microphone, and Screen Sharing) must be active simultaneously before entering the AI Interview room.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowPreFlightModal(false)}
+              >
+                <FaTimes />
+              </button>
+            </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(239,68,68,0.15)", color: "#f87171", padding: "6px 12px", borderRadius: "8px", fontWeight: "bold", fontSize: "14px" }}>
-                      <FaClock />
-                      <span>{formatTimer(timeLeft)}</span>
-                    </div>
+            {/* Quick 1-click button */}
+            <div style={{ marginBottom: "18px", textAlign: "center" }}>
+              <button
+                type="button"
+                className="one-click-setup-btn"
+                onClick={requestAllParameters}
+              >
+                <FaBolt /> ⚡ One-Click Connect All 3 Parameters (Webcam, Mic & Screen)
+              </button>
+            </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setInterviewActive(false)}
-                      style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "20px", cursor: "pointer" }}
-                    >
-                      <FaTimes />
-                    </button>
-                  </div>
+            <div className="preflight-grid">
+              {/* 1. Camera Box */}
+              <div className={`preflight-device-block ${isCameraReady ? "ready" : ""}`}>
+                <div className="device-block-header">
+                  <span><FaVideo /> 1. Webcam Camera</span>
+                  {isCameraReady ? (
+                    <span className="status-tag granted">✓ Active</span>
+                  ) : (
+                    <span className="status-tag required">Required</span>
+                  )}
                 </div>
 
-                {sessionQuestions.length > 0 && (
-                  <div style={{ marginTop: "20px" }}>
-                    {/* Tabs for questions */}
-                    <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
-                      {sessionQuestions.map((q, idx) => (
-                        <button
-                          key={q.id}
-                          type="button"
-                          onClick={() => {
-                            setCurrentQIndex(idx);
-                            setShowHint(false);
-                          }}
-                          style={{
-                            padding: "8px 16px",
-                            borderRadius: "8px",
-                            border: "none",
-                            cursor: "pointer",
-                            fontSize: "13px",
-                            fontWeight: "bold",
-                            background: currentQIndex === idx ? "#2563eb" : "rgba(255,255,255,0.06)",
-                            color: currentQIndex === idx ? "#fff" : "#94a3b8",
-                          }}
-                        >
-                          Q{idx + 1}: {q.category || `Question ${idx + 1}`}
-                        </button>
-                      ))}
+                <div className="preflight-preview-video-container">
+                  {cameraStream ? (
+                    <VideoPlayer stream={cameraStream} mirrored={cameraMirrored} />
+                  ) : (
+                    <div className="preview-placeholder">
+                      <FaVideoSlash style={{ fontSize: "28px", color: "#64748b" }} />
+                      <p>Camera feed is inactive.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="device-block-footer">
+                  <button
+                    type="button"
+                    className={`preflight-btn ${isCameraReady ? "active-btn" : ""}`}
+                    onClick={requestCamera}
+                  >
+                    {isCameraReady ? "✓ Camera Connected" : "Grant Camera Access"}
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Microphone Box */}
+              <div className={`preflight-device-block ${isMicReady ? "ready" : ""}`}>
+                <div className="device-block-header">
+                  <span><FaMicrophone /> 2. Microphone Audio</span>
+                  {isMicReady ? (
+                    <span className="status-tag granted">✓ Active</span>
+                  ) : (
+                    <span className="status-tag required">Required</span>
+                  )}
+                </div>
+
+                <div className="preflight-preview-mic-container">
+                  {micStream ? (
+                    <div className="mic-active-tester">
+                      <FaMicrophone style={{ fontSize: "28px", color: "#22c55e", marginBottom: "8px" }} />
+                      <p>Microphone is active! Speak to test volume:</p>
+                      <div className="audio-live-bars">
+                        {[...Array(12)].map((_, idx) => {
+                          const threshold = (idx + 1) * 8;
+                          const isActive = audioLevel >= threshold;
+                          return (
+                            <span
+                              key={idx}
+                              style={{
+                                height: `${Math.max((idx + 1) * 7, 10)}%`,
+                                background: isActive
+                                  ? idx > 9
+                                    ? "#ef4444"
+                                    : idx > 6
+                                    ? "#f59e0b"
+                                    : "#22c55e"
+                                  : "rgba(255,255,255,0.1)",
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                      <small style={{ color: "#38bdf8", fontWeight: "bold", marginTop: "6px" }}>
+                        Voice Level: {audioLevel}%
+                      </small>
+                    </div>
+                  ) : (
+                    <div className="preview-placeholder">
+                      <FaMicrophoneSlash style={{ fontSize: "28px", color: "#64748b" }} />
+                      <p>Microphone is inactive.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="device-block-footer">
+                  <button
+                    type="button"
+                    className={`preflight-btn ${isMicReady ? "active-btn" : ""}`}
+                    onClick={requestMicrophone}
+                  >
+                    {isMicReady ? "✓ Microphone Connected" : "Grant Microphone Access"}
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. Screen Sharing Box */}
+              <div className={`preflight-device-block ${isScreenReady ? "ready" : ""}`}>
+                <div className="device-block-header">
+                  <span><FaDesktop /> 3. Screen Share</span>
+                  {isScreenReady ? (
+                    <span className="status-tag granted">✓ Active</span>
+                  ) : (
+                    <span className="status-tag required">Required</span>
+                  )}
+                </div>
+
+                <div className="preflight-preview-screen-container">
+                  {screenStream ? (
+                    <VideoPlayer stream={screenStream} mirrored={false} style={{ background: "#000" }} />
+                  ) : (
+                    <div className="preview-placeholder">
+                      <FaDesktop style={{ fontSize: "28px", color: "#64748b" }} />
+                      <p>Select your coding window/screen.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="device-block-footer">
+                  <button
+                    type="button"
+                    className={`preflight-btn ${isScreenReady ? "active-btn" : ""}`}
+                    onClick={requestScreenShare}
+                  >
+                    {isScreenReady ? "✓ Screen Share Active" : "Select Screen / Window"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Launch Action */}
+            <div className="preflight-actions">
+              <button
+                type="button"
+                className={`preflight-launch-btn ${!allParametersReady ? "disabled-lock" : "ready-glow"}`}
+                onClick={startLiveInterviewSession}
+                disabled={!allParametersReady}
+              >
+                {!allParametersReady ? <FaLock /> : <FaPlayCircle />}
+                {allParametersReady
+                  ? "🚀 Launch AI Interview Room (All 3 Parameters Ready)"
+                  : `⚠️ All 3 Parameters are Compulsory (${readyCount}/3 Ready)`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= FULLSCREEN SCREEN SHARING MODAL ================= */}
+      {showScreenExpanded && screenStream && (
+        <div className="screen-expanded-backdrop" onClick={() => setShowScreenExpanded(false)}>
+          <div className="screen-expanded-container" onClick={(e) => e.stopPropagation()}>
+            <div className="screen-expanded-header">
+              <span><FaDesktop /> Live Screen Stream (Candidate View)</span>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowScreenExpanded(false)}
+              >
+                <FaCompress />
+              </button>
+            </div>
+            <div className="screen-expanded-video-wrap">
+              <VideoPlayer stream={screenStream} mirrored={false} style={{ background: "#000" }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= LIVE INTERVIEW COCKPIT SESSION MODAL ================= */}
+      {interviewActive && (
+        <div className="interview-live-cockpit-overlay">
+          {/* Subtle dark ambient backdrop */}
+          <div
+            className="interview-ai-backdrop"
+            style={{
+              backgroundImage: `linear-gradient(180deg, rgba(2, 6, 23, 0.94), rgba(15, 23, 42, 0.98)), url(${aiBotImage})`,
+            }}
+          />
+
+          <div className="cockpit-container">
+            {!evaluationResult ? (
+              <>
+                {/* COCKPIT TOP HEADER */}
+                <div className="cockpit-top-bar">
+                  <div className="cockpit-brand">
+                    <span className="cockpit-role-badge">
+                      ✦ {company} • {role} ({difficulty})
+                    </span>
+                    <h3 className="cockpit-title">AI Technical Interview</h3>
+                  </div>
+
+                  <div className="cockpit-telemetry-cluster">
+                    {/* Camera indicator */}
+                    <div className={`telemetry-pill ${isCameraReady && isCameraActive ? "active" : "inactive"}`}>
+                      <FaVideo />
+                      <span>{isCameraReady && isCameraActive ? "Camera" : "Cam Off"}</span>
                     </div>
 
-                    {/* Question Box */}
-                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: "20px", borderRadius: "12px", marginBottom: "20px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
-                        <span style={{ color: "#38bdf8", fontSize: "12px", fontWeight: "bold", textTransform: "uppercase" }}>
-                          Question {currentQIndex + 1} of {sessionQuestions.length}
-                        </span>
-
-                        {sessionQuestions[currentQIndex]?.hint && (
-                          <button
-                            type="button"
-                            onClick={() => setShowHint(!showHint)}
-                            style={{
-                              background: "rgba(234,179,8,0.15)",
-                              border: "1px solid rgba(234,179,8,0.3)",
-                              color: "#facc15",
-                              padding: "4px 10px",
-                              borderRadius: "6px",
-                              fontSize: "12px",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "4px",
-                            }}
-                          >
-                            <FaLightbulb />
-                            {showHint ? "Hide Hint" : "Need a Hint?"}
-                          </button>
-                        )}
-                      </div>
-
-                      <h3 style={{ fontSize: "17px", lineHeight: "1.5", margin: 0, color: "#f8fafc" }}>
-                        {sessionQuestions[currentQIndex]?.question}
-                      </h3>
-
-                      {showHint && sessionQuestions[currentQIndex]?.hint && (
-                        <div style={{ marginTop: "14px", padding: "12px", background: "rgba(234,179,8,0.08)", borderLeft: "3px solid #facc15", borderRadius: "4px", color: "#fef08a", fontSize: "13px" }}>
-                          💡 <strong>Interviewer Hint:</strong> {sessionQuestions[currentQIndex].hint}
+                    {/* Mic indicator */}
+                    <div className={`telemetry-pill ${isMicReady && isMicActive ? "active" : "inactive"}`}>
+                      <FaMicrophone />
+                      <span>{isMicReady && isMicActive ? "Mic" : "Mic Off"}</span>
+                      {isMicReady && isMicActive && (
+                        <div className="pill-audio-wave">
+                          <span style={{ height: `${Math.max(audioLevel * 0.6, 20)}%` }} />
+                          <span style={{ height: `${Math.max(audioLevel * 0.9, 40)}%` }} />
+                          <span style={{ height: `${Math.max(audioLevel * 0.5, 25)}%` }} />
                         </div>
                       )}
                     </div>
 
-                    {/* Answer Editor */}
-                    <div style={{ marginBottom: "20px" }}>
-                      <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "8px", fontWeight: "bold" }}>
-                        Your Technical Explanation & Code Snippets:
-                      </label>
-                      <textarea
-                        rows={8}
-                        value={answers[sessionQuestions[currentQIndex]?.id] || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setAnswers((prev) => ({
-                            ...prev,
-                            [sessionQuestions[currentQIndex].id]: val,
-                          }));
-                        }}
-                        placeholder="Write your structured solution, architectural trade-offs, code snippets, and time/space complexity analysis..."
-                        style={{
-                          width: "100%",
-                          padding: "14px",
-                          borderRadius: "10px",
-                          background: "#020617",
-                          border: "1px solid rgba(255,255,255,0.15)",
-                          color: "#f8fafc",
-                          fontFamily: "monospace",
-                          fontSize: "14px",
-                          resize: "vertical",
-                          outline: "none",
-                          boxSizing: "border-box",
-                        }}
-                      />
+                    {/* Screen share indicator */}
+                    <div className={`telemetry-pill ${isScreenReady ? "active" : "inactive"}`}>
+                      <FaDesktop />
+                      <span>{isScreenReady ? "Screen" : "No Screen"}</span>
                     </div>
 
-                    {/* Navigation Buttons */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCurrentQIndex((prev) => Math.max(prev - 1, 0));
-                          setShowHint(false);
-                        }}
-                        disabled={currentQIndex === 0}
-                        style={{
-                          padding: "10px 20px",
-                          borderRadius: "8px",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                          background: "rgba(255,255,255,0.05)",
-                          color: "#fff",
-                          cursor: currentQIndex === 0 ? "not-allowed" : "pointer",
-                          opacity: currentQIndex === 0 ? 0.5 : 1,
-                        }}
-                      >
-                        ← Previous
-                      </button>
+                    {/* Timer */}
+                    <div className="cockpit-timer">
+                      <FaClock />
+                      <span>{formatTimer(timeLeft)}</span>
+                    </div>
 
-                      {currentQIndex < sessionQuestions.length - 1 ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCurrentQIndex((prev) => Math.min(prev + 1, sessionQuestions.length - 1));
-                            setShowHint(false);
-                          }}
-                          style={{
-                            padding: "10px 22px",
-                            borderRadius: "8px",
-                            background: "#2563eb",
-                            border: "none",
-                            color: "#fff",
-                            fontWeight: "bold",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Next Question →
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={handleSubmitInterview}
-                          disabled={loading}
-                          style={{
-                            padding: "12px 28px",
-                            borderRadius: "8px",
-                            background: "linear-gradient(135deg, #22c55e, #16a34a)",
-                            border: "none",
-                            color: "#fff",
-                            fontWeight: "bold",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                          }}
-                        >
-                          {loading ? <FaSpinner className="fa-spin" /> : <FaCheckCircle />}
-                          {loading ? "Evaluating with AI Engine..." : "Submit & Generate Report"}
-                        </button>
-                      )}
+                    {/* End session */}
+                    <button
+                      type="button"
+                      onClick={handleCloseSession}
+                      className="cockpit-exit-btn"
+                      title="End Interview Session"
+                    >
+                      <FaTimes />
+                      <span>End</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* COCKPIT MAIN GRID */}
+                <div className="cockpit-main-grid">
+                  {/* LEFT SIDEBAR: AI EXAMINER & PROCTOR FEEDS */}
+                  <div className="cockpit-left-pane">
+                    {/* 1. COMPACT AI INTERVIEWER CARD */}
+                    <div className="ai-examiner-compact-card">
+                      <div className="ai-examiner-top">
+                        <div className="ai-avatar-thumb">
+                          <img src={aiBotImage} alt="AI Examiner" />
+                          <span className="ai-status-dot" />
+                        </div>
+                        <div className="ai-examiner-meta">
+                          <div className="ai-name-row">
+                            <strong>Unit-7 AI Examiner</strong>
+                            <span className="ai-badge-live">
+                              {aiSpeechState === "listening" ? "Listening" : aiSpeechState === "analyzing" ? "Analyzing" : "Online"}
+                            </span>
+                          </div>
+                          {/* Speech wave */}
+                          <div className="ai-voice-wave-container">
+                            <div className="voice-wave-bar bar-1"></div>
+                            <div className="voice-wave-bar bar-2"></div>
+                            <div className="voice-wave-bar bar-3"></div>
+                            <div className="voice-wave-bar bar-4"></div>
+                            <div className="voice-wave-bar bar-5"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="ai-speech-bubble">
+                        {aiSpeechState === "listening"
+                          ? "🎙️ Transcribing speech in real-time... Speak clearly."
+                          : aiSpeechState === "analyzing"
+                          ? "⚙️ Synthesizing keywords & Big-O complexity..."
+                          : "💬 'Provide a structured solution covering architecture, code, and complexity.'"}
+                      </p>
+                    </div>
+
+                    {/* 2. CANDIDATE WEBCAM VIDEO (PROCTOR) */}
+                    <div className="cockpit-feed-card">
+                      <div className="feed-card-header">
+                        <span>
+                          <FaCircle style={{ color: "#ef4444", fontSize: "7px" }} className="pulse-dot" />
+                          Candidate Feed
+                        </span>
+                        <div className="feed-card-actions">
+                          <button
+                            type="button"
+                            onClick={() => setCameraMirrored(!cameraMirrored)}
+                            title="Flip Video"
+                            className="feed-card-btn"
+                          >
+                            <FaSyncAlt />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={toggleCamera}
+                            title={isCameraActive ? "Mute Camera" : "Unmute Camera"}
+                            className={`feed-card-btn ${!isCameraActive ? "muted" : ""}`}
+                          >
+                            {isCameraActive ? <FaVideo /> : <FaVideoSlash />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={toggleMic}
+                            title={isMicActive ? "Mute Microphone" : "Unmute Microphone"}
+                            className={`feed-card-btn ${!isMicActive ? "muted" : ""}`}
+                          >
+                            {isMicActive ? <FaMicrophone /> : <FaMicrophoneSlash />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="feed-media-wrap">
+                        {cameraStream && isCameraActive ? (
+                          <VideoPlayer stream={cameraStream} mirrored={cameraMirrored} />
+                        ) : (
+                          <div className="feed-off-placeholder">
+                            <FaVideoSlash style={{ fontSize: "20px", color: "#64748b" }} />
+                            <span>Camera feed paused</span>
+                          </div>
+                        )}
+                        <span className="live-rec-badge">● PROCTOR ACTIVE</span>
+                      </div>
+
+                      {/* Integrated Audio Bar */}
+                      <div className="candidate-audio-indicator-bar">
+                        <div className="audio-vol-meter-bg">
+                          <div
+                            className="audio-vol-meter-fill"
+                            style={{ width: `${Math.max(audioLevel, 5)}%` }}
+                          />
+                        </div>
+                        <span>Mic: {audioLevel}%</span>
+                      </div>
+                    </div>
+
+                    {/* 3. SCREEN SHARE FEED */}
+                    <div className="cockpit-feed-card">
+                      <div className="feed-card-header">
+                        <span><FaDesktop /> Screen Share</span>
+                        <div className="feed-card-actions">
+                          {screenStream && (
+                            <button
+                              type="button"
+                              onClick={() => setShowScreenExpanded(true)}
+                              title="Expand Fullscreen"
+                              className="feed-card-btn"
+                            >
+                              <FaExpand />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={requestScreenShare}
+                            title="Switch Screen"
+                            className="feed-card-btn"
+                          >
+                            <FaTv />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div
+                        className="feed-media-wrap"
+                        onClick={() => screenStream && setShowScreenExpanded(true)}
+                        style={{ cursor: screenStream ? "pointer" : "default" }}
+                      >
+                        {screenStream ? (
+                          <>
+                            <VideoPlayer stream={screenStream} mirrored={false} style={{ background: "#000" }} />
+                            <div className="screen-click-expand-hint">
+                              <FaExpand /> Click to expand
+                            </div>
+                          </>
+                        ) : (
+                          <div className="feed-off-placeholder">
+                            <FaLaptopCode style={{ fontSize: "20px", color: "#64748b" }} />
+                            <button
+                              type="button"
+                              onClick={requestScreenShare}
+                              className="start-screenshare-inline-btn"
+                            >
+                              Select Screen / Window
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
+
+                  {/* RIGHT WORKSPACE: QUESTIONS & CODE EDITOR */}
+                  <div className="cockpit-right-pane">
+                    {sessionQuestions.length > 0 && (
+                      <div className="interview-workspace">
+                        {/* Question Selector Tabs */}
+                        <div className="question-tabs-row">
+                          {sessionQuestions.map((q, idx) => {
+                            const isAnswered = !!answers[q.id]?.trim();
+                            return (
+                              <button
+                                key={q.id}
+                                type="button"
+                                onClick={() => {
+                                  setCurrentQIndex(idx);
+                                  setShowHint(false);
+                                }}
+                                className={`question-tab-btn ${currentQIndex === idx ? "active" : ""}`}
+                              >
+                                {isAnswered && <span className="tab-answered-dot">✓</span>}
+                                Question {idx + 1}: {q.category || `Part ${idx + 1}`}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Question Prompt Card */}
+                        <div className="cockpit-question-box">
+                          <div className="question-box-header">
+                            <span className="q-badge">
+                              ✦ Question {currentQIndex + 1} of {sessionQuestions.length} • {sessionQuestions[currentQIndex]?.category}
+                            </span>
+
+                            {sessionQuestions[currentQIndex]?.hint && (
+                              <button
+                                type="button"
+                                onClick={() => setShowHint(!showHint)}
+                                className="hint-toggle-btn"
+                              >
+                                <FaLightbulb />
+                                {showHint ? "Hide Guidance" : "💡 View Guidance"}
+                              </button>
+                            )}
+                          </div>
+
+                          <h3 className="question-prompt-text">
+                            {sessionQuestions[currentQIndex]?.question}
+                          </h3>
+
+                          {showHint && sessionQuestions[currentQIndex]?.hint && (
+                            <div className="hint-revealed-box">
+                              💡 <strong>Interviewer Guidance:</strong> {sessionQuestions[currentQIndex].hint}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Solution Code Editor Box */}
+                        <div className="solution-editor-container">
+                          <div className="editor-header">
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <FaCode style={{ color: "#38bdf8" }} />
+                              <label>Your Structured Solution & Code Implementation:</label>
+                            </div>
+
+                            {/* Actions Toolbar */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <button
+                                type="button"
+                                onClick={handleInsertTemplate}
+                                className="editor-tool-btn"
+                                title="Insert Solution Template"
+                              >
+                                <FaFileAlt /> Template
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={handleClearAnswer}
+                                className="editor-tool-btn clear"
+                                title="Clear Response"
+                              >
+                                <FaTrashAlt />
+                              </button>
+
+                              {/* VOICE-TO-TEXT DICTATION BUTTON */}
+                              <button
+                                type="button"
+                                onClick={toggleVoiceDictation}
+                                className={`voice-dictation-btn ${isDictating ? "active" : ""}`}
+                                title="Dictate response with real-time speech recognition"
+                              >
+                                <FaMicrophone className={isDictating ? "pulse-dot" : ""} />
+                                {isDictating ? "🎙️ Listening... (Stop)" : "🎙️ Dictate with Voice"}
+                              </button>
+                            </div>
+                          </div>
+
+                          <textarea
+                            rows={10}
+                            value={answers[sessionQuestions[currentQIndex]?.id] || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setAnswers((prev) => ({
+                                ...prev,
+                                [sessionQuestions[currentQIndex].id]: val,
+                              }));
+                            }}
+                            placeholder="// Type or voice-dictate your structured solution here:&#10;// 1. High-Level Architectural Approach & Trade-offs&#10;// 2. Code Implementation & Algorithmic Flow&#10;// 3. Time Complexity O(...) & Space Complexity O(...)&#10;// 4. Edge Cases, Null Handling & Concurrency..."
+                            className="technical-code-textarea"
+                          />
+
+                          {/* Editor Stats Footer */}
+                          <div className="editor-stats-footer">
+                            <span>Words: <strong>{wordCount}</strong></span>
+                            <span>Characters: <strong>{charCount}</strong></span>
+                            <span>✦ AI Semantic Rubric Scoring Active</span>
+                          </div>
+                        </div>
+
+                        {/* Navigation & Submit Bar */}
+                        <div className="cockpit-footer-actions">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCurrentQIndex((prev) => Math.max(prev - 1, 0));
+                              setShowHint(false);
+                            }}
+                            disabled={currentQIndex === 0}
+                            className="cockpit-prev-btn"
+                          >
+                            ← Previous Question
+                          </button>
+
+                          {currentQIndex < sessionQuestions.length - 1 ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCurrentQIndex((prev) => Math.min(prev + 1, sessionQuestions.length - 1));
+                                setShowHint(false);
+                              }}
+                              className="cockpit-next-btn"
+                            >
+                              Next Question →
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleSubmitInterview}
+                              disabled={loading}
+                              className="cockpit-submit-btn"
+                            >
+                              {loading ? <FaSpinner className="fa-spin" /> : <FaCheckCircle />}
+                              {loading ? "Evaluating AI Rubrics..." : "Submit Interview & Generate AI Report"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </>
             ) : (
               /* ================= REPORT CARD ================= */
-              <div>
-                <div style={{ textAlign: "center", padding: "16px 0 20px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-                  <div style={{ display: "inline-flex", padding: "12px", background: "rgba(34,197,94,0.15)", borderRadius: "50%", color: "#22c55e", fontSize: "36px", marginBottom: "10px" }}>
+              <div className="report-card-container">
+                <div className="report-card-header">
+                  <div className="report-award-icon">
                     <FaAward />
                   </div>
-                  <h2 style={{ fontSize: "22px", margin: "0 0 6px" }}>Interview Report & AI Feedback</h2>
-                  <p style={{ color: "#94a3b8", fontSize: "14px", margin: "0 0 12px" }}>
+                  <h2>Interview Performance & AI Rubric Report</h2>
+                  <p>
                     {company} • {role} ({difficulty})
                   </p>
                   <button
                     type="button"
                     onClick={handleDownloadPDF}
                     disabled={downloadingPdf}
-                    style={{
-                      padding: "8px 20px",
-                      borderRadius: "8px",
-                      background: pdfSuccess ? "#16a34a" : "linear-gradient(135deg, #2563eb, #1d4ed8)",
-                      color: "#fff",
-                      border: "none",
-                      fontWeight: "600",
-                      fontSize: "13px",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      boxShadow: "0 4px 14px rgba(37,99,235,0.35)",
-                    }}
+                    className="report-pdf-btn"
                   >
                     <FaFilePdf />
                     {pdfSuccess ? "✓ PDF Report Saved!" : downloadingPdf ? "Generating PDF..." : "Download Official PDF Report"}
@@ -827,41 +1642,41 @@ function MockInterview({ onInterviewCompleted }) {
                 </div>
 
                 {/* Multi-factor Score Grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px", margin: "20px 0" }}>
-                  <div style={{ background: "rgba(255,255,255,0.04)", padding: "16px", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Overall Score</span>
-                    <h3 style={{ fontSize: "28px", color: "#22c55e", margin: "4px 0" }}>{evaluationResult.score_percentage}</h3>
-                    <small style={{ color: "#cbd5e1", fontWeight: "bold" }}>{evaluationResult.grade}</small>
+                <div className="score-summary-grid">
+                  <div className="score-summary-card">
+                    <span className="score-label">Overall Score</span>
+                    <h3 className="score-val green">{evaluationResult.score_percentage}</h3>
+                    <small>{evaluationResult.grade}</small>
                   </div>
 
-                  <div style={{ background: "rgba(255,255,255,0.04)", padding: "16px", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Technical Depth</span>
-                    <h3 style={{ fontSize: "28px", color: "#38bdf8", margin: "4px 0" }}>{evaluationResult.technical_score || 88}%</h3>
-                    <small style={{ color: "#cbd5e1" }}>Domain concepts</small>
+                  <div className="score-summary-card">
+                    <span className="score-label">Technical Depth</span>
+                    <h3 className="score-val blue">{evaluationResult.technical_score || 88}%</h3>
+                    <small>Domain concepts</small>
                   </div>
 
-                  <div style={{ background: "rgba(255,255,255,0.04)", padding: "16px", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Communication</span>
-                    <h3 style={{ fontSize: "28px", color: "#a855f7", margin: "4px 0" }}>{evaluationResult.communication_score || 85}%</h3>
-                    <small style={{ color: "#cbd5e1" }}>Clarity & Structure</small>
+                  <div className="score-summary-card">
+                    <span className="score-label">Communication</span>
+                    <h3 className="score-val purple">{evaluationResult.communication_score || 85}%</h3>
+                    <small>Clarity & Structure</small>
                   </div>
 
-                  <div style={{ background: "rgba(255,255,255,0.04)", padding: "16px", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>XP Reward</span>
-                    <h3 style={{ fontSize: "28px", color: "#f59e0b", margin: "4px 0" }}>+100 XP</h3>
-                    <small style={{ color: "#cbd5e1" }}>Added to Profile</small>
+                  <div className="score-summary-card">
+                    <span className="score-label">XP Reward</span>
+                    <h3 className="score-val amber">+100 XP</h3>
+                    <small>Added to Profile</small>
                   </div>
                 </div>
 
                 {/* Identified Keywords */}
                 {evaluationResult.identified_keywords && evaluationResult.identified_keywords.length > 0 && (
-                  <div style={{ background: "rgba(255,255,255,0.03)", padding: "14px 18px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "18px" }}>
-                    <span style={{ fontSize: "12px", color: "#94a3b8", display: "block", marginBottom: "8px" }}>
+                  <div className="report-keywords-box">
+                    <span className="keywords-title">
                       ✦ TECHNICAL KEYWORDS DETECTED IN YOUR RESPONSES:
                     </span>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    <div className="keywords-chip-list">
                       {evaluationResult.identified_keywords.map((kw, idx) => (
-                        <span key={idx} style={{ padding: "4px 10px", borderRadius: "6px", background: "rgba(56,189,248,0.15)", color: "#38bdf8", fontSize: "12px", fontWeight: "500", border: "1px solid rgba(56,189,248,0.3)" }}>
+                        <span key={idx} className="keyword-chip">
                           ✓ {kw}
                         </span>
                       ))}
@@ -870,35 +1685,29 @@ function MockInterview({ onInterviewCompleted }) {
                 )}
 
                 {/* AI Summary */}
-                <div style={{ background: "rgba(59,130,246,0.08)", padding: "16px", borderRadius: "12px", border: "1px solid rgba(59,130,246,0.2)", marginBottom: "20px" }}>
-                  <h4 style={{ margin: "0 0 6px", color: "#60a5fa" }}>AI Performance Evaluation</h4>
-                  <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.6", color: "#e2e8f0" }}>
-                    {evaluationResult.overall_summary}
-                  </p>
+                <div className="report-ai-summary-box">
+                  <h4>AI Proctor Performance Evaluation</h4>
+                  <p>{evaluationResult.overall_summary}</p>
                 </div>
 
                 {/* Per-Question Detailed Breakdown */}
                 {evaluationResult.detailed_feedback && evaluationResult.detailed_feedback.length > 0 && (
-                  <div style={{ marginBottom: "24px" }}>
-                    <h4 style={{ color: "#38bdf8", margin: "0 0 12px", fontSize: "16px" }}>📝 Question-by-Question Detailed Analysis</h4>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div className="report-questions-breakdown">
+                    <h4>📝 Question-by-Question Detailed Analysis</h4>
+                    <div className="report-questions-list">
                       {evaluationResult.detailed_feedback.map((qf, idx) => (
-                        <div key={idx} style={{ background: "rgba(255,255,255,0.03)", padding: "16px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                            <span style={{ fontWeight: "bold", fontSize: "14px", color: "#f8fafc" }}>
-                              Question {idx + 1}: {qf.question}
-                            </span>
-                            <span style={{ padding: "4px 10px", borderRadius: "6px", background: qf.score >= 80 ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)", color: qf.score >= 80 ? "#4ade80" : "#fbbf24", fontWeight: "bold", fontSize: "13px" }}>
+                        <div key={idx} className="report-question-item">
+                          <div className="item-header">
+                            <span>Question {idx + 1}: {qf.question}</span>
+                            <span className={`item-score ${qf.score >= 80 ? "good" : "avg"}`}>
                               {qf.score}%
                             </span>
                           </div>
-
-                          <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#cbd5e1", lineHeight: 1.5 }}>
+                          <p className="item-feedback">
                             <strong>AI Feedback:</strong> {qf.feedback}
                           </p>
-
                           {qf.identified_keywords && qf.identified_keywords.length > 0 && (
-                            <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "6px" }}>
+                            <div className="item-concepts">
                               <strong>Matched Concepts:</strong> {qf.identified_keywords.join(", ")}
                             </div>
                           )}
@@ -909,45 +1718,33 @@ function MockInterview({ onInterviewCompleted }) {
                 )}
 
                 {/* Strengths & Improvements */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
-                  <div style={{ background: "rgba(34,197,94,0.06)", padding: "16px", borderRadius: "10px", border: "1px solid rgba(34,197,94,0.2)" }}>
-                    <h4 style={{ color: "#22c55e", margin: "0 0 8px" }}>✓ Key Strengths</h4>
-                    <ul style={{ margin: 0, paddingLeft: "18px", color: "#cbd5e1", fontSize: "13px", lineHeight: 1.5 }}>
+                <div className="strengths-improvements-grid">
+                  <div className="strengths-box">
+                    <h4>✓ Key Strengths</h4>
+                    <ul>
                       {evaluationResult.strengths?.map((s, idx) => (
-                        <li key={idx} style={{ marginBottom: "4px" }}>{s}</li>
+                        <li key={idx}>{s}</li>
                       ))}
                     </ul>
                   </div>
 
-                  <div style={{ background: "rgba(245,158,11,0.06)", padding: "16px", borderRadius: "10px", border: "1px solid rgba(245,158,11,0.2)" }}>
-                    <h4 style={{ color: "#f59e0b", margin: "0 0 8px" }}>⚠ Suggested Improvements</h4>
-                    <ul style={{ margin: 0, paddingLeft: "18px", color: "#cbd5e1", fontSize: "13px", lineHeight: 1.5 }}>
+                  <div className="improvements-box">
+                    <h4>⚠ Suggested Improvements</h4>
+                    <ul>
                       {evaluationResult.improvements?.map((imp, idx) => (
-                        <li key={idx} style={{ marginBottom: "4px" }}>{imp}</li>
+                        <li key={idx}>{imp}</li>
                       ))}
                     </ul>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "center", gap: "14px", flexWrap: "wrap" }}>
+                {/* Footer Buttons */}
+                <div className="report-footer-actions">
                   <button
                     type="button"
                     onClick={handleDownloadPDF}
                     disabled={downloadingPdf}
-                    style={{
-                      padding: "12px 26px",
-                      borderRadius: "8px",
-                      background: pdfSuccess ? "#16a34a" : "linear-gradient(135deg, #059669, #10b981)",
-                      color: "#fff",
-                      border: "none",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      boxShadow: "0 4px 12px rgba(16,185,129,0.3)",
-                    }}
+                    className="report-download-btn"
                   >
                     <FaDownload />
                     {pdfSuccess ? "✓ PDF Downloaded!" : "Download Evaluation PDF"}
@@ -958,17 +1755,9 @@ function MockInterview({ onInterviewCompleted }) {
                     onClick={() => {
                       setInterviewActive(false);
                       setEvaluationResult(null);
+                      stopAllStreams();
                     }}
-                    style={{
-                      padding: "12px 32px",
-                      borderRadius: "8px",
-                      background: "#2563eb",
-                      color: "#fff",
-                      border: "none",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                    }}
+                    className="report-return-btn"
                   >
                     Done & Return to Dashboard
                   </button>
@@ -981,93 +1770,50 @@ function MockInterview({ onInterviewCompleted }) {
 
       {/* ================= SCHEDULE MODAL ================= */}
       {showScheduleModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(10, 15, 29, 0.8)",
-            backdropFilter: "blur(6px)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              background: "#0f172a",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: "16px",
-              width: "100%",
-              maxWidth: "500px",
-              padding: "28px",
-              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.6)",
-              color: "#fff",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h3 style={{ margin: 0, fontSize: "18px" }}>📅 Schedule Mock Interview</h3>
+        <div className="interview-modal-backdrop">
+          <div className="schedule-modal-box">
+            <div className="schedule-modal-header">
+              <h3>📅 Schedule Mock Interview</h3>
               <button
                 type="button"
+                className="modal-close-btn"
                 onClick={() => setShowScheduleModal(false)}
-                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "18px", cursor: "pointer" }}
               >
                 <FaTimes />
               </button>
             </div>
 
             {scheduleSuccess ? (
-              <div style={{ background: "rgba(34,197,94,0.15)", border: "1px solid #22c55e", color: "#4ade80", padding: "16px", borderRadius: "8px", textAlign: "center", fontSize: "14px" }}>
+              <div className="schedule-success-box">
                 {scheduleSuccess}
               </div>
             ) : (
               <form onSubmit={handleScheduleSubmit}>
-                <div style={{ marginBottom: "16px" }}>
-                  <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "6px" }}>Company & Role</label>
-                  <div style={{ background: "rgba(255,255,255,0.05)", padding: "10px 14px", borderRadius: "8px", color: "#38bdf8", fontWeight: "bold" }}>
+                <div className="schedule-field">
+                  <label>Company & Role</label>
+                  <div className="schedule-selected-meta">
                     {company} • {role}
                   </div>
                 </div>
 
-                <div style={{ marginBottom: "16px" }}>
-                  <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "6px" }}>Interview Date</label>
+                <div className="schedule-field">
+                  <label>Interview Date</label>
                   <input
                     type="date"
                     required
                     value={scheduleDate}
                     onChange={(e) => setScheduleDate(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      background: "#020617",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      color: "#fff",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
+                    className="schedule-input"
                   />
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "6px" }}>Time Slot</label>
+                <div className="schedule-row">
+                  <div className="schedule-field">
+                    <label>Time Slot</label>
                     <select
                       value={scheduleTime}
                       onChange={(e) => setScheduleTime(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        borderRadius: "8px",
-                        background: "#020617",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        color: "#fff",
-                        outline: "none",
-                      }}
+                      className="schedule-select"
                     >
                       <option value="10:00 AM">10:00 AM</option>
                       <option value="11:30 AM">11:30 AM</option>
@@ -1077,20 +1823,12 @@ function MockInterview({ onInterviewCompleted }) {
                     </select>
                   </div>
 
-                  <div>
-                    <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "6px" }}>Interview Mode</label>
+                  <div className="schedule-field">
+                    <label>Interview Mode</label>
                     <select
                       value={scheduleMode}
                       onChange={(e) => setScheduleMode(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        borderRadius: "8px",
-                        background: "#020617",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        color: "#fff",
-                        outline: "none",
-                      }}
+                      className="schedule-select"
                     >
                       <option value="Virtual">Virtual Video</option>
                       <option value="Online Coding">Online Coding</option>
@@ -1102,20 +1840,7 @@ function MockInterview({ onInterviewCompleted }) {
                 <button
                   type="submit"
                   disabled={loading}
-                  style={{
-                    width: "100%",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    background: "#2563eb",
-                    border: "none",
-                    color: "#fff",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                  }}
+                  className="schedule-confirm-btn"
                 >
                   {loading ? <FaSpinner className="fa-spin" /> : <FaCalendarAlt />}
                   {loading ? "Scheduling..." : "Confirm Schedule"}
@@ -1125,80 +1850,41 @@ function MockInterview({ onInterviewCompleted }) {
           </div>
         </div>
       )}
+
       {/* ================= AI MODEL SETTINGS MODAL ================= */}
       {showApiKeyModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(10, 15, 29, 0.82)",
-            backdropFilter: "blur(6px)",
-            zIndex: 99999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              background: "#0f172a",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: "16px",
-              width: "100%",
-              maxWidth: "520px",
-              padding: "26px",
-              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.6)",
-              color: "#fff",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <div className="interview-modal-backdrop">
+          <div className="ai-settings-modal-box">
+            <div className="settings-header">
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <FaRobot style={{ color: "#38bdf8", fontSize: "20px" }} />
-                <h3 style={{ margin: 0, fontSize: "18px" }}>AI Evaluation Engine Settings</h3>
+                <h3>AI Evaluation Engine Settings</h3>
               </div>
               <button
                 type="button"
+                className="modal-close-btn"
                 onClick={() => setShowApiKeyModal(false)}
-                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "18px", cursor: "pointer" }}
               >
                 <FaTimes />
               </button>
             </div>
 
-            <div style={{ background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "18px", fontSize: "13px", lineHeight: "1.5", color: "#cbd5e1" }}>
-              <strong style={{ color: "#38bdf8", display: "block", marginBottom: "4px" }}>✦ Supported AI Engines:</strong>
-              1. <strong>Live Google Gemini 1.5 Flash</strong>: Enter your free API key from Google AI Studio below for live generative assessment.<br/>
+            <div className="ai-settings-info">
+              <strong>✦ Supported AI Engines:</strong>
+              1. <strong>Live Google Gemini 1.5 Flash</strong>: Enter your free API key from Google AI Studio for live generative assessment.<br />
               2. <strong>Neural Semantic Rubric Engine</strong>: Built-in strict multi-factor evaluator that scores domain depth, Big-O complexity, and trade-offs.
             </div>
 
-            <div style={{ marginBottom: "18px" }}>
-              <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "6px", fontWeight: "bold" }}>
-                Google Gemini API Key (Optional for Live LLM):
-              </label>
+            <div className="ai-key-input-wrap">
+              <label>Google Gemini API Key (Optional for Live LLM):</label>
               <input
                 type="password"
                 placeholder="AIzaSy..."
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  background: "#020617",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  color: "#fff",
-                  outline: "none",
-                  boxSizing: "border-box",
-                  fontFamily: "monospace",
-                }}
+                className="key-input"
               />
-              <small style={{ color: "#64748b", fontSize: "11px", display: "block", marginTop: "4px" }}>
-                Keys are saved securely in your local browser storage and never shared.
-              </small>
+              <small>Keys are saved securely in your local browser storage and never shared.</small>
             </div>
 
             <div style={{ display: "flex", gap: "10px" }}>
@@ -1214,16 +1900,7 @@ function MockInterview({ onInterviewCompleted }) {
                   }
                   setShowApiKeyModal(false);
                 }}
-                style={{
-                  flex: 1,
-                  padding: "10px",
-                  borderRadius: "8px",
-                  background: "#2563eb",
-                  color: "#fff",
-                  border: "none",
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                }}
+                className="save-key-btn"
               >
                 Save AI Settings
               </button>
@@ -1237,15 +1914,7 @@ function MockInterview({ onInterviewCompleted }) {
                     localStorage.removeItem("intervista_gemini_api_key");
                     setShowApiKeyModal(false);
                   }}
-                  style={{
-                    padding: "10px 16px",
-                    borderRadius: "8px",
-                    background: "rgba(239,68,68,0.15)",
-                    border: "1px solid rgba(239,68,68,0.3)",
-                    color: "#f87171",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                  }}
+                  className="clear-key-btn"
                 >
                   Clear Key
                 </button>
