@@ -1,6 +1,5 @@
 /* ==========================================================================
-   Intervista AI — Footer
-   Tokens: ink navy background, violet accent, warm off-white text
+   Intervista AI — Responsive Footer
    ========================================================================== */
 
 .iv-footer {
@@ -13,62 +12,120 @@
   --iv-border: #232935;
 
   position: relative;
+
+  width: 100%;
+
   background: var(--iv-bg);
   color: var(--iv-text);
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
     sans-serif;
+
   overflow: hidden;
+
   padding: 4rem 1.5rem 2rem;
 }
 
+
+/* ==========================================================================
+   GLOW
+   ========================================================================== */
+
 .iv-footer__glow {
   position: absolute;
+
   top: -120px;
   left: 50%;
+
   width: 640px;
   height: 320px;
+
   transform: translateX(-50%);
+
   background: radial-gradient(
     ellipse at center,
     rgba(124, 111, 240, 0.18) 0%,
     rgba(124, 111, 240, 0) 70%
   );
+
   pointer-events: none;
 }
 
+
+/* ==========================================================================
+   CONTAINER
+   ========================================================================== */
+
 .iv-footer__container {
   position: relative;
+
+  width: 100%;
   max-width: 1120px;
+
   margin: 0 auto;
 }
 
-/* ---------- Top section ---------- */
+
+/* ==========================================================================
+   TOP SECTION
+   ========================================================================== */
 
 .iv-footer__top {
   display: grid;
-  grid-template-columns: minmax(240px, 380px) 1fr;
+
+  grid-template-columns:
+    minmax(240px, 380px)
+    minmax(0, 1fr);
+
   gap: 3rem;
 }
+
+
+/* ==========================================================================
+   BRAND
+   ========================================================================== */
 
 .iv-footer__brand {
   display: flex;
   flex-direction: column;
+
   gap: 1.25rem;
+
+  min-width: 0;
 }
+
+
+/* ==========================================================================
+   LOGO
+   ========================================================================== */
 
 .iv-footer__logo {
   display: inline-flex;
+
   align-items: center;
+
   gap: 0.65rem;
-  text-decoration: none;
+
   width: fit-content;
+
+  text-decoration: none;
 }
 
 .iv-footer__logo-text {
-  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-family:
+    "Space Grotesk",
+    "Inter",
+    sans-serif;
+
   font-size: 1.35rem;
   font-weight: 600;
+
   letter-spacing: -0.01em;
+
   color: var(--iv-text);
 }
 
@@ -76,18 +133,28 @@
   color: var(--iv-accent-soft);
 }
 
-/* Signature element: a small waveform, evoking the spoken interview */
+
+/* ==========================================================================
+   WAVEFORM
+   ========================================================================== */
+
 .iv-footer__waveform {
   display: inline-flex;
+
   align-items: flex-end;
+
   gap: 3px;
+
   height: 16px;
 }
 
 .iv-footer__bar {
   width: 3px;
+
   background: var(--iv-accent);
+
   border-radius: 2px;
+
   animation: iv-wave 1.6s ease-in-out infinite;
 }
 
@@ -95,18 +162,22 @@
   height: 6px;
   animation-delay: 0s;
 }
+
 .iv-footer__bar:nth-child(2) {
   height: 14px;
   animation-delay: 0.15s;
 }
+
 .iv-footer__bar:nth-child(3) {
   height: 9px;
   animation-delay: 0.3s;
 }
+
 .iv-footer__bar:nth-child(4) {
   height: 16px;
   animation-delay: 0.45s;
 }
+
 .iv-footer__bar:nth-child(5) {
   height: 7px;
   animation-delay: 0.6s;
@@ -118,45 +189,77 @@
     transform: scaleY(0.6);
     opacity: 0.7;
   }
+
   50% {
     transform: scaleY(1);
     opacity: 1;
   }
 }
 
+
+/* ==========================================================================
+   TAGLINE
+   ========================================================================== */
+
 .iv-footer__tagline {
   font-size: 0.925rem;
+
   line-height: 1.6;
+
   color: var(--iv-text-muted);
+
   max-width: 34ch;
+
   margin: 0;
 }
 
+
+/* ==========================================================================
+   NEWSLETTER
+   ========================================================================== */
+
 .iv-footer__newsletter {
+  width: 100%;
+
   margin-top: 0.5rem;
 }
 
 .iv-footer__label {
   display: block;
+
   font-size: 0.8rem;
   font-weight: 500;
+
   color: var(--iv-text);
+
   margin-bottom: 0.6rem;
 }
 
 .iv-footer__input-row {
   display: flex;
+
+  width: 100%;
+
   gap: 0.5rem;
 }
 
 .iv-footer__input {
   flex: 1;
+
   min-width: 0;
+
+  width: 100%;
+
   background: var(--iv-bg-soft);
+
   border: 1px solid var(--iv-border);
+
   border-radius: 8px;
+
   padding: 0.6rem 0.85rem;
+
   font-size: 0.875rem;
+
   color: var(--iv-text);
 }
 
@@ -171,14 +274,23 @@
 
 .iv-footer__submit {
   flex-shrink: 0;
+
   background: var(--iv-accent);
+
   color: #0f1419;
+
   font-size: 0.875rem;
+
   font-weight: 600;
+
   border: none;
+
   border-radius: 8px;
+
   padding: 0.6rem 1.1rem;
+
   cursor: pointer;
+
   transition: background 0.2s ease;
 }
 
@@ -191,36 +303,59 @@
   outline-offset: 2px;
 }
 
-/* ---------- Link groups ---------- */
+
+/* ==========================================================================
+   LINK GROUPS
+   ========================================================================== */
 
 .iv-footer__links {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
   gap: 2rem;
+
+  min-width: 0;
+}
+
+.iv-footer__group {
+  min-width: 0;
 }
 
 .iv-footer__group-title {
   font-size: 0.8rem;
+
   font-weight: 600;
+
   text-transform: uppercase;
+
   letter-spacing: 0.06em;
+
   color: var(--iv-text);
+
   margin: 0 0 1rem;
 }
 
 .iv-footer__group-list {
   list-style: none;
+
   margin: 0;
   padding: 0;
+
   display: flex;
+
   flex-direction: column;
+
   gap: 0.7rem;
 }
 
 .iv-footer__link {
   font-size: 0.875rem;
+
   color: var(--iv-text-muted);
+
   text-decoration: none;
+
   transition: color 0.15s ease;
 }
 
@@ -230,99 +365,313 @@
 
 .iv-footer__link:focus-visible {
   outline: 2px solid var(--iv-accent);
+
   outline-offset: 2px;
+
   border-radius: 2px;
 }
 
-/* ---------- Divider & bottom bar ---------- */
+
+/* ==========================================================================
+   DIVIDER
+   ========================================================================== */
 
 .iv-footer__divider {
+  width: 100%;
+
   height: 1px;
+
   background: var(--iv-border);
+
   margin: 3rem 0 1.5rem;
 }
 
+
+/* ==========================================================================
+   BOTTOM BAR
+   ========================================================================== */
+
 .iv-footer__bottom {
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
+
   flex-wrap: wrap;
+
   gap: 1rem;
+
+  width: 100%;
 }
 
 .iv-footer__copyright {
   font-size: 0.8rem;
+
   color: var(--iv-text-muted);
+
   margin: 0;
 }
 
+
+/* ==========================================================================
+   SOCIAL LINKS
+   ========================================================================== */
+
 .iv-footer__socials {
   list-style: none;
+
   display: flex;
+
+  align-items: center;
+
   gap: 0.6rem;
+
   margin: 0;
   padding: 0;
 }
 
 .iv-footer__social-link {
   display: inline-flex;
+
   align-items: center;
   justify-content: center;
+
   width: 34px;
   height: 34px;
+
   border-radius: 999px;
+
   border: 1px solid var(--iv-border);
+
   color: var(--iv-text-muted);
+
   font-size: 0.7rem;
+
   font-weight: 600;
+
   text-transform: uppercase;
+
   text-decoration: none;
-  transition: border-color 0.15s ease, color 0.15s ease;
+
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .iv-footer__social-link:hover {
   color: var(--iv-accent-soft);
+
   border-color: var(--iv-accent);
+
+  background: rgba(124, 111, 240, 0.08);
 }
 
 .iv-footer__social-link:focus-visible {
   outline: 2px solid var(--iv-accent);
+
   outline-offset: 2px;
 }
 
-/* ---------- Reduced motion ---------- */
 
-@media (prefers-reduced-motion: reduce) {
-  .iv-footer__bar {
-    animation: none;
+/* ==========================================================================
+   LARGE TABLET
+   ========================================================================== */
+
+@media (max-width: 1000px) {
+  .iv-footer {
+    padding-left: 2rem;
+    padding-right: 2rem;
   }
-}
 
-/* ---------- Responsive ---------- */
-
-@media (max-width: 860px) {
   .iv-footer__top {
-    grid-template-columns: 1fr;
     gap: 2.5rem;
   }
 
   .iv-footer__links {
-    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
   }
 }
+
+
+/* ==========================================================================
+   TABLET
+   ========================================================================== */
+
+@media (max-width: 860px) {
+  .iv-footer {
+    padding-top: 3.5rem;
+  }
+
+  .iv-footer__top {
+    grid-template-columns: 1fr;
+
+    gap: 2.5rem;
+  }
+
+  .iv-footer__brand {
+    max-width: 600px;
+  }
+
+  .iv-footer__tagline {
+    max-width: 55ch;
+  }
+
+  .iv-footer__links {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    gap: 2rem;
+  }
+}
+
+
+/* ==========================================================================
+   MOBILE
+   ========================================================================== */
 
 @media (max-width: 560px) {
   .iv-footer {
     padding: 3rem 1.25rem 1.75rem;
   }
 
+  .iv-footer__glow {
+    width: 450px;
+    height: 240px;
+
+    top: -100px;
+  }
+
+  .iv-footer__top {
+    gap: 2.25rem;
+  }
+
+  .iv-footer__brand {
+    gap: 1rem;
+  }
+
+  .iv-footer__logo-text {
+    font-size: 1.25rem;
+  }
+
+  .iv-footer__tagline {
+    font-size: 0.875rem;
+
+    max-width: 100%;
+  }
+
+  /* Newsletter becomes stacked */
+  .iv-footer__input-row {
+    flex-direction: column;
+
+    gap: 0.65rem;
+  }
+
+  .iv-footer__input {
+    width: 100%;
+
+    min-height: 44px;
+  }
+
+  .iv-footer__submit {
+    width: 100%;
+
+    min-height: 44px;
+  }
+
+  /* Two-column footer links */
   .iv-footer__links {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.75rem 1.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 2rem 1.25rem;
+  }
+
+  .iv-footer__divider {
+    margin: 2.5rem 0 1.25rem;
   }
 
   .iv-footer__bottom {
     flex-direction: column;
-    align-items: flex-start;
+
+    align-items: center;
+
+    text-align: center;
+
+    gap: 1.25rem;
+  }
+}
+
+
+/* ==========================================================================
+   SMALL MOBILE
+   ========================================================================== */
+
+@media (max-width: 400px) {
+  .iv-footer {
+    padding: 2.5rem 1rem 1.5rem;
+  }
+
+  .iv-footer__links {
+    grid-template-columns: 1fr;
+
+    gap: 1.75rem;
+  }
+
+  .iv-footer__group-title {
+    margin-bottom: 0.75rem;
+  }
+
+  .iv-footer__group-list {
+    gap: 0.6rem;
+  }
+
+  .iv-footer__divider {
+    margin-top: 2rem;
+  }
+
+  .iv-footer__copyright {
+    font-size: 0.75rem;
+  }
+}
+
+
+/* ==========================================================================
+   VERY SMALL DEVICES
+   ========================================================================== */
+
+@media (max-width: 320px) {
+  .iv-footer {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+
+  .iv-footer__logo-text {
+    font-size: 1.15rem;
+  }
+
+  .iv-footer__socials {
+    gap: 0.4rem;
+  }
+
+  .iv-footer__social-link {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-footer__bar {
+    animation: none;
+  }
+
+  .iv-footer__submit,
+  .iv-footer__link,
+  .iv-footer__social-link {
+    transition: none;
   }
 }

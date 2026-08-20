@@ -1,4 +1,4 @@
-import "./Dashboard.css";
+    import "./Dashboard.css";
 import {
   FaFire,
   FaMedal,

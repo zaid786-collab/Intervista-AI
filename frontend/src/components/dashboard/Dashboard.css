@@ -1900,7 +1900,7 @@ transition:.3s;
     border: 1px solid rgba(56, 189, 248, 0.3);
     border-radius: 20px;
     width: 100%;
-    maxWidth: 900px;
+    max-width: 900px;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8);

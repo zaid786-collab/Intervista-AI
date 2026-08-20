@@ -1,11 +1,15 @@
-/* ================= NAVBAR ================= */
+/* =========================
+   NAVBAR
+========================= */
 
 .navbar {
   width: 100%;
   height: 90px;
+
   position: fixed;
   top: 0;
   left: 0;
+
   z-index: 99999;
 
   display: flex;
@@ -19,22 +23,35 @@
   -webkit-backdrop-filter: blur(14px);
 
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
   isolation: isolate;
 }
+
+
+/* =========================
+   LOGO
+========================= */
 
 .logo {
   display: flex;
   align-items: center;
   gap: 10px;
+
   background: none;
   border: none;
+
   padding: 0;
   margin: 0;
+
   color: inherit;
+  text-decoration: none;
+
   cursor: pointer;
   font: inherit;
+
   position: relative;
   z-index: 10;
+
   flex-shrink: 0;
 }
 
@@ -45,13 +62,18 @@
 .logoBox {
   width: 36px;
   height: 36px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   border-radius: 12px;
+
   background: linear-gradient(135deg, #356dff, #25d6ff);
+
   color: #fff;
   font-weight: 800;
+
   box-shadow: 0 8px 22px rgba(37, 214, 255, 0.35);
 }
 
@@ -60,56 +82,87 @@
   margin: 0;
 }
 
+
+/* =========================
+   NAV MENU
+========================= */
+
 .navMenu {
   flex: 1;
+
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   margin-left: 70px;
 }
 
 .navLinks {
   display: flex;
   align-items: center;
+
   gap: 18px;
+
   list-style: none;
+
   margin: 0;
   padding: 0;
+
   flex-wrap: wrap;
 }
 
 .navLinks li {
   position: relative;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   min-height: 44px;
+
   padding: 0 16px;
+
   color: #b7bfd3;
+
   font-size: 18px;
   font-weight: 500;
+
   cursor: pointer;
+
   border-radius: 12px;
-  transition: color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+
+  transition:
+    color 0.3s ease,
+    background 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .navLinks li:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.04);
+
   backdrop-filter: blur(8px);
 }
 
 .navLinks li::after {
   content: "";
+
   position: absolute;
+
   left: 50%;
   bottom: -6px;
+
   transform: translateX(-50%);
+
   width: 0;
   height: 2px;
+
   border-radius: 20px;
+
   background: linear-gradient(90deg, #356dff, #25d6ff);
+
   transition: width 0.35s ease;
+
   pointer-events: none;
 }
 
@@ -117,39 +170,70 @@
   width: 70%;
 }
 
+
+/* =========================
+   NAV LINK
+========================= */
+
 .navLinkButton {
   border: none;
   background: transparent;
+
   color: inherit;
+
   font: inherit;
+
   cursor: pointer;
+
   padding: 0;
   margin: 0;
+
   width: 100%;
   height: 100%;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   position: relative;
-  z-index: 10;
+  z-index: 1000000;
+
   outline: none;
 }
 
+
+/* =========================
+   ACTIVE PAGE
+========================= */
+
 .navLinks li.active-page {
   color: #ffffff;
+
   background: rgba(53, 109, 255, 0.18);
+
   border: 1px solid rgba(37, 214, 255, 0.45);
-  box-shadow: 0 0 22px rgba(37, 214, 255, 0.3), inset 0 0 10px rgba(53, 109, 255, 0.25);
+
+  box-shadow:
+    0 0 22px rgba(37, 214, 255, 0.3),
+    inset 0 0 10px rgba(53, 109, 255, 0.25);
+
   animation: navActiveGlow 3s ease-in-out infinite alternate;
 }
 
 @keyframes navActiveGlow {
   0% {
-    box-shadow: 0 0 16px rgba(37, 214, 255, 0.25), inset 0 0 8px rgba(53, 109, 255, 0.2);
+    box-shadow:
+      0 0 16px rgba(37, 214, 255, 0.25),
+      inset 0 0 8px rgba(53, 109, 255, 0.2);
+
     border-color: rgba(37, 214, 255, 0.4);
   }
+
   100% {
-    box-shadow: 0 0 28px rgba(37, 214, 255, 0.55), inset 0 0 14px rgba(53, 109, 255, 0.35);
+    box-shadow:
+      0 0 28px rgba(37, 214, 255, 0.55),
+      inset 0 0 14px rgba(53, 109, 255, 0.35);
+
     border-color: rgba(37, 214, 255, 0.85);
   }
 }
@@ -157,22 +241,24 @@
 .navLinks li.active-page::after {
   width: 75%;
   height: 3px;
+
   background: linear-gradient(90deg, #356dff, #25d6ff);
+
   box-shadow: 0 0 12px #25d6ff;
 }
 
 .navLinks li.active-page .navLinkButton {
   color: #ffffff;
+
   font-weight: 600;
+
   text-shadow: 0 0 10px rgba(37, 214, 255, 0.5);
 }
 
-.profileBtn.active-page,
-.loginBtn.active-page,
-.startBtn.active-page {
-  border-color: #25d6ff !important;
-  box-shadow: 0 0 25px rgba(37, 214, 255, 0.4), inset 0 0 10px rgba(53, 109, 255, 0.3) !important;
-}
+
+/* =========================
+   RIGHT SIDE
+========================= */
 
 .navRight {
   display: flex;
@@ -186,34 +272,70 @@
   display: flex;
   align-items: center;
   justify-content: center;
+
   border-radius: 16px;
+
   transition: all 0.35s ease;
+
   text-decoration: none;
 }
+
+.profileBtn.active-page,
+.loginBtn.active-page,
+.startBtn.active-page {
+  border-color: #25d6ff !important;
+
+  box-shadow:
+    0 0 25px rgba(37, 214, 255, 0.4),
+    inset 0 0 10px rgba(53, 109, 255, 0.3) !important;
+}
+
+
+/* =========================
+   LOGIN BUTTON
+========================= */
 
 .loginBtn {
   position: relative;
   overflow: hidden;
+
   width: 110px;
   height: 56px;
+
   color: #ffffff;
+
   font-size: 17px;
   font-weight: 600;
+
   background: #11151f;
+
   border: 1px solid rgba(255, 255, 255, 0.12);
+
   cursor: pointer;
+
   z-index: 10;
 }
 
 .loginBtn::before {
   content: "";
+
   position: absolute;
+
   top: 0;
   left: -150%;
+
   width: 60%;
   height: 100%;
-  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.8),
+    transparent
+  );
+
   transform: skewX(-25deg);
+
   pointer-events: none;
 }
 
@@ -223,93 +345,123 @@
 
 .loginBtn:hover {
   border-color: #2ac8ff;
+
   box-shadow: 0 0 20px rgba(42, 200, 255, 0.35);
 }
 
+
+/* =========================
+   START BUTTON
+========================= */
+
 .startBtn {
   height: 56px;
+
   padding: 0 32px;
+
   border: none;
+
   background: linear-gradient(90deg, #356dff, #25d6ff);
+
   color: #ffffff;
+
   font-size: 18px;
   font-weight: 600;
+
   cursor: pointer;
+
   position: relative;
   z-index: 10;
 }
 
 .startBtn:hover {
   transform: translateY(-2px);
+
   box-shadow: 0 12px 35px rgba(38, 171, 255, 0.45);
 }
 
+
+/* =========================
+   PROFILE BUTTON
+========================= */
+
 .profileBtn {
   height: 56px;
+
   padding: 0 20px;
+
   background: #11151f;
+
   border: 1px solid rgba(255, 255, 255, 0.12);
+
   color: #fff;
+
   cursor: pointer;
 }
 
 .profileBtn:hover {
   background: rgba(53, 109, 255, 0.12);
+
   border-color: rgba(53, 109, 255, 0.45);
+
   box-shadow: 0 0 20px rgba(53, 109, 255, 0.18);
+
   transform: translateY(-1px);
 }
 
+
+/* =========================
+   USER
+========================= */
+
 .navUser {
   color: #9ecbff;
+
   font-size: 0.9rem;
+
   white-space: nowrap;
 }
 
-.navbar,
-.navMenu,
-.navLinks,
-.navLinks li,
-.navLinkButton,
-.navRight,
-.logo,
-.loginBtn,
-.startBtn,
-.profileBtn {
-  pointer-events: auto;
-}
 
-.navLinkButton {
-  position: relative;
-  z-index: 1000000;
-}
-
-.navLinks li {
-  position: relative;
-  z-index: 100000;
-}
+/* =========================
+   HAMBURGER
+========================= */
 
 .navToggle {
   display: none;
+
   flex-direction: column;
   justify-content: center;
+
   gap: 5px;
+
   width: 48px;
   height: 48px;
+
   border: 1px solid rgba(255, 255, 255, 0.14);
+
   border-radius: 12px;
+
   background: rgba(17, 21, 31, 0.9);
+
   cursor: pointer;
+
   flex-shrink: 0;
 }
 
 .navToggle span {
   width: 22px;
   height: 2px;
+
   background: #fff;
+
   border-radius: 99px;
+
   margin: 0 auto;
-  transition: transform 0.25s ease, opacity 0.25s ease;
+
+  transition:
+    transform 0.25s ease,
+    opacity 0.25s ease;
 }
 
 .navToggle.open span:nth-child(1) {
@@ -324,14 +476,25 @@
   transform: translateY(-7px) rotate(-45deg);
 }
 
+
+/* =========================
+   SHINE ANIMATION
+========================= */
+
 @keyframes shine {
   0% {
     left: -150%;
   }
+
   100% {
     left: 180%;
   }
 }
+
+
+/* =========================
+   TABLET
+========================= */
 
 @media (max-width: 1080px) {
   .navbar {
@@ -351,49 +514,106 @@
   }
 }
 
+
+/* =========================
+   MOBILE NAVBAR
+========================= */
+
 @media (max-width: 940px) {
   .navbar {
-    height: auto;
+    height: 90px;
     min-height: 90px;
-    padding: 14px 20px;
-    flex-wrap: wrap;
+
+    padding: 0 20px;
+
+    flex-wrap: nowrap;
   }
 
   .navToggle {
     display: flex;
+
+    position: relative;
+    z-index: 100001;
   }
 
   .navMenu {
-    display: none;
-    flex: 1 1 100%;
-    margin-left: 0;
+    position: absolute;
+
+    top: 90px;
+    left: 0;
+
     width: 100%;
+
+    display: none;
+
     flex-direction: column;
     align-items: stretch;
+
+    margin: 0;
+    padding: 20px;
+
     gap: 18px;
-    padding-top: 10px;
+
+    background: rgba(5, 8, 20, 0.98);
+
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
+
+    z-index: 100000;
   }
 
   .navMenu.open {
     display: flex;
   }
 
-  .navLinks,
-  .navRight {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
+  .navLinks {
+    display: flex;
 
-  .navLinks li,
-  .navLinkButton,
-  .navRight a,
-  .navRight button {
+    flex-direction: column;
+
+    align-items: stretch;
+
     width: 100%;
+
+    gap: 8px;
   }
 
   .navLinks li {
+    width: 100%;
+
     min-height: 52px;
+
+    padding: 0 16px;
+  }
+
+  .navLinkButton {
+    width: 100%;
+  }
+
+  .navRight {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: stretch;
+
+    width: 100%;
+
+    gap: 10px;
+
+    padding-top: 15px;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .navRight a,
+  .navRight button {
+    width: 100%;
   }
 
   .loginBtn,
@@ -403,7 +623,19 @@
   }
 }
 
+
+/* =========================
+   SMALL MOBILE
+========================= */
+
 @media (max-width: 560px) {
+  .navbar {
+    height: 70px;
+    min-height: 70px;
+
+    padding: 0 16px;
+  }
+
   .logo h2 {
     font-size: 1.05rem;
   }
@@ -411,10 +643,28 @@
   .logoBox {
     width: 30px;
     height: 30px;
+
     border-radius: 10px;
   }
 
-  .navbar {
-    padding: 12px 16px;
+  .navToggle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .navMenu {
+    top: 70px;
+
+    padding: 15px;
+  }
+
+  .navLinks li {
+    min-height: 48px;
+  }
+
+  .loginBtn,
+  .profileBtn,
+  .startBtn {
+    height: 50px;
   }
 }
