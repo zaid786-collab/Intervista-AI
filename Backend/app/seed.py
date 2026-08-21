@@ -69,10 +69,29 @@ def seed_db():
                     )
                     db.add(resource)
             db.commit()
-            print("DSA topics seeded!")
+        # Seed Default Users if none exist
+        if db.query(models.User).count() == 0:
+            from app.auth import hash_password
+            print("Seeding default demo & admin accounts...")
+            admin_user = models.User(
+                name="Admin User",
+                email="admin@intervista.ai",
+                hashed_password=hash_password("admin123"),
+                is_admin=True,
+                is_active=True,
+            )
+            demo_user = models.User(
+                name="Demo User",
+                email="demo@intervista.ai",
+                hashed_password=hash_password("demo123"),
+                is_admin=False,
+                is_active=True,
+            )
+            db.add(admin_user)
+            db.add(demo_user)
+            db.commit()
+            print("Default users created: admin@intervista.ai / admin123, demo@intervista.ai / demo123")
 
-        # Note: Interview, Activity, Notification and WeeklyPerformance records are created
-        # dynamically as users practice and complete mock interviews.
         print("Database seed complete!")
 
     except Exception as e:
@@ -83,3 +102,4 @@ def seed_db():
 
 if __name__ == "__main__":
     seed_db()
+

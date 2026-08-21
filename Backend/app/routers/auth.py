@@ -10,7 +10,7 @@ from app.auth import create_access_token, hash_password, verify_password
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import utcnow
-from app.services.email_service import send_verification_otp
+from app.services.email_service import send_verification_otp, is_smtp_configured
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -71,10 +71,15 @@ def signup(payload: schemas.SignupRequest, db: Session = Depends(get_db)):
     try:
         issue_otp(user, db)
     except Exception as exc:
-        # Do not leave an unusable unverified account when email delivery is unavailable.
         db.delete(user)
         db.commit()
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Could not send verification email. Please try again.") from exc
+
+    if not is_smtp_configured():
+        return schemas.SignupResponse(
+            message="Dev mode: Account created! Enter any 6 digits (e.g. 123456) or log in directly.",
+            email=user.email,
+        )
     return schemas.SignupResponse(message="Verification code sent to your email.", email=user.email)
 
 
@@ -87,8 +92,17 @@ def verify_email(payload: schemas.VerifyEmailRequest, db: Session = Depends(get_
     otp = db.query(models.EmailVerificationOTP).filter(
         models.EmailVerificationOTP.user_id == user.id
     ).order_by(models.EmailVerificationOTP.created_at.desc()).first()
-    if not otp or otp_is_expired(otp) or otp.code_hash != hashlib.sha256(payload.code.encode()).hexdigest():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code.")
+
+    # If SMTP is not configured in local environment, allow verification with any code or matching code
+    if is_smtp_configured():
+        if not otp or otp_is_expired(otp) or otp.code_hash != hashlib.sha256(payload.code.encode()).hexdigest():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code.")
+    else:
+        # Dev fallback: accept valid code, '123456', '000000', or any 6-digit input
+        if otp and not otp_is_expired(otp) and otp.code_hash == hashlib.sha256(payload.code.encode()).hexdigest():
+            pass
+        elif len(payload.code.strip()) != 6:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please enter a 6-digit code.")
 
     db.query(models.EmailVerificationOTP).filter(models.EmailVerificationOTP.user_id == user.id).delete()
     db.commit()
@@ -117,11 +131,17 @@ def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has been disabled.")
-    if db.query(models.EmailVerificationOTP).filter(models.EmailVerificationOTP.user_id == user.id).first():
+
+    # In dev mode without SMTP configured, auto-verify any pending OTP on valid password
+    if not is_smtp_configured():
+        db.query(models.EmailVerificationOTP).filter(models.EmailVerificationOTP.user_id == user.id).delete()
+        db.commit()
+    elif db.query(models.EmailVerificationOTP).filter(models.EmailVerificationOTP.user_id == user.id).first():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Please verify your email before logging in.")
 
     token = create_access_token(subject=str(user.id))
     return schemas.TokenResponse(access_token=token, user=user)
+
 
 
 @router.get("/me", response_model=schemas.UserOut)
