@@ -5615,3 +5615,518 @@ grid-template-columns:1fr;
     grid-template-columns: 1fr;
   }
 }
+
+/* =====================================================
+   4-ROUND & 20-QUESTION INTERVIEW WORKSPACE STYLING
+===================================================== */
+.rounds-stage-tracker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.round-stage-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.round-stage-pill:hover {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(56, 189, 248, 0.3);
+  transform: translateY(-2px);
+}
+
+.round-stage-pill.active {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.25), rgba(14, 165, 233, 0.15));
+  border-color: #38bdf8;
+  box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
+}
+
+.round-stage-pill.completed {
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.round-pill-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.round-pill-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.round-pill-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.round-pill-progress {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.round-stage-pill.active .round-pill-progress {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+/* 20-Question Matrix Row */
+.questions-matrix-row {
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  gap: 5px;
+  margin-bottom: 16px;
+  padding: 6px;
+  background: rgba(12, 17, 30, 0.7);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.question-matrix-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.question-matrix-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.question-matrix-btn.answered {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.35);
+  color: #4ade80;
+}
+
+.question-matrix-btn.active {
+  background: linear-gradient(135deg, #2563eb, #0ea5e9) !important;
+  color: #ffffff !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+  transform: scale(1.06);
+  z-index: 2;
+}
+
+.q-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.round-badge {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(37, 99, 235, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 8px;
+}
+
+/* 4-Round Performance Matrix in Report Card */
+.report-rounds-matrix {
+  margin: 25px 0;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+}
+
+.report-rounds-matrix h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #fff;
+}
+
+.report-rounds-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.round-score-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.round-score-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.round-num-tag {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.round-score-badge {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.round-score-badge.pass {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.round-score-badge.retry {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.round-score-card h5 {
+  font-size: 13px;
+  color: #fff;
+  margin: 0 0 10px 0;
+  font-weight: 600;
+}
+
+.round-score-val-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.round-score-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: #38bdf8;
+  min-width: 40px;
+}
+
+.round-score-bar-bg {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.round-score-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+  border-radius: 10px;
+  transition: width 0.6s ease;
+}
+
+.item-round-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  padding: 2px 8px;
+  border-radius: 5px;
+  margin-right: 8px;
+}
+
+.item-q-title {
+  font-weight: 600;
+  color: #fff;
+}
+
+@media (max-width: 1024px) {
+  .rounds-stage-tracker,
+  .report-rounds-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .questions-matrix-row {
+    grid-template-columns: repeat(10, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .rounds-stage-tracker,
+  .report-rounds-grid {
+    grid-template-columns: 1fr;
+  }
+  .questions-matrix-row {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* =====================================================
+   ROUND 4: HR & CULTURE AUDIO & DUAL-MODE STYLES
+===================================================== */
+.hr-round-box {
+  border-color: rgba(56, 189, 248, 0.3) !important;
+  background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.07), rgba(15, 23, 42, 0.75)) !important;
+}
+
+.hr-audio-question-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  margin: 12px 0 16px 0;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  flex-wrap: wrap;
+}
+
+.hr-audio-question-banner.speaking {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(14, 165, 233, 0.15));
+  border-color: #38bdf8;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.25);
+}
+
+.hr-audio-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Audio Equalizer animation bars */
+.hr-audio-eq-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 22px;
+  padding: 2px 4px;
+}
+
+.eq-bar {
+  width: 3px;
+  height: 6px;
+  background: #38bdf8;
+  border-radius: 2px;
+  transition: height 0.2s ease;
+}
+
+.hr-audio-eq-bars.active .bar-1 {
+  animation: eqBounce 0.6s ease-in-out infinite alternate;
+}
+.hr-audio-eq-bars.active .bar-2 {
+  animation: eqBounce 0.8s ease-in-out 0.15s infinite alternate;
+}
+.hr-audio-eq-bars.active .bar-3 {
+  animation: eqBounce 0.5s ease-in-out 0.3s infinite alternate;
+}
+.hr-audio-eq-bars.active .bar-4 {
+  animation: eqBounce 0.9s ease-in-out 0.2s infinite alternate;
+}
+.hr-audio-eq-bars.active .bar-5 {
+  animation: eqBounce 0.7s ease-in-out 0.1s infinite alternate;
+}
+
+@keyframes eqBounce {
+  0% {
+    height: 4px;
+  }
+  100% {
+    height: 20px;
+  }
+}
+
+.hr-audio-text-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.hr-audio-state-tag {
+  font-size: 13px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.hr-audio-text-info small {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.hr-audio-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hr-audio-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(37, 99, 235, 0.2);
+  color: #38bdf8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hr-audio-action-btn:hover {
+  background: #2563eb;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.hr-audio-action-btn.stop {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.hr-audio-action-btn.stop:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+.hr-autoplay-toggle-btn {
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hr-autoplay-toggle-btn.active {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.35);
+  color: #4ade80;
+}
+
+/* HR Dual-Mode (Audio + Text) Response Workspace */
+.hr-editor-mode {
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+.hr-dual-mode-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px 12px 0 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hr-banner-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hr-mode-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.hr-mode-desc {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.hr-live-recording-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.live-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulseDot 1s infinite;
+}
+
+@keyframes pulseDot {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+    box-shadow: 0 0 8px #ef4444;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+}
+
+.star-btn {
+  background: rgba(245, 158, 11, 0.15) !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+  color: #fbbf24 !important;
+}
+
+.star-btn:hover {
+  background: rgba(245, 158, 11, 0.3) !important;
+  color: #fff !important;
+}
+
+.hr-primary-voice {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(14, 165, 233, 0.25)) !important;
+  border-color: #38bdf8 !important;
+  color: #fff !important;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+
+.hr-primary-voice.active {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  border-color: #f87171 !important;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.4) !important;
+}
+
+.hr-footer-hint {
+  color: #38bdf8 !important;
+  font-weight: 600;
+}
