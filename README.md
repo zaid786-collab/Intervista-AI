@@ -1,4 +1,4 @@
-# Intervista AI - AI-Powered Technical Interview Platform
+# Intervista AI - AI-Powered Technical Interview Prepration Platform
 
 An intelligent, end-to-end AI mock interview preparation and evaluation platform featuring live media evaluation, rubric scoring, dynamic metrics, and instant PDF report generation.
 
