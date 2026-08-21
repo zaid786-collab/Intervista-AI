@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchCurrentUser, getToken, setToken, clearToken, login as apiLogin, signup as apiSignup } from "../api";
+import { fetchCurrentUser, getToken, setToken, clearToken, login as apiLogin, signup as apiSignup, verifyEmail as apiVerifyEmail } from "../api";
 import { AuthContext } from "./authContextCore";
 
 export function AuthProvider({ children }) {
@@ -39,7 +39,11 @@ export function AuthProvider({ children }) {
   };
 
   const signup = async (credentials) => {
-    const data = await apiSignup(credentials);
+    return apiSignup(credentials);
+  };
+
+  const verifyEmail = async (verification) => {
+    const data = await apiVerifyEmail(verification);
     setToken(data.access_token);
     setUser(data.user);
     return data;
@@ -61,6 +65,7 @@ export function AuthProvider({ children }) {
         loading,
         login,
         signup,
+        verifyEmail,
         logout,
         updateUser,
         isAuthenticated: Boolean(user),

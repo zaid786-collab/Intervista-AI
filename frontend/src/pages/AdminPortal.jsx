@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { adminDeleteUser, adminListUsers, adminUpdateUser } from "../api";
+import { adminDeleteUser, adminGetUser, adminListUsers, adminUpdateUser } from "../api";
 import { useAuth } from "../context/useAuth";
 import "./AdminPortal.css";
 
@@ -9,6 +9,8 @@ function AdminPortal() {
   const [loading, setLoading] = useState(() => Boolean(user?.is_admin));
   const [error, setError] = useState("");
   const [busyUserId, setBusyUserId] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   const isAdmin = Boolean(user?.is_admin);
 
@@ -57,6 +59,24 @@ function AdminPortal() {
     } finally {
       setBusyUserId(null);
     }
+  };
+
+  const showUserDetails = async (userId) => {
+    setDetailsLoading(true);
+    setError("");
+    try {
+      setSelectedUser(await adminGetUser(userId));
+    } catch (err) {
+      setError(err.message || "Could not load user details.");
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const formatDate = (date) => (date ? new Date(date).toLocaleString() : "Not available");
+  const formatPracticeTime = (minutes) => {
+    if (!minutes) return "0 mins";
+    return minutes < 60 ? `${minutes} mins` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
   };
 
   if (!isAdmin) {
@@ -161,6 +181,14 @@ function AdminPortal() {
                           <button
                             type="button"
                             className="admin-action-btn"
+                            disabled={isBusy}
+                            onClick={() => showUserDetails(item.id)}
+                          >
+                            View details
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-action-btn"
                             disabled={isBusy || isSelf}
                             onClick={() => runAction(item.id, { is_admin: !item.is_admin })}
                           >
@@ -193,6 +221,59 @@ function AdminPortal() {
             </table>
           )}
         </section>
+
+        {(detailsLoading || selectedUser) && (
+          <section className="admin-card admin-details" aria-live="polite">
+            {detailsLoading && <p className="admin-loading">Loading full user details...</p>}
+            {selectedUser && !detailsLoading && (
+              <>
+                <div className="admin-details-header">
+                  <div>
+                    <span className="eyebrow">USER INSPECTOR</span>
+                    <h2>{selectedUser.name}</h2>
+                    <p>{selectedUser.email} · Joined {formatDate(selectedUser.created_at)}</p>
+                  </div>
+                  <button type="button" className="admin-action-btn" onClick={() => setSelectedUser(null)}>Close</button>
+                </div>
+
+                <div className="admin-detail-grid">
+                  <div><span>Account status</span><strong>{selectedUser.is_active ? "Active" : "Disabled"}</strong></div>
+                  <div><span>Role</span><strong>{selectedUser.is_admin ? "Admin" : "Member"}</strong></div>
+                  <div><span>Target role</span><strong>{selectedUser.target_role || "Not set"}</strong></div>
+                  <div><span>Progress</span><strong>{selectedUser.progress}%</strong></div>
+                  <div><span>XP</span><strong>{selectedUser.xp ?? 0}</strong></div>
+                  <div><span>Practice time</span><strong>{formatPracticeTime(selectedUser.practice_minutes)}</strong></div>
+                  <div><span>Completed interviews</span><strong>{selectedUser.completed_interviews}</strong></div>
+                  <div><span>Scheduled interviews</span><strong>{selectedUser.scheduled_interviews}</strong></div>
+                  <div><span>Average score</span><strong>{selectedUser.average_interview_score ?? "—"}{selectedUser.average_interview_score !== null && "%"}</strong></div>
+                  <div><span>Best score</span><strong>{selectedUser.best_interview_score ?? "—"}{selectedUser.best_interview_score !== null && "%"}</strong></div>
+                  <div><span>Resources solved</span><strong>{selectedUser.solved_resources}</strong></div>
+                  <div><span>Challenges solved</span><strong>{selectedUser.solved_challenges}</strong></div>
+                  <div><span>Unread alerts</span><strong>{selectedUser.unread_notifications}</strong></div>
+                </div>
+
+                <div className="admin-detail-copy">
+                  <div><span>Bio</span><p>{selectedUser.bio || "No bio added."}</p></div>
+                  <div><span>Skills</span><p>{selectedUser.skills || "No skills added."}</p></div>
+                </div>
+
+                <h3>Recent interviews</h3>
+                {selectedUser.recent_interviews.length === 0 ? (
+                  <p className="admin-empty">No interview activity yet.</p>
+                ) : (
+                  <div className="admin-interview-list">
+                    {selectedUser.recent_interviews.map((interview) => (
+                      <div key={interview.id} className="admin-interview-row">
+                        <strong>{interview.company} · {interview.role}</strong>
+                        <span>{interview.status} · {interview.score || "No score"} · {interview.date || "No date"}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        )}
 
       </div>
     </main>

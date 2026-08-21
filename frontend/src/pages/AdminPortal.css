@@ -230,6 +230,64 @@
   color: #9ca8bd;
 }
 
+.admin-details-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.admin-details-header h2 {
+  margin: 6px 0;
+}
+
+.admin-details-header p,
+.admin-detail-copy p {
+  color: #9ca8bd;
+  margin: 0;
+}
+
+.admin-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 12px;
+}
+
+.admin-detail-grid > div,
+.admin-detail-copy > div,
+.admin-interview-row {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.admin-detail-grid span,
+.admin-detail-copy span {
+  display: block;
+  color: #758198;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+
+.admin-detail-grid strong { color: #f4f7ff; }
+
+.admin-detail-copy {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 18px 0 24px;
+}
+
+.admin-details h3 { font-size: 16px; margin: 0 0 12px; }
+.admin-interview-list { display: grid; gap: 8px; }
+.admin-interview-row { display: flex; justify-content: space-between; gap: 16px; }
+.admin-interview-row span { color: #9ca8bd; font-size: 13px; }
+
 
 /* ================= RESPONSIVE ================= */
 
@@ -247,4 +305,9 @@
   .admin-summary {
     grid-template-columns: 1fr;
   }
+
+  .admin-details-header,
+  .admin-interview-row { flex-direction: column; }
+
+  .admin-detail-copy { grid-template-columns: 1fr; }
 }

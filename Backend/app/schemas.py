@@ -22,6 +22,20 @@ class TokenResponse(BaseModel):
     user: "UserOut"
 
 
+class SignupResponse(BaseModel):
+    message: str
+    email: EmailStr
+
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class ResendOTPRequest(BaseModel):
+    email: EmailStr
+
+
 # ---------- Users ----------
 
 class UserOut(BaseModel):
@@ -53,6 +67,19 @@ class UserUpdateByAdmin(BaseModel):
     is_admin: Optional[bool] = None
     is_active: Optional[bool] = None
     progress: Optional[int] = Field(default=None, ge=0, le=100)
+
+
+class AdminUserDetails(UserOut):
+    """Full account and activity snapshot for the admin user inspector."""
+    completed_interviews: int = 0
+    scheduled_interviews: int = 0
+    average_interview_score: Optional[int] = None
+    best_interview_score: Optional[int] = None
+    practice_minutes: int = 0
+    solved_resources: int = 0
+    solved_challenges: int = 0
+    unread_notifications: int = 0
+    recent_interviews: List["InterviewOut"] = []
 
 
 class ProgressUpdate(BaseModel):
@@ -89,6 +116,9 @@ class InterviewOut(BaseModel):
     mode: Optional[str] = None
     feedback: Optional[str] = None
     duration_minutes: Optional[int] = 45
+
+
+AdminUserDetails.model_rebuild()
 
 
 class ActivityOut(BaseModel):

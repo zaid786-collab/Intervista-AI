@@ -80,6 +80,14 @@ export function login({ email, password }) {
   return request("/api/auth/login", { method: "POST", body: { email, password } });
 }
 
+export function verifyEmail({ email, code }) {
+  return request("/api/auth/verify-email", { method: "POST", body: { email, code } });
+}
+
+export function resendOtp(email) {
+  return request("/api/auth/resend-otp", { method: "POST", body: { email } });
+}
+
 export function fetchCurrentUser() {
   return request("/api/auth/me", { auth: true });
 }
@@ -94,6 +102,10 @@ export function updateMyProgress(progress) {
 
 export function adminListUsers() {
   return request("/api/admin/users", { auth: true });
+}
+
+export function adminGetUser(userId) {
+  return request(`/api/admin/users/${userId}`, { auth: true });
 }
 
 export function adminUpdateUser(userId, updates) {

@@ -1,6 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -18,7 +19,7 @@ def list_users(
     return db.query(models.User).order_by(models.User.created_at.desc()).all()
 
 
-@router.get("/users/{user_id}", response_model=schemas.UserOut)
+@router.get("/users/{user_id}", response_model=schemas.AdminUserDetails)
 def get_user(
     user_id: int,
     db: Session = Depends(get_db),
@@ -27,7 +28,43 @@ def get_user(
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return user
+    completed_filter = (
+        models.Interview.user_id == user.id,
+        models.Interview.status == "Completed",
+    )
+    completed_interviews = db.query(models.Interview).filter(*completed_filter).count()
+    scheduled_interviews = db.query(models.Interview).filter(
+        models.Interview.user_id == user.id,
+        models.Interview.status == "Scheduled",
+    ).count()
+    average_score = db.query(func.avg(models.Interview.score_num)).filter(
+        *completed_filter, models.Interview.score_num.isnot(None)
+    ).scalar()
+    best_score = db.query(func.max(models.Interview.score_num)).filter(
+        *completed_filter, models.Interview.score_num.isnot(None)
+    ).scalar()
+    practice_minutes = db.query(func.sum(models.Interview.duration_minutes)).filter(
+        *completed_filter
+    ).scalar() or 0
+
+    recent = db.query(models.Interview).filter(
+        models.Interview.user_id == user.id
+    ).order_by(models.Interview.created_at.desc()).limit(5).all()
+
+    return {
+        **schemas.UserOut.model_validate(user).model_dump(),
+        "completed_interviews": completed_interviews,
+        "scheduled_interviews": scheduled_interviews,
+        "average_interview_score": round(average_score) if average_score is not None else None,
+        "best_interview_score": round(best_score) if best_score is not None else None,
+        "practice_minutes": practice_minutes,
+        "solved_resources": db.query(models.UserSolvedResource).filter(models.UserSolvedResource.user_id == user.id).count(),
+        "solved_challenges": db.query(models.UserSolvedChallenge).filter(models.UserSolvedChallenge.user_id == user.id).count(),
+        "unread_notifications": db.query(models.Notification).filter(
+            models.Notification.user_id == user.id, models.Notification.is_read.is_(False)
+        ).count(),
+        "recent_interviews": recent,
+    }
 
 
 @router.patch("/users/{user_id}", response_model=schemas.UserOut)
