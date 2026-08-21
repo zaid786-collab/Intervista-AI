@@ -208,47 +208,59 @@ function Dashboard() {
         </div>
 
         {/* View Switcher Navigation Tabs */}
-        <div className="dashboard-view-tabs">
+        <div className="dashboard-view-tabs" role="tablist" aria-label="Dashboard Views">
           <button
+            role="tab"
+            aria-selected={activeSection === "dashboard"}
             className={`dashboard-tab-btn ${activeSection === "dashboard" ? "active" : ""}`}
             onClick={() => handleNavigation("dashboard")}
           >
-            <FaHome /> Overview
+            <FaHome className="tab-icon" /> <span>Overview</span>
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeSection === "interviews"}
             className={`dashboard-tab-btn ${activeSection === "interviews" ? "active" : ""}`}
             onClick={() => handleNavigation("interviews")}
           >
-            <FaMicrophone /> Mock Room
+            <FaMicrophone className="tab-icon" /> <span>Mock Room</span>
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeSection === "analytics"}
             className={`dashboard-tab-btn ${activeSection === "analytics" ? "active" : ""}`}
             onClick={() => handleNavigation("analytics")}
           >
-            <FaChartLine /> Analytics & Skills
+            <FaChartLine className="tab-icon" /> <span>Analytics & Skills</span>
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeSection === "schedule"}
             className={`dashboard-tab-btn ${activeSection === "schedule" ? "active" : ""}`}
             onClick={() => handleNavigation("schedule")}
           >
-            <FaCalendarAlt /> Schedule & Feed
+            <FaCalendarAlt className="tab-icon" /> <span>Schedule & Feed</span>
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeSection === "career"}
             className={`dashboard-tab-btn ${activeSection === "career" ? "active" : ""}`}
             onClick={() => handleNavigation("career")}
           >
-            <FaBriefcase /> Career Prep
+            <FaBriefcase className="tab-icon" /> <span>Career Prep</span>
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeSection === "settings"}
             className={`dashboard-tab-btn ${activeSection === "settings" ? "active" : ""}`}
             onClick={() => handleNavigation("settings")}
           >
-            <FaCog /> Settings
+            <FaCog className="tab-icon" /> <span>Settings</span>
           </button>
         </div>
 
