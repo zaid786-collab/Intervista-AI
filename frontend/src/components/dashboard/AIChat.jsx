@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./Dashboard.css";
 import {
   FaRobot,
@@ -8,8 +8,13 @@ import {
 } from "react-icons/fa";
 
 function AIChat() {
-
     const [open, setOpen] = useState(false);
+
+    useEffect(() => {
+        const handleOpenChat = () => setOpen(true);
+        window.addEventListener("intervista_open_chat", handleOpenChat);
+        return () => window.removeEventListener("intervista_open_chat", handleOpenChat);
+    }, []);
 
     const [messages, setMessages] = useState([
         {

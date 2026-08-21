@@ -652,6 +652,37 @@ function solution() {
     }
   };
 
+  useEffect(() => {
+    const handleQuickStart = () => {
+      if (!interviewActive) {
+        const el = document.getElementById("mock-interview");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (!anyParameterReady) {
+          setShowPreFlightModal(true);
+        } else {
+          startLiveInterviewSession();
+        }
+      }
+    };
+
+    const handleQuickVoice = () => {
+      if (!interviewActive) {
+        const el = document.getElementById("mock-interview");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (!isMicReady) {
+          requestMicrophone();
+        }
+      }
+    };
+
+    window.addEventListener("intervista_start_interview", handleQuickStart);
+    window.addEventListener("intervista_voice_practice", handleQuickVoice);
+    return () => {
+      window.removeEventListener("intervista_start_interview", handleQuickStart);
+      window.removeEventListener("intervista_voice_practice", handleQuickVoice);
+    };
+  }, [interviewActive, anyParameterReady, isMicReady]);
+
   // 1. START INTERVIEW HANDLER
   const startLiveInterviewSession = async () => {
     setShowPreFlightModal(false);

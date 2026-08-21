@@ -326,7 +326,7 @@ function Dashboard() {
           )}
 
           {activeSection === "analytics" && (
-            <>
+            <div id="analytics-section">
               <div className="dashboard-row">
                 <Analytics
                   performanceData={dashboardData?.weekly_performance}
@@ -363,11 +363,11 @@ function Dashboard() {
                 />
                 <CodingChallenge onChallengeSolved={loadDashboard} />
               </div>
-            </>
+            </div>
           )}
 
           {activeSection === "schedule" && (
-            <>
+            <div id="schedule-section">
               <div className="dashboard-row">
                 <Recent
                   interviews={dashboardData?.recent_interviews}
@@ -390,11 +390,11 @@ function Dashboard() {
               <div className="full-width">
                 <Activity activities={dashboardData?.activities} />
               </div>
-            </>
+            </div>
           )}
 
           {activeSection === "career" && (
-            <>
+            <div id="career-prep-section">
               <div className="career-prep-layout">
                 <div className="career-main-col">
                   <ResumeAnalyzer onResumeAnalyzed={loadDashboard} />
@@ -408,7 +408,7 @@ function Dashboard() {
                 <JobRecommendations />
                 <Leaderboard />
               </div>
-            </>
+            </div>
           )}
 
           {activeSection === "settings" && (
