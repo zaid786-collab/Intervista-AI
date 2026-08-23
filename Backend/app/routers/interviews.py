@@ -13,100 +13,376 @@ from app.services.pdf_generator import generate_interview_pdf_report
 
 router = APIRouter(prefix="/api/interviews", tags=["Mock Interviews & AI Evaluation"])
 
-DEFAULT_QUESTION_BANK = {
+# =====================================================================
+# 20-QUESTION 4-ROUND INTERVIEW ENGINE QUESTION BANKS
+# =====================================================================
+
+APTITUDE_ROUND_QUESTIONS = [
+    {
+        "id": 1,
+        "round_number": 1,
+        "round_title": "Aptitude & Logical Reasoning",
+        "category": "Quantitative & Throughput Estimation",
+        "question": "A distributed microservices cluster processes 12,000 requests per minute across 4 worker nodes. If peak traffic surges by 150% and each node's throughput is upgraded by 25%, calculate the minimum total worker nodes needed to ensure zero queue degradation.",
+        "hint": "Original capacity per node: 3,000 req/min. Surged traffic: 30,000 req/min. New node capacity: 3,750 req/min. Nodes required = ceil(30000 / 3750) = 8 nodes.",
+    },
+    {
+        "id": 2,
+        "round_number": 1,
+        "round_title": "Aptitude & Logical Reasoning",
+        "category": "Probability & System Reliability",
+        "question": "A fault-tolerant cloud service runs 3 independent replica nodes. Each node independently has an operational reliability of 95% at any time. Calculate the exact probability that at least 2 nodes remain operational to maintain quorum.",
+        "hint": "Use binomial probability: P(all 3 up) + P(exactly 2 up) = (0.95)^3 + 3 * (0.95)^2 * (0.05) = 0.857375 + 0.135375 = 99.275%.",
+    },
+    {
+        "id": 3,
+        "round_number": 1,
+        "round_title": "Aptitude & Logical Reasoning",
+        "category": "Pattern & Sequence Deduction",
+        "question": "Analyze the computational complexity progression: 2, 6, 12, 20, 30, 42, ... Derive the algebraic nth term formula and determine the 10th term in this sequence.",
+        "hint": "Notice n*(n+1): 1*2=2, 2*3=6, 3*4=12, ..., 10th term = 10*11 = 110.",
+    },
+    {
+        "id": 4,
+        "round_number": 1,
+        "round_title": "Aptitude & Logical Reasoning",
+        "category": "Logical Dependency & Scheduling",
+        "question": "Five asynchronous pipeline stages (A, B, C, D, E) must execute under strict dependency rules: Stage A must complete before B starts; C requires both B and D to finish; E cannot be first or last. Deduce all valid topological execution orderings.",
+        "hint": "Analyze graph edges A->B->C and D->C with position constraint for E. Example valid order: D -> A -> B -> E -> C or A -> D -> B -> E -> C.",
+    },
+    {
+        "id": 5,
+        "round_number": 1,
+        "round_title": "Aptitude & Logical Reasoning",
+        "category": "Algorithmic Logic Puzzle",
+        "question": "You manage 8 identical compute instances, but exactly one instance contains a memory-leak regression making it run at half speed. You have a dual-sided comparator benchmark tool. What is the minimum number of benchmark runs required to pinpoint the degraded node?",
+        "hint": "Divide instances into groups of 3, 3, 2 (ternary search). Compare 3 vs 3. If balanced, test the remaining 2. Minimum 2 benchmark runs are sufficient.",
+    },
+]
+
+ROLE_DSA_QUESTIONS = {
     "Frontend Developer": [
         {
-            "id": 1,
-            "category": "Coding & Architecture",
-            "question": "How does React Fiber reconciliation work, and how does React optimize DOM diffing with keys?",
-            "hint": "Mention Virtual DOM, heuristic O(n) diffing, fiber node hierarchy, work loop, and component identity.",
+            "id": 6,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - Sliding Window & Streams",
+            "question": "Given an unbounded stream of user click telemetry timestamps, design an O(n) sliding-window algorithm to find the maximum number of user interactions in any continuous 5-second interval.",
+            "hint": "Use a sliding window with two pointers or a monotonic deque to maintain valid timestamps within [t, t+5] in O(1) amortized time per event.",
         },
         {
-            "id": 2,
-            "category": "Performance & CWV",
-            "question": "Explain how to diagnose and optimize Core Web Vitals (LCP, INP, CLS) in a large single-page app.",
-            "hint": "Discuss fetchpriority, critical rendering path, code-splitting, layout stability, and long task decomposition.",
+            "id": 7,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - Tree Diffing & Keys",
+            "question": "Explain the tree reconciliation algorithm used in Virtual DOM diffing. How does key hashing prevent O(n^3) tree editing complexity and reduce it to linear O(n)?",
+            "hint": "Detail level-by-level breadth-first comparison, heuristic assumptions, double-buffered Fiber trees, and stable key map indexing.",
         },
         {
-            "id": 3,
-            "category": "JavaScript & Web APIs",
-            "question": "Explain JavaScript closures, event loop macro/microtask queue ordering, and memory leak prevention.",
-            "hint": "Mention lexical scoping, garbage collection retainers, Promise microtasks, and cleanup in useEffect.",
+            "id": 8,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - Graph & Cycle Detection",
+            "question": "Given an ES Module dependency graph with possible circular dependencies, implement cycle detection and compute a valid bundling execution order using DFS 3-color marking.",
+            "hint": "Use DFS with White (unvisited), Gray (currently visiting / cycle detected), and Black (visited) states to perform topological sort.",
+        },
+        {
+            "id": 9,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - Dynamic Programming & Trie",
+            "question": "Implement an autocomplete search dictionary parser using a Prefix Trie combined with Dynamic Programming for fuzzy Levenshtein distance matching under a 2-edit threshold.",
+            "hint": "Traverse the Trie while maintaining DP state rows for edit distances (insert, delete, replace) to prune unpromising branches early.",
+        },
+        {
+            "id": 10,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "Core Technical - Virtual List Engine",
+            "question": "Architect a 60fps DOM Virtualization list renderer for 1,000,000 items. Explain how you calculate scrollTop offset, viewport slices, overscan buffers, and item recycling.",
+            "hint": "Compute visible start/end indices: startIndex = Math.floor(scrollTop / itemHeight), render only visible + buffer count, transform translate coordinates.",
         },
     ],
     "Backend Developer": [
         {
-            "id": 1,
-            "category": "System Design",
-            "question": "How do you architect a high-throughput, low-latency distributed caching layer using Redis?",
-            "hint": "Address cache-aside, cache penetration, bloom filters, cache stampede, eviction policies, and cluster replication.",
+            "id": 6,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - LRU Cache Design",
+            "question": "Implement a high-performance, thread-safe Least Recently Used (LRU) Cache supporting O(1) get() and put() operations using a Doubly Linked List and Hash Map.",
+            "hint": "Combine a HashMap<Key, Node> for O(1) lookups with a DoublyLinkedList for O(1) node relocation on access and tail eviction on capacity breach.",
         },
         {
-            "id": 2,
-            "category": "Databases & Concurrency",
-            "question": "Compare PostgreSQL B-Tree vs Hash indexing and explain transaction isolation levels and deadlocks.",
-            "hint": "Mention read committed, repeatable read, serializable, MVCC, row locking, and deadlock detection graphs.",
+            "id": 7,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - Priority Queue & Routing",
+            "question": "Design an adaptive shortest-path network routing algorithm for microservice RPCs using Dijkstra's algorithm with Min-Heap under dynamically fluctuating latency weights.",
+            "hint": "Use an indexed priority queue to dynamically update node distances (relaxation) and handle edge weight updates gracefully in O((V + E) log V).",
         },
         {
-            "id": 3,
-            "category": "Distributed Systems",
-            "question": "How do you guarantee idempotency in distributed payment transactions across microservices?",
-            "hint": "Discuss Idempotency-Key headers, transactional outbox pattern, distributed locks, and two-phase commit.",
+            "id": 8,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - Monotonic Queue Rate Limiting",
+            "question": "Implement a sliding-window rate limiter using a Redis Sorted Set (ZSET) to enforce 1,000 requests per minute per API key under high concurrency.",
+            "hint": "Use MULTI/EXEC or Lua script: ZADD current timestamp, ZREMRANGEBYSCORE older than now-60s, ZCARD to check quota, and EXPIRE.",
+        },
+        {
+            "id": 9,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "Core Technical - Concurrency & MVCC",
+            "question": "Compare Optimistic Concurrency Control (OCC) with version columns against Pessimistic Locking (SELECT FOR UPDATE). How do you resolve distributed deadlocks?",
+            "hint": "Discuss CAS version updates, database row locks, lock acquisition timeouts, and distributed wait-for graphs with deadlock cycle termination.",
+        },
+        {
+            "id": 10,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "Core Technical - Distributed Idempotency",
+            "question": "Design a guaranteed idempotent financial transaction processing pipeline across distributed payment services using the Transactional Outbox pattern.",
+            "hint": "Store Idempotency-Key headers in DB with state (IN_PROGRESS, COMPLETED), use transactional outbox with CDC (Debezium) into Kafka for consumer deduplication.",
         },
     ],
     "Full Stack Engineer": [
         {
-            "id": 1,
-            "category": "Full Stack Architecture",
-            "question": "Design a secure, real-time collaboration canvas (like Figma/Google Docs) supporting conflict resolution.",
-            "hint": "Mention WebSockets, Operational Transformation (OT) vs CRDTs, JWT token refresh, and delta compression.",
+            "id": 6,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - CRDT Conflict Resolution",
+            "question": "Implement a Conflict-Free Replicated Data Type (CRDT) LWW-Element-Set (Last-Write-Wins) for real-time collaborative document editing across disconnected clients.",
+            "hint": "Maintain Add-Set and Remove-Set with timestamps; resolve concurrent edits deterministically by comparing UTC epoch timestamps and client UUID tie-breakers.",
         },
         {
-            "id": 2,
-            "category": "Security & Auth",
-            "question": "Explain OAuth2 PKCE flow, JWT storage best practices, and preventing CSRF/XSS in modern web apps.",
-            "hint": "Compare HttpOnly cookies vs localStorage, SameSite cookie attributes, Content Security Policy, and token rotation.",
+            "id": 7,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - Tree Indexing & Search",
+            "question": "Design an in-memory B-Tree or Inverted Index data structure for lightning-fast multi-keyword full-text search across 500,000 customer product catalogs.",
+            "hint": "Tokenize and normalize words, build InvertedIndex: Map<Token, PostingList<DocID, Frequency>>, and perform posting list intersections using skip pointers.",
         },
         {
-            "id": 3,
-            "category": "Data & Performance",
-            "question": "How do you implement pagination, rate limiting, and database connection pooling at scale?",
-            "hint": "Compare cursor-based vs offset pagination, Token Bucket vs Sliding Window log, and PgBouncer connection pooling.",
+            "id": 8,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - Queue & Backpressure",
+            "question": "Design a Producer-Consumer message queue with bounded ring buffer memory and exponential backpressure mechanism when consumer processing slows down.",
+            "hint": "Use a circular ring buffer with atomic head/tail pointers, condition variables for signaling full/empty buffers, and reactive backpressure flow control.",
+        },
+        {
+            "id": 9,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "Core Technical - OAuth2 PKCE Security",
+            "question": "Explain the end-to-end OAuth 2.0 PKCE authorization flow for Single Page Applications. How does code_challenge and code_verifier protect against interception attacks?",
+            "hint": "Generate cryptographic code_verifier (high-entropy string) and code_challenge (SHA-256 hash). Authorization server verifies challenge on token exchange.",
+        },
+        {
+            "id": 10,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "Core Technical - Real-time WebSocket Gateway",
+            "question": "Architect a real-time bi-directional WebSocket gateway capable of broadcasting live events to 250,000 concurrent connected clients with horizontal cluster scaling.",
+            "hint": "Use Redis Pub/Sub or Apache Kafka as the distributed broadcast bus between WebSocket gateway instances with heartbeat ping/pong connection monitoring.",
         },
     ],
     "AI / ML Engineer": [
         {
-            "id": 1,
-            "category": "LLM & RAG Systems",
-            "question": "Design a high-accuracy, production-ready Retrieval-Augmented Generation (RAG) system with hybrid search.",
-            "hint": "Discuss chunking strategies, dense vector embeddings, sparse BM25 reranking, cross-encoders, and vector DB indexing.",
+            "id": 6,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - HNSW Vector Graph Indexing",
+            "question": "Explain the Hierarchical Navigable Small World (HNSW) graph algorithm for Approximate Nearest Neighbor (ANN) vector search. How does multi-layer routing achieve logarithmic search time?",
+            "hint": "Discuss skip-list inspired layered graphs, greedy routing at top layers, beam search at layer 0, and distance metrics (Cosine vs Euclidean).",
         },
         {
-            "id": 2,
-            "category": "Model Serving & Inference",
-            "question": "How do you optimize LLM inference throughput and latency in production (vLLM, quantization, KV caching)?",
-            "hint": "Mention PagedAttention, continuous batching, FP8/AWQ quantization, prefix caching, and speculative decoding.",
+            "id": 7,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - KV Cache & PagedAttention",
+            "question": "Implement an efficient Key-Value (KV) Cache memory management algorithm (similar to vLLM's PagedAttention) to eliminate memory fragmentation during LLM token generation.",
+            "hint": "Map continuous virtual KV blocks to non-contiguous physical GPU memory pages, enabling dynamic allocation without pre-allocating worst-case sequence lengths.",
+        },
+        {
+            "id": 8,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "DSA - Matrix Multiply & Quantization",
+            "question": "Detail the computational mechanics of FP8 / INT4 weight-only quantization vs activation quantization. How does AWQ preserve salient weight channels without perplexity degradation?",
+            "hint": "Analyze per-channel scaling factors, identifying outlier activation channels (top 1%), and selectively protecting salient weights from aggressive quantization.",
+        },
+        {
+            "id": 9,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "Core Technical - Production RAG Architecture",
+            "question": "Design a multi-stage Retrieval-Augmented Generation (RAG) system with hybrid dense-sparse search (BM25 + BGE-M3), Reciprocal Rank Fusion (RRF), and cross-encoder reranking.",
+            "hint": "Cover semantic chunking with overlap, sparse BM25 + dense vector embeddings, RRF formula RRF(d) = sum(1 / (k + rank)), and Cohere/bge-reranker reranking.",
+        },
+        {
+            "id": 10,
+            "round_number": 2,
+            "round_title": "Data Structures & Algorithms (DSA)",
+            "category": "Core Technical - Distributed Model Training",
+            "question": "Explain pipeline parallelism, tensor parallelism (Megatron-LM), and ZeRO memory optimization stages (ZeRO-1, 2, 3) in training multi-billion parameter LLMs across GPU clusters.",
+            "hint": "Detail partitioning optimizer states (ZeRO-1), gradients (ZeRO-2), and model parameters (ZeRO-3), plus inter-GPU all-reduce communication overlaps.",
         },
     ],
 }
+
+def get_company_specific_questions(company: str, role: str):
+    return [
+        {
+            "id": 11,
+            "round_number": 3,
+            "round_title": f"Company Architecture & System Design ({company})",
+            "category": "System Design - High Availability & Scale",
+            "question": f"Architect a global distributed system for {company} handling 500 Million Daily Active Users. Discuss Geo-DNS routing, L4/L7 load balancing, Multi-Region replication, and edge caching.",
+            "hint": "Address Anycast DNS, NGINX/Envoy ingress proxies, CDN points of presence, active-active multi-region databases, and partition tolerance.",
+        },
+        {
+            "id": 12,
+            "round_number": 3,
+            "round_title": f"Company Architecture & System Design ({company})",
+            "category": f"{company} Core Engineering Challenge",
+            "question": f"How would you solve {company}'s signature engineering challenge: designing high-throughput data pipelines with sub-second query latency and zero-downtime rolling deployments?",
+            "hint": f"Discuss blue-green deployments, canary testing, distributed tracing (OpenTelemetry), and auto-healing infrastructure tailored to {company}.",
+        },
+        {
+            "id": 13,
+            "round_number": 3,
+            "round_title": f"Company Architecture & System Design ({company})",
+            "category": "System Design - Data Sharding & Partitions",
+            "question": f"Design a resilient data sharding strategy for {company} that dynamically handles hotspots (e.g. celebrity accounts or viral flash events) without manual database re-indexing.",
+            "hint": "Explain Consistent Hashing with virtual nodes, composite shard keys (TenantID + Salt), and micro-sharding with automated live data migration.",
+        },
+        {
+            "id": 14,
+            "round_number": 3,
+            "round_title": f"Company Architecture & System Design ({company})",
+            "category": "System Design - Fault Tolerance & Circuit Breakers",
+            "question": f"In a mission-critical microservices mesh at {company}, how do you prevent cascading service failures when a downstream database slows down under heavy load?",
+            "hint": "Cover Circuit Breaker state machines (Closed, Open, Half-Open), exponential backoff with full jitter, bulkhead thread pools, and graceful degradation.",
+        },
+        {
+            "id": 15,
+            "round_number": 3,
+            "round_title": f"Company Architecture & System Design ({company})",
+            "category": "System Design - Zero Trust & API Security",
+            "question": f"Design an enterprise Zero-Trust security and mTLS authentication architecture for thousands of microservices communicating across {company}'s cloud VPCs.",
+            "hint": "Discuss SPIFFE/SPIRE identity issuance, short-lived X.509 certificates with automated rotation via service mesh (Istio/Linkerd), and fine-grained RBAC.",
+        },
+    ]
+
+def get_hr_behavioral_questions(company: str):
+    return [
+        {
+            "id": 16,
+            "round_number": 4,
+            "round_title": "Behavioral & HR Leadership Round",
+            "category": "HR - Conflict Resolution & Alignment",
+            "question": f"Describe a situation where you had a strong technical disagreement with a Senior Engineer or Product Manager at work. How did you resolve it constructively using the STAR method?",
+            "hint": "Structure using STAR (Situation, Task, Action, Result). Focus on objective data, running benchmarks/POCs, active listening, and 'disagree and commit' alignment.",
+        },
+        {
+            "id": 17,
+            "round_number": 4,
+            "round_title": "Behavioral & HR Leadership Round",
+            "category": "HR - Crisis Management & Ownership",
+            "question": f"Tell me about a high-severity production outage or critical bug that occurred under your ownership. How did you coordinate the incident response and lead the post-mortem?",
+            "hint": "Emphasize rapid mitigation first, transparent communication to stakeholders, root cause analysis (5 Whys), and blameless post-mortem with automated safeguards.",
+        },
+        {
+            "id": 18,
+            "round_number": 4,
+            "round_title": "Behavioral & HR Leadership Round",
+            "category": "HR - Failure & Growth Mindset",
+            "question": "Can you share an experience where a project or technical architecture you spearheaded failed to meet expectations or hit its deadline? What were your core takeaways?",
+            "hint": "Demonstrate radical ownership, honesty, learning agility, early risk escalation, and how this experience shaped your current engineering standards.",
+        },
+        {
+            "id": 19,
+            "round_number": 4,
+            "round_title": "Behavioral & HR Leadership Round",
+            "category": "HR - Leadership & Mentorship",
+            "question": f"How do you elevate the engineers around you? Give a concrete example of how you mentored a colleague, improved code review quality, or championed engineering best practices.",
+            "hint": "Highlight concrete actions: hosting architecture RFC sessions, creating starter boilerplates, providing empathetic PR reviews, and pairing with junior teammates.",
+        },
+        {
+            "id": 20,
+            "round_number": 4,
+            "round_title": "Behavioral & HR Leadership Round",
+            "category": "HR - Company Culture & Vision",
+            "question": f"Why do you specifically want to join {company} over other top tech firms, and how does your 2-3 year technical vision align with our engineering culture and scale?",
+            "hint": f"Connect your personal passions and technical strengths directly to {company}'s core principles, products, and technical scale.",
+        },
+    ]
 
 @router.post("/start", response_model=schemas.StartInterviewResponse)
 def start_mock_interview(
     payload: schemas.StartInterviewRequest,
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
-    role_key = payload.role if payload.role in DEFAULT_QUESTION_BANK else "Frontend Developer"
-    questions_raw = DEFAULT_QUESTION_BANK.get(role_key, DEFAULT_QUESTION_BANK["Frontend Developer"])
+    role_key = payload.role if payload.role in ROLE_DSA_QUESTIONS else "Frontend Developer"
     
-    questions = [
+    # 1. Round 1: Aptitude & Logical Reasoning (5 Questions)
+    round1_questions = [
         schemas.InterviewQuestion(
             id=q["id"],
+            round_number=q["round_number"],
+            round_title=q["round_title"],
             category=q["category"],
-            question=f"[{payload.company}] {q['question']}",
+            question=q["question"],
             hint=q.get("hint"),
         )
-        for q in questions_raw
+        for q in APTITUDE_ROUND_QUESTIONS
     ]
+    
+    # 2. Round 2: Data Structures & Algorithms (5 Questions)
+    dsa_raw = ROLE_DSA_QUESTIONS.get(role_key, ROLE_DSA_QUESTIONS["Frontend Developer"])
+    round2_questions = [
+        schemas.InterviewQuestion(
+            id=q["id"],
+            round_number=q["round_number"],
+            round_title=q["round_title"],
+            category=q["category"],
+            question=q["question"],
+            hint=q.get("hint"),
+        )
+        for q in dsa_raw
+    ]
+    
+    # 3. Round 3: Company-Specific Architecture & System Design (5 Questions)
+    company_raw = get_company_specific_questions(payload.company, payload.role)
+    round3_questions = [
+        schemas.InterviewQuestion(
+            id=q["id"],
+            round_number=q["round_number"],
+            round_title=q["round_title"],
+            category=q["category"],
+            question=q["question"],
+            hint=q.get("hint"),
+        )
+        for q in company_raw
+    ]
+    
+    # 4. Round 4: Behavioral & HR Leadership Round (5 Questions)
+    hr_raw = get_hr_behavioral_questions(payload.company)
+    round4_questions = [
+        schemas.InterviewQuestion(
+            id=q["id"],
+            round_number=q["round_number"],
+            round_title=q["round_title"],
+            category=q["category"],
+            question=q["question"],
+            hint=q.get("hint"),
+        )
+        for q in hr_raw
+    ]
+    
+    # Combine all 4 rounds into a master 20-question interview session
+    all_20_questions = round1_questions + round2_questions + round3_questions + round4_questions
 
     session_id = f"intv_{payload.company.lower()}_{int(datetime.now().timestamp())}"
 
@@ -115,8 +391,8 @@ def start_mock_interview(
         company=payload.company,
         role=payload.role,
         difficulty=payload.difficulty,
-        duration_minutes=payload.duration_minutes,
-        questions=questions,
+        duration_minutes=payload.duration_minutes or 60,
+        questions=all_20_questions,
     )
 
 @router.post("/submit", response_model=schemas.SubmitInterviewResponse)

@@ -236,6 +236,8 @@ class InterviewQuestion(BaseModel):
     category: str
     question: str
     hint: Optional[str] = None
+    round_number: Optional[int] = 1
+    round_title: Optional[str] = None
     expected_key_points: Optional[List[str]] = []
 
 

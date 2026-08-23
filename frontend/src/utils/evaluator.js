@@ -382,7 +382,45 @@ export async function evaluateInterview(company, role, difficulty, answers, cust
     improvements.push("Provide concrete code snippets or step-by-step algorithms rather than high-level definitions.");
   }
 
-  const overallSummary = `Candidate achieved an overall interview performance score of ${avgScore}% (${grade}) for ${company}'s ${role} position. Technical Depth: ${avgTech}%, Communication: ${avgComm}%, Problem Solving: ${avgProb}%.`;
+  // Calculate round-by-round sub-scores (4 rounds of 5 questions each)
+  const round1Items = detailed.slice(0, 5);
+  const round2Items = detailed.slice(5, 10);
+  const round3Items = detailed.slice(10, 15);
+  const round4Items = detailed.slice(15, 20);
+
+  const calcRoundAvg = (items) => {
+    if (!items.length) return 0;
+    return Math.round(items.reduce((acc, c) => acc + c.score, 0) / items.length);
+  };
+
+  const roundsBreakdown = [
+    {
+      round_number: 1,
+      title: "Aptitude & Logical Reasoning",
+      score: calcRoundAvg(round1Items),
+      questions_count: round1Items.length,
+    },
+    {
+      round_number: 2,
+      title: "Data Structures & Algorithms (DSA)",
+      score: calcRoundAvg(round2Items),
+      questions_count: round2Items.length,
+    },
+    {
+      round_number: 3,
+      title: "Company Architecture & System Design",
+      score: calcRoundAvg(round3Items),
+      questions_count: round3Items.length,
+    },
+    {
+      round_number: 4,
+      title: "Behavioral & HR Leadership Round",
+      score: calcRoundAvg(round4Items),
+      questions_count: round4Items.length,
+    },
+  ];
+
+  const overallSummary = `Candidate completed all 4 rounds (20 questions) with an overall score of ${avgScore}% (${grade}) for ${company}'s ${role} interview. Technical Depth: ${avgTech}%, Communication: ${avgComm}%, Problem Solving: ${avgProb}%.`;
 
   return {
     interview_id: Date.now(),
@@ -392,6 +430,7 @@ export async function evaluateInterview(company, role, difficulty, answers, cust
     technical_score: avgTech,
     communication_score: avgComm,
     problem_solving_score: avgProb,
+    rounds_breakdown: roundsBreakdown,
     identified_keywords: Array.from(allKeywords),
     strengths,
     improvements,
