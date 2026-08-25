@@ -5,78 +5,151 @@ import {
   FaBriefcase,
   FaCalendarAlt,
   FaCog,
+  FaChevronLeft,
+  FaChevronRight,
+  FaTimes,
+  FaColumns,
 } from "react-icons/fa";
 
-function Sidebar({ activeSection = "dashboard", onNavigate }) {
+const NAV_ITEMS = [
+  { id: "dashboard", label: "Overview", icon: FaHome },
+  { id: "interviews", label: "Mock Room", icon: FaMicrophone, badge: "AI" },
+  { id: "analytics", label: "Analytics & Skills", icon: FaChartLine },
+  { id: "schedule", label: "Schedule & Feed", icon: FaCalendarAlt },
+  { id: "career", label: "Career Prep", icon: FaBriefcase },
+  { id: "settings", label: "Settings", icon: FaCog },
+];
+
+function Sidebar({
+  activeSection = "dashboard",
+  onNavigate,
+  isCollapsed = false,
+  onToggleCollapse,
+  mobileOpen = false,
+  onCloseMobile,
+}) {
   const handleClick = (item) => {
     if (onNavigate) {
       onNavigate(item);
     }
+    if (mobileOpen && onCloseMobile) {
+      onCloseMobile();
+    }
   };
 
   return (
-    <aside className="sidebar">
-      {/* Logo */}
-      <div className="sidebar-brand">
-        <span className="sidebar-logo">✦</span>
-        <h2>Intervista AI</h2>
-      </div>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {mobileOpen && (
+        <div
+          className="sidebar-mobile-backdrop"
+          onClick={onCloseMobile}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Navigation */}
-      <nav className="sidebar-nav">
-        <p className="sidebar-label">MAIN MENU</p>
-
-        <ul>
-          <li
-            className={activeSection === "dashboard" ? "active" : ""}
+      <aside
+        className={`sidebar ${isCollapsed ? "collapsed" : "expanded"} ${
+          mobileOpen ? "mobile-open" : ""
+        }`}
+        aria-label="Sidebar Navigation"
+      >
+        {/* Top Header & Brand */}
+        <div className="sidebar-header">
+          <div
+            className="sidebar-brand"
             onClick={() => handleClick("dashboard")}
+            title="Intervista AI"
           >
-            <FaHome className="sidebar-icon" />
-            <span>Overview</span>
-          </li>
+            <span className="sidebar-logo" aria-hidden="true">✦</span>
+            {!isCollapsed && <h2 className="sidebar-title">Intervista AI</h2>}
+          </div>
 
-          <li
-            className={activeSection === "interviews" ? "active" : ""}
-            onClick={() => handleClick("interviews")}
-          >
-            <FaMicrophone className="sidebar-icon" />
-            <span>Mock Room</span>
-          </li>
+          {/* Collapse / Expand Toggle Button for Desktop */}
+          {onToggleCollapse && (
+            <button
+              type="button"
+              className="sidebar-toggle-btn"
+              onClick={onToggleCollapse}
+              title={isCollapsed ? "Expand sidebar (Max)" : "Collapse sidebar (Min)"}
+              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+            </button>
+          )}
 
-          <li
-            className={activeSection === "analytics" ? "active" : ""}
-            onClick={() => handleClick("analytics")}
-          >
-            <FaChartLine className="sidebar-icon" />
-            <span>Analytics & Skills</span>
-          </li>
+          {/* Close Button for Mobile Drawer */}
+          {onCloseMobile && (
+            <button
+              type="button"
+              className="sidebar-mobile-close"
+              onClick={onCloseMobile}
+              title="Close sidebar"
+              aria-label="Close sidebar"
+            >
+              <FaTimes />
+            </button>
+          )}
+        </div>
 
-          <li
-            className={activeSection === "schedule" ? "active" : ""}
-            onClick={() => handleClick("schedule")}
-          >
-            <FaCalendarAlt className="sidebar-icon" />
-            <span>Schedule & Feed</span>
-          </li>
+        {/* Navigation */}
+        <nav className="sidebar-nav">
+          {!isCollapsed && <p className="sidebar-label">MAIN MENU</p>}
+          {isCollapsed && <div className="sidebar-mini-divider" />}
 
-          <li
-            className={activeSection === "career" ? "active" : ""}
-            onClick={() => handleClick("career")}
-          >
-            <FaBriefcase className="sidebar-icon" />
-            <span>Career Prep</span>
-          </li>
+          <ul>
+            {NAV_ITEMS.map((item) => {
+              const IconComponent = item.icon;
+              const isActive = activeSection === item.id;
 
-          <li
-            className={activeSection === "settings" ? "active" : ""}
-            onClick={() => handleClick("settings")}
+              return (
+                <li
+                  key={item.id}
+                  className={`sidebar-item ${isActive ? "active" : ""}`}
+                  onClick={() => handleClick(item.id)}
+                  title={isCollapsed ? item.label : undefined}
+                >
+                  <IconComponent className="sidebar-icon" />
+                  
+                  {!isCollapsed && (
+                    <span className="sidebar-item-text">{item.label}</span>
+                  )}
+
+                  {!isCollapsed && item.badge && (
+                    <span className="sidebar-badge">{item.badge}</span>
+                  )}
+
+                  {/* Floating tooltip when collapsed (Min Mode) */}
+                  {isCollapsed && (
+                    <div className="sidebar-tooltip">
+                      {item.label}
+                      {item.badge && <span className="tooltip-badge">{item.badge}</span>}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        {/* Sidebar Footer with Min/Max Mode Indicator */}
+        <div className="sidebar-footer">
+          <button
+            type="button"
+            className="sidebar-footer-toggle"
+            onClick={onToggleCollapse}
+            title={isCollapsed ? "Expand to Full View" : "Collapse to Mini View"}
           >
-            <FaCog className="sidebar-icon" />
-            <span>Settings</span>
-          </li>
-        </ul>
-      </nav>
-    </aside>
+            <FaColumns className="footer-toggle-icon" />
+            {!isCollapsed && (
+              <span className="footer-toggle-text">
+                Collapse Sidebar
+              </span>
+            )}
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
 

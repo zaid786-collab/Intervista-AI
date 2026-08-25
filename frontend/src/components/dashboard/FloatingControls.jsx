@@ -1,9 +1,26 @@
-import { FaMoon, FaSun, FaBell } from "react-icons/fa";
+import { FaMoon, FaSun, FaBell, FaBars } from "react-icons/fa";
 import "./Dashboard.css";
 
-function FloatingControls({ darkMode, setDarkMode, onOpenNotifications, notificationCount = 0 }) {
+function FloatingControls({
+  darkMode,
+  setDarkMode,
+  onOpenNotifications,
+  notificationCount = 0,
+  onToggleMobileSidebar,
+}) {
   return (
     <div className="floating-controls">
+      {onToggleMobileSidebar && (
+        <button
+          className="floating-btn mobile-sidebar-btn"
+          onClick={onToggleMobileSidebar}
+          title="Toggle Navigation Menu"
+          aria-label="Toggle Navigation Menu"
+        >
+          <FaBars />
+        </button>
+      )}
+
       {setDarkMode && (
         <button
           className="floating-btn"

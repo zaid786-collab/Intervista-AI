@@ -14,18 +14,19 @@ def is_smtp_configured() -> bool:
     return bool(all([host, username, password, sender]))
 
 
-def send_verification_otp(recipient: str, code: str) -> None:
+def send_verification_otp(recipient: str, code: str) -> bool:
     """Send a verification code using the SMTP account configured in .env, or log in dev mode."""
     if not is_smtp_configured():
         print(f"\n==========================================")
         print(f"[DEV AUTH OTP] Verification Code for {recipient}: {code}")
         print(f"==========================================\n")
         logger.info("[DEV AUTH OTP] Verification Code for %s: %s", recipient, code)
-        return
+        return False
 
     host = os.getenv("SMTP_HOST")
     username = os.getenv("SMTP_USERNAME")
-    password = os.getenv("SMTP_PASSWORD")
+    # Clean whitespace/spaces often found in copied Gmail App Passwords (e.g. 'abcd efgh ijkl mnop')
+    password = (os.getenv("SMTP_PASSWORD") or "").replace(" ", "")
     sender = os.getenv("SMTP_FROM") or username
     port = int(os.getenv("SMTP_PORT", "587"))
 
@@ -38,8 +39,17 @@ def send_verification_otp(recipient: str, code: str) -> None:
         "It expires in 10 minutes. Do not share this code with anyone."
     )
 
-    with smtplib.SMTP(host, port, timeout=15) as smtp:
-        smtp.starttls()
-        smtp.login(username, password)
-        smtp.send_message(message)
-
+    try:
+        with smtplib.SMTP(host, port, timeout=10) as smtp:
+            smtp.starttls()
+            smtp.login(username, password)
+            smtp.send_message(message)
+        logger.info(f"Verification email successfully sent to {recipient}")
+        return True
+    except Exception as e:
+        logger.warning(f"SMTP sending failed: {e}. Falling back to OTP logging.")
+        print(f"\n==========================================")
+        print(f"[FALLBACK AUTH OTP] Could not reach SMTP ({e}).")
+        print(f"[AUTH OTP] Verification Code for {recipient}: {code}")
+        print(f"==========================================\n")
+        return False

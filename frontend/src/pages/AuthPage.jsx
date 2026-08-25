@@ -52,14 +52,14 @@ export default function AuthPage({ mode = "login" }) {
       if (isLogin) {
         await login({ email, password });
       } else {
-        await signup({
+        const res = await signup({
           name: formData.name.trim() || email.split("@")[0],
           email,
           password,
         });
         setVerificationEmail(email);
         setAwaitingVerification(true);
-        setNotice(`We sent a 6-digit code to ${email}.`);
+        setNotice(res?.message || `We sent a 6-digit code to ${email}.`);
         return;
       }
 
@@ -90,8 +90,8 @@ export default function AuthPage({ mode = "login" }) {
     setError("");
     setLoading(true);
     try {
-      await resendOtp(verificationEmail);
-      setNotice("A new code has been sent to your email.");
+      const res = await resendOtp(verificationEmail);
+      setNotice(res?.message || "A new code has been sent to your email.");
     } catch (err) {
       setError(err.message || "Could not resend the code.");
     } finally {
@@ -116,16 +116,38 @@ export default function AuthPage({ mode = "login" }) {
           <form className="authForm" onSubmit={handleVerification}>
             <label>
               Email verification code
-              <input type="text" inputMode="numeric" autoComplete="one-time-code" value={code}
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={code}
                 onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="123456" maxLength="6" autoFocus />
+                placeholder="123456"
+                maxLength="6"
+                autoFocus
+              />
             </label>
             {notice && <p className="authNotice">{notice}</p>}
             {error && <p className="authError">{error}</p>}
             <button type="submit" className="authSubmitBtn" disabled={loading}>
               {loading ? "Verifying..." : "Verify email"}
             </button>
-            <button type="button" className="textButton authResend" disabled={loading} onClick={handleResend}>Resend code</button>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
+              <button type="button" className="textButton authResend" disabled={loading} onClick={handleResend}>
+                Resend code
+              </button>
+              <button
+                type="button"
+                className="textButton"
+                onClick={() => {
+                  setAwaitingVerification(false);
+                  setError("");
+                  setNotice("");
+                }}
+              >
+                ← Back to edit
+              </button>
+            </div>
           </form>
         ) : (
         <form className="authForm" onSubmit={handleSubmit}>

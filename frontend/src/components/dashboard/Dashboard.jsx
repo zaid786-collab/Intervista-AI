@@ -88,6 +88,24 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("dashboard");
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem("intervista_sidebar_collapsed");
+    return saved === "true";
+  });
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("intervista_sidebar_collapsed", String(next));
+      return next;
+    });
+  };
+
+  const handleToggleMobileSidebar = () => {
+    setMobileSidebarOpen((prev) => !prev);
+  };
+
   const handleDarkModeToggle = () => {
     const nextMode = !darkMode;
     setDarkMode(nextMode);
@@ -140,10 +158,21 @@ function Dashboard() {
       : parseInt(metrics.total_interviews, 10) || 0;
 
   return (
-    <div className={`${darkMode ? "dashboard dark" : "dashboard light"} ${accentTheme}`}>
-      <Sidebar activeSection={activeSection} onNavigate={handleNavigation} />
+    <div
+      className={`${darkMode ? "dashboard dark" : "dashboard light"} ${accentTheme} ${
+        sidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"
+      }`}
+    >
+      <Sidebar
+        activeSection={activeSection}
+        onNavigate={handleNavigation}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={handleToggleSidebar}
+        mobileOpen={mobileSidebarOpen}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
+      />
 
-      <div className="main">
+      <div className={`main ${sidebarCollapsed ? "collapsed" : ""}`}>
         {/* Dashboard Top Greeting */}
         <div id="dashboard-top">
           <Welcome
@@ -158,6 +187,7 @@ function Dashboard() {
           setDarkMode={handleDarkModeToggle}
           onOpenNotifications={() => handleNavigation("schedule")}
           notificationCount={dashboardData?.notifications?.length || 0}
+          onToggleMobileSidebar={handleToggleMobileSidebar}
         />
 
         {/* Executive Stats Cards */}
