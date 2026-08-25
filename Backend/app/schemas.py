@@ -340,4 +340,23 @@ class JobOut(BaseModel):
     logo: str
 
 
+class JobApplyRequest(BaseModel):
+    job_id: Optional[str] = None
+    company: str
+    role: str
+    location: Optional[str] = "Remote / Hybrid"
+    salary: Optional[str] = "Competitive"
+    recipient_email: Optional[EmailStr] = None
+    candidate_name: Optional[str] = None
+
+
+class JobApplyResponse(BaseModel):
+    success: bool
+    message: str
+    job_id: Optional[str] = None
+    company: str
+    role: str
+    email_sent_to: str
+
+
 TokenResponse.model_rebuild()

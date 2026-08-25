@@ -56,15 +56,19 @@ async function request(path, { method = "GET", body, auth = false } = {}) {
   }
 
   if (!response) {
-    throw new Error(lastError?.message || "Failed to fetch: Cannot connect to Intervista AI backend.");
+    throw new Error(lastError?.message || "Cannot connect to Intervista AI backend. Please ensure the backend server is running on port 8000.");
   }
 
   // 204 No Content has no body to parse
   const data = response.status === 204 ? null : await response.json().catch(() => null);
 
   if (!response.ok) {
-    const message = data?.detail || "Something went wrong. Please try again.";
+    const message = data?.detail || `Request failed with status ${response.status}. Please check your credentials.`;
     throw new Error(typeof message === "string" ? message : "Request failed.");
+  }
+
+  if (response.status !== 204 && data === null) {
+    throw new Error("Invalid response format received from server. Please ensure the backend API is online.");
   }
 
   return data;
@@ -318,4 +322,22 @@ export function fetchSolvedResources() {
 
 export function toggleSolvedResource(title) {
   return request("/api/resources/toggle-solved", { method: "POST", auth: true, body: { title } });
+}
+
+// ---------- Jobs & Applications ----------
+
+export function applyToJob(jobDetails) {
+  return request("/api/jobs/apply", {
+    method: "POST",
+    auth: true,
+    body: {
+      job_id: jobDetails.job_id || jobDetails.id,
+      company: jobDetails.company,
+      role: jobDetails.role,
+      location: jobDetails.location || "Remote / Hybrid",
+      salary: jobDetails.salary || "Competitive",
+      recipient_email: jobDetails.recipient_email || jobDetails.email,
+      candidate_name: jobDetails.candidate_name || jobDetails.name,
+    },
+  });
 }

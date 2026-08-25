@@ -13,7 +13,7 @@
     "dev:all": "concurrently -k -p \"[{name}]\" -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm run backend\" \"npm run dev\"",
     "build": "npm --prefix frontend run build",
     "preview": "npm --prefix frontend run preview",
-    "backend": "cd Backend && .\\venv\\Scripts\\uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    "backend": "cd Backend && (..\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload || python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload)"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

@@ -10,7 +10,7 @@
   top: 0;
   left: 0;
 
-  z-index: 99999;
+  z-index: 1000;
 
   display: flex;
   align-items: center;
@@ -23,8 +23,6 @@
   -webkit-backdrop-filter: blur(14px);
 
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-
-  isolation: isolate;
 }
 
 
@@ -196,7 +194,7 @@
   justify-content: center;
 
   position: relative;
-  z-index: 1000000;
+  z-index: 2;
 
   outline: none;
 }
@@ -533,7 +531,7 @@
     display: flex;
 
     position: relative;
-    z-index: 100001;
+    z-index: 1002;
   }
 
   .navMenu {
@@ -564,7 +562,7 @@
 
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
 
-    z-index: 100000;
+    z-index: 1001;
   }
 
   .navMenu.open {
@@ -668,3 +666,29 @@
     height: 50px;
   }
 }
+
+/* =========================================================
+   KEEP NAVBAR BEHIND EDITOR & BLURRED IN NORMAL/HALF SCREEN
+   ========================================================= */
+
+body.editor-open .navbar,
+body:has(.code-modal-backdrop) .navbar {
+  z-index: 100 !important;
+}
+
+/* =========================================================
+   HIDE NAVBAR COMPLETELY DURING FULLSCREEN EDITOR & INTERVIEW
+   ========================================================= */
+
+body.editor-fullscreen-active .navbar,
+body.interview-cockpit-active .navbar,
+body:has(.interview-live-cockpit-overlay) .navbar,
+body:has(.code-modal-backdrop.screen-mode-max) .navbar,
+body:has(.solution-editor-container.editor-screen-max) .navbar {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(-100%) !important;
+  z-index: -1 !important;
+}

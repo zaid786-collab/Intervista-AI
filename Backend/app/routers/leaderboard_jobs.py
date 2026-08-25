@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.dependencies import get_current_user_optional
+from app.services.email_service import send_job_application_email
 
 router = APIRouter(prefix="/api", tags=["Leaderboard & Jobs"])
 
@@ -93,3 +94,29 @@ def get_job_recommendations(
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
     return [schemas.JobOut(**j) for j in FEATURED_JOBS]
+
+@router.post("/jobs/apply", response_model=schemas.JobApplyResponse)
+def apply_to_job(
+    req: schemas.JobApplyRequest,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+):
+    target_email = req.recipient_email or (current_user.email if current_user else "candidate@intervista.ai")
+    target_name = req.candidate_name or (current_user.name if current_user else "Candidate")
+
+    send_job_application_email(
+        recipient=target_email,
+        user_name=target_name,
+        company=req.company,
+        role=req.role,
+        location=req.location or "Remote / Hybrid",
+        salary=req.salary or "Competitive",
+    )
+
+    return schemas.JobApplyResponse(
+        success=True,
+        message=f"Application for {req.role} at {req.company} submitted successfully. Confirmation email sent to {target_email}.",
+        job_id=req.job_id,
+        company=req.company,
+        role=req.role,
+        email_sent_to=target_email,
+    )

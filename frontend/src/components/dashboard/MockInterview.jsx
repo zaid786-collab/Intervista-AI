@@ -36,6 +36,7 @@ import {
   FaPlay,
   FaStop,
   FaStar,
+  FaColumns,
 } from "react-icons/fa";
 import { useAuth } from "../../context/useAuth";
 import { generateInterviewPDF } from "../../utils/pdfGenerator";
@@ -440,6 +441,27 @@ function MockInterview({ onInterviewCompleted }) {
   const [showPreFlightModal, setShowPreFlightModal] = useState(false);
   const [showScreenExpanded, setShowScreenExpanded] = useState(false);
   const [aiSpeechState, setAiSpeechState] = useState("observing"); // observing | analyzing | listening
+  const [editorScreenMode, setEditorScreenMode] = useState("normal"); // "normal" | "half" | "max"
+
+  // Manage Fullscreen immersion & suppress Navbar/Sidebar during active interview or max editor mode
+  useEffect(() => {
+    if (interviewActive) {
+      document.body.classList.add("interview-cockpit-active");
+    } else {
+      document.body.classList.remove("interview-cockpit-active");
+    }
+
+    if (editorScreenMode === "max") {
+      document.body.classList.add("editor-fullscreen-active");
+    } else {
+      document.body.classList.remove("editor-fullscreen-active");
+    }
+
+    return () => {
+      document.body.classList.remove("interview-cockpit-active");
+      document.body.classList.remove("editor-fullscreen-active");
+    };
+  }, [interviewActive, editorScreenMode]);
 
   // AI Key & Settings
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("intervista_gemini_api_key") || "");
@@ -2065,7 +2087,7 @@ function solution() {
                           </div>
 
                           {/* Solution Code / Text Editor Box */}
-                          <div className={`solution-editor-container ${currentRoundIdx === 3 ? "hr-editor-mode" : ""}`}>
+                          <div className={`solution-editor-container ${currentRoundIdx === 3 ? "hr-editor-mode" : ""} editor-screen-${editorScreenMode}`}>
                             {currentRoundIdx === 3 && (
                               <div className="hr-dual-mode-banner">
                                 <div className="hr-banner-left">
@@ -2097,7 +2119,35 @@ function solution() {
                               </div>
 
                               {/* Actions Toolbar */}
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                {/* Screen Size Sizing Options: Half / Max / Normal */}
+                                <div className="editor-screen-mode-pills" style={{ display: "flex", background: "rgba(255,255,255,0.06)", padding: "2px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditorScreenMode("normal")}
+                                    className={`editor-mode-pill-btn ${editorScreenMode === "normal" ? "active" : ""}`}
+                                    title="Standard Split View"
+                                  >
+                                    <FaDesktop /> Normal
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditorScreenMode("half")}
+                                    className={`editor-mode-pill-btn ${editorScreenMode === "half" ? "active" : ""}`}
+                                    title="50% Half Screen Editor"
+                                  >
+                                    <FaColumns /> Half
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditorScreenMode("max")}
+                                    className={`editor-mode-pill-btn ${editorScreenMode === "max" ? "active" : ""}`}
+                                    title="Maximize Full Viewport Code Editor"
+                                  >
+                                    <FaExpand /> Max
+                                  </button>
+                                </div>
+
                                 {currentRoundIdx === 3 ? (
                                   <button
                                     type="button"
@@ -2135,7 +2185,7 @@ function solution() {
                                   title="Record your voice response with real-time speech transcription"
                                 >
                                   <FaMicrophone className={isDictating ? "pulse-dot" : ""} />
-                                  {isDictating ? "🎙️ Recording Voice... (Click to Stop)" : currentRoundIdx === 3 ? "🎙️ Answer with Voice (Mic)" : "🎙️ Dictate with Voice"}
+                                  {isDictating ? "🎙️ Recording..." : currentRoundIdx === 3 ? "🎙️ Answer with Voice" : "🎙️ Dictate"}
                                 </button>
                               </div>
                             </div>
