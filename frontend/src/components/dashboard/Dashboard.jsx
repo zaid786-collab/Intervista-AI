@@ -1,98 +1,111 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "./Dashboard.css";
-import { fetchDashboardData } from "../../api";
-import { useAuth } from "../../context/useAuth";
 
 import Sidebar from "./Sidebar";
-import FloatingControls from "./FloatingControls";
-
 import Welcome from "./Welcome";
 import Card from "./Cards";
-import Analytics from "./Analytics";
-import AIInsights from "./AIInsights";
 import Recent from "./Recent";
-import Upcoming from "./Upcoming";
-import CodingChallenge from "./CodingChallenge";
+import AIInsights from "./AIInsights";
 import ProgressTracker from "./ProgressTracker";
-import ResumeAnalyzer from "./ResumeAnalyzer";
-import Leaderboard from "./Leaderboard";
-import Notifications from "./Notifications";
-import Schedule from "./Schedule";
 import Achievements from "./Achievements";
+import Analytics from "./Analytics";
 import QuickActions from "./QuickActions";
 import MockInterview from "./MockInterview";
-import Activity from "./Activity";
 import InterviewHeatmap from "./InterviewHeatmap";
+import Upcoming from "./Upcoming";
+import Schedule from "./Schedule";
+import Notifications from "./Notifications";
+import Activity from "./Activity";
+import ResumeAnalyzer from "./ResumeAnalyzer";
+import CodingChallenge from "./CodingChallenge";
 import JobRecommendations from "./JobRecommendations";
+import Leaderboard from "./Leaderboard";
 import AIChat from "./AIChat";
 
+import { useAuth } from "../../context/useAuth";
+import { fetchDashboardData } from "../../api";
+
 import {
+  FaUserGraduate,
+  FaChartLine,
+  FaTrophy,
+  FaClock,
   FaHome,
   FaMicrophone,
-  FaChartLine,
   FaCalendarAlt,
   FaBriefcase,
   FaCog,
-  FaUserGraduate,
-  FaTrophy,
-  FaClock,
+  FaPalette,
   FaSun,
   FaMoon,
-  FaPalette,
   FaCheckCircle,
-  FaRedo,
+  FaTrashAlt,
+  FaBell,
 } from "react-icons/fa";
 
 const THEME_OPTIONS = [
   {
-    id: "theme-cyber",
+    id: "theme-neon-cyan",
     name: "Cyber Neon",
-    primary: "#2563eb",
-    secondary: "#0ea5e9",
-    desc: "Electric cyan & deep cobalt blue",
-  },
-  {
-    id: "theme-purple",
-    name: "Nebula Violet",
-    primary: "#7c3aed",
-    secondary: "#ec4899",
-    desc: "Cosmic purple & vibrant magenta",
+    desc: "Vibrant Cyan & Electric Blue",
+    primary: "#00d2ff",
+    secondary: "#3a7bd5",
   },
   {
     id: "theme-emerald",
-    name: "Matrix Emerald",
-    primary: "#059669",
-    secondary: "#10b981",
-    desc: "Sleek emerald & mint green",
+    name: "Emerald Matrix",
+    desc: "Matrix Green & Clean Teal",
+    primary: "#10b981",
+    secondary: "#059669",
+  },
+  {
+    id: "theme-sunset",
+    name: "Sunset Blaze",
+    desc: "Deep Violet & Radiant Coral",
+    primary: "#f43f5e",
+    secondary: "#8b5cf6",
   },
   {
     id: "theme-amber",
-    name: "Solar Amber",
-    primary: "#ea580c",
-    secondary: "#f59e0b",
-    desc: "Warm amber & golden flame",
+    name: "Golden Prestige",
+    desc: "Luxurious Amber & Gold",
+    primary: "#f59e0b",
+    secondary: "#d97706",
   },
 ];
 
 function Dashboard() {
   const { user } = useAuth();
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem("intervista_theme_mode");
-    return saved !== null ? saved === "dark" : true;
-  });
-  const [accentTheme, setAccentTheme] = useState(() => {
-    return localStorage.getItem("intervista_accent_theme") || "theme-cyber";
-  });
-  const [showThemePicker, setShowThemePicker] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("dashboard");
 
+  // Notifications State & Sync
+  const [notificationsList, setNotificationsList] = useState([]);
+
+  // Schedules State & Sync
+  const [upcomingSchedules, setUpcomingSchedules] = useState([]);
+
+  // Sidebar Min/Max Customizable state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem("intervista_sidebar_collapsed");
-    return saved === "true";
+    return localStorage.getItem("intervista_sidebar_collapsed") === "true";
   });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Appearance & Theme State
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem("intervista_theme_mode");
+    return saved ? saved === "dark" : true;
+  });
+
+  const [accentTheme, setAccentTheme] = useState(() => {
+    return localStorage.getItem("intervista_accent_theme") || "theme-neon-cyan";
+  });
+
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const [reminderNotifications, setReminderNotifications] = useState(true);
+  const [weeklyDigest, setWeeklyDigest] = useState(true);
+  const [resetConfirm, setResetConfirm] = useState(false);
 
   const handleToggleSidebar = () => {
     setSidebarCollapsed((prev) => {
@@ -120,11 +133,23 @@ function Dashboard() {
   const loadDashboard = useCallback(() => {
     fetchDashboardData()
       .then((data) => {
-        if (data) setDashboardData(data);
+        if (data) {
+          setDashboardData(data);
+          // Sync notifications
+          if (Array.isArray(data.notifications)) {
+            setNotificationsList(data.notifications);
+          }
+          // Sync schedules with custom stored items
+          const customSchedules = JSON.parse(localStorage.getItem("intervista_custom_schedules") || "[]");
+          const apiSchedules = data.upcoming_interviews || [];
+          setUpcomingSchedules([...customSchedules, ...apiSchedules]);
+        }
         setLoading(false);
       })
       .catch((err) => {
         console.warn("Dashboard sync using offline fallback:", err);
+        const customSchedules = JSON.parse(localStorage.getItem("intervista_custom_schedules") || "[]");
+        setUpcomingSchedules(customSchedules);
         setLoading(false);
       });
   }, []);
@@ -145,6 +170,61 @@ function Dashboard() {
     }
   };
 
+  // Schedule Management Handlers
+  const handleAddSchedule = (newSchedule) => {
+    setUpcomingSchedules((prev) => {
+      const updated = [newSchedule, ...prev];
+      const customOnly = updated.filter((s) => s.id && s.id.startsWith("sched-"));
+      localStorage.setItem("intervista_custom_schedules", JSON.stringify(customOnly));
+      return updated;
+    });
+
+    // Add a notification for the schedule
+    const schedNotif = {
+      id: `notif-${Date.now()}`,
+      title: `Interview Scheduled: ${newSchedule.company}`,
+      desc: `${newSchedule.role} session confirmed for ${newSchedule.date} at ${newSchedule.time}.`,
+      time: "Just now",
+      color: "#22c55e",
+      read: false,
+    };
+    setNotificationsList((prev) => [schedNotif, ...prev]);
+  };
+
+  const handleCancelSchedule = (idOrIndex) => {
+    setUpcomingSchedules((prev) => {
+      const updated = prev.filter((item, idx) => (item.id ? item.id !== idOrIndex : idx !== idOrIndex));
+      const customOnly = updated.filter((s) => s.id && s.id.startsWith("sched-"));
+      localStorage.setItem("intervista_custom_schedules", JSON.stringify(customOnly));
+      return updated;
+    });
+  };
+
+  const handleJoinInterview = (scheduledItem) => {
+    setActiveSection("interviews");
+    setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent("intervista_prefill_interview", {
+          detail: {
+            company: scheduledItem.company,
+            role: scheduledItem.role,
+          },
+        })
+      );
+      const el = document.getElementById("mock-interview");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
+  };
+
+  const handleResetHistory = () => {
+    localStorage.removeItem("intervista_applied_jobs");
+    localStorage.removeItem("intervista_custom_schedules");
+    setUpcomingSchedules([]);
+    setNotificationsList([]);
+    setResetConfirm(false);
+    loadDashboard();
+  };
+
   const metrics = dashboardData?.metrics || {
     total_interviews: 0,
     avg_score: "0%",
@@ -156,6 +236,8 @@ function Dashboard() {
     typeof metrics.total_interviews === "number"
       ? metrics.total_interviews
       : parseInt(metrics.total_interviews, 10) || 0;
+
+  const unreadNotifCount = notificationsList.filter((n) => !n.read).length;
 
   return (
     <div
@@ -182,12 +264,12 @@ function Dashboard() {
             darkMode={darkMode}
             setDarkMode={handleDarkModeToggle}
             onOpenNotifications={() => handleNavigation("schedule")}
-            notificationCount={dashboardData?.notifications?.length || 0}
+            notificationCount={unreadNotifCount}
             onToggleMobileSidebar={handleToggleMobileSidebar}
           />
         </div>
 
-        {/* Executive Stats Cards */}
+        {/* Executive Stats Cards with Interactive onClick Navigation */}
         <div className="cards">
           <Card
             icon={<FaUserGraduate />}
@@ -198,6 +280,7 @@ function Dashboard() {
                 ? "No interviews yet • Start below"
                 : `${totalInterviewsNum} completed session${totalInterviewsNum > 1 ? "s" : ""}`
             }
+            onClick={() => handleNavigation("interviews")}
           />
 
           <Card
@@ -209,6 +292,7 @@ function Dashboard() {
                 ? "Complete session to evaluate"
                 : "Live performance average"
             }
+            onClick={() => handleNavigation("analytics")}
           />
 
           <Card
@@ -220,6 +304,7 @@ function Dashboard() {
                 ? "No score recorded yet"
                 : "Highest recorded score"
             }
+            onClick={() => handleNavigation("analytics")}
           />
 
           <Card
@@ -231,6 +316,7 @@ function Dashboard() {
                 ? "0 mins practiced"
                 : "Total practice duration"
             }
+            onClick={() => handleNavigation("schedule")}
           />
         </div>
 
@@ -305,6 +391,7 @@ function Dashboard() {
                   avgScore={metrics.avg_score}
                   totalInterviews={totalInterviewsNum}
                   recentInterviews={dashboardData?.recent_interviews}
+                  onStartTargetedPractice={(role) => handleJoinInterview({ company: "Targeted Practice", role })}
                 />
               </div>
 
@@ -329,7 +416,7 @@ function Dashboard() {
                 <Analytics
                   performanceData={dashboardData?.weekly_performance}
                   recentInterviews={dashboardData?.recent_interviews}
-                  upcomingInterviews={dashboardData?.upcoming_interviews}
+                  upcomingInterviews={upcomingSchedules}
                   totalInterviews={totalInterviewsNum}
                 />
                 <QuickActions onAction={handleNavigation} />
@@ -358,13 +445,14 @@ function Dashboard() {
                 <Analytics
                   performanceData={dashboardData?.weekly_performance}
                   recentInterviews={dashboardData?.recent_interviews}
-                  upcomingInterviews={dashboardData?.upcoming_interviews}
+                  upcomingInterviews={upcomingSchedules}
                   totalInterviews={totalInterviewsNum}
                 />
                 <AIInsights
                   avgScore={metrics.avg_score}
                   totalInterviews={totalInterviewsNum}
                   recentInterviews={dashboardData?.recent_interviews}
+                  onStartTargetedPractice={(role) => handleJoinInterview({ company: "Targeted Practice", role })}
                 />
               </div>
 
@@ -401,17 +489,24 @@ function Dashboard() {
                   onStartInterview={() => handleNavigation("interviews")}
                 />
                 <Upcoming
-                  interviews={dashboardData?.upcoming_interviews}
-                  onScheduleInterview={() => handleNavigation("interviews")}
+                  interviews={upcomingSchedules}
+                  onScheduleInterview={() => handleNavigation("schedule")}
+                  onJoinInterview={handleJoinInterview}
+                  onCancelSchedule={handleCancelSchedule}
                 />
               </div>
 
               <div className="dashboard-row">
                 <Schedule
-                  interviews={dashboardData?.upcoming_interviews}
-                  onScheduleAdded={loadDashboard}
+                  interviews={upcomingSchedules}
+                  onScheduleAdded={handleAddSchedule}
+                  onJoinInterview={handleJoinInterview}
+                  onCancelSchedule={handleCancelSchedule}
                 />
-                <Notifications notifications={dashboardData?.notifications} />
+                <Notifications
+                  notifications={notificationsList}
+                  onNotificationsChanged={setNotificationsList}
+                />
               </div>
 
               <div className="full-width">
@@ -510,6 +605,83 @@ function Dashboard() {
                     >
                       <FaPalette /> {showThemePicker ? "Hide Themes" : "Select Theme Palette"}
                     </button>
+                  </div>
+
+                  {/* Setting 3: Notifications Preferences */}
+                  <div className="settings-card-item">
+                    <div>
+                      <div className="settings-card-header">
+                        <h3>
+                          <FaBell style={{ color: "#38bdf8" }} />
+                          Notifications
+                        </h3>
+                        <span className="settings-status-badge">
+                          {reminderNotifications ? "Active" : "Muted"}
+                        </span>
+                      </div>
+                      <p className="settings-card-desc">
+                        Receive instant reminders before scheduled interviews and new ATS report updates.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => setReminderNotifications(!reminderNotifications)}
+                      className="settings-theme-btn"
+                      style={{ width: "100%", justifyContent: "center", gap: "8px" }}
+                    >
+                      {reminderNotifications ? "Mute Reminders" : "Enable Reminders"}
+                    </button>
+                  </div>
+
+                  {/* Setting 4: Reset Practice Cache */}
+                  <div className="settings-card-item">
+                    <div>
+                      <div className="settings-card-header">
+                        <h3>
+                          <FaTrashAlt style={{ color: "#ef4444" }} />
+                          Reset Practice Cache
+                        </h3>
+                        <span className="settings-status-badge" style={{ color: "#ef4444" }}>
+                          Data Utility
+                        </span>
+                      </div>
+                      <p className="settings-card-desc">
+                        Clear local applications, custom mock schedules, and reset notification feeds.
+                      </p>
+                    </div>
+
+                    {resetConfirm ? (
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          onClick={handleResetHistory}
+                          className="settings-theme-btn"
+                          style={{
+                            flex: 1,
+                            background: "rgba(239, 68, 68, 0.2)",
+                            color: "#ef4444",
+                            borderColor: "#ef4444",
+                            justifyContent: "center",
+                          }}
+                        >
+                          Confirm Reset
+                        </button>
+                        <button
+                          onClick={() => setResetConfirm(false)}
+                          className="settings-theme-btn"
+                          style={{ flex: 1, justifyContent: "center" }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setResetConfirm(true)}
+                        className="settings-theme-btn"
+                        style={{ width: "100%", justifyContent: "center", color: "#ef4444" }}
+                      >
+                        Clear Practice Cache
+                      </button>
+                    )}
                   </div>
                 </div>
 
