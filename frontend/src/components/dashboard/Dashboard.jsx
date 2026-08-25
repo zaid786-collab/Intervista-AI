@@ -173,22 +173,19 @@ function Dashboard() {
       />
 
       <div className={`main ${sidebarCollapsed ? "collapsed" : ""}`}>
-        {/* Dashboard Top Greeting */}
+        {/* Dashboard Top Greeting & Action Card */}
         <div id="dashboard-top">
           <Welcome
             userName={user?.name}
             totalInterviews={totalInterviewsNum}
             onStartInterview={() => handleNavigation("interviews")}
+            darkMode={darkMode}
+            setDarkMode={handleDarkModeToggle}
+            onOpenNotifications={() => handleNavigation("schedule")}
+            notificationCount={dashboardData?.notifications?.length || 0}
+            onToggleMobileSidebar={handleToggleMobileSidebar}
           />
         </div>
-
-        <FloatingControls
-          darkMode={darkMode}
-          setDarkMode={handleDarkModeToggle}
-          onOpenNotifications={() => handleNavigation("schedule")}
-          notificationCount={dashboardData?.notifications?.length || 0}
-          onToggleMobileSidebar={handleToggleMobileSidebar}
-        />
 
         {/* Executive Stats Cards */}
         <div className="cards">
