@@ -1,13 +1,13 @@
 /* =========================================================
-   RESOURCES PAGE - COMPACT & BALANCED DESIGN
+   RESOURCES PAGE - PERFECT MEDIUM-RANGE BALANCED DESIGN
    ========================================================= */
 
 .resource-page {
   min-height: 100vh;
-  padding-top: 75px;
+  padding-top: 85px;
   background:
-    radial-gradient(circle at 80% 15%, rgba(37, 121, 255, 0.09), transparent 30%),
-    radial-gradient(circle at 15% 35%, rgba(0, 191, 255, 0.05), transparent 28%),
+    radial-gradient(circle at 80% 15%, rgba(37, 121, 255, 0.11), transparent 30%),
+    radial-gradient(circle at 15% 35%, rgba(0, 191, 255, 0.06), transparent 28%),
     #05070f;
   color: #ffffff;
   overflow: hidden;
@@ -15,37 +15,37 @@
 
 
 /* =========================================================
-   HERO
+   HERO (MEDIUM BALANCED SIZE)
    ========================================================= */
 
 .resource-hero {
-  min-height: 420px;
-  padding: 45px 6% 35px;
+  min-height: 520px;
+  padding: 65px 7% 50px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 40px;
+  gap: 50px;
   position: relative;
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
 }
 
 .resource-hero::before {
   content: "";
   position: absolute;
-  width: 380px;
-  height: 380px;
-  left: -190px;
-  top: 30px;
-  background: rgba(37, 109, 255, 0.06);
-  filter: blur(80px);
+  width: 440px;
+  height: 440px;
+  left: -220px;
+  top: 40px;
+  background: rgba(37, 109, 255, 0.07);
+  filter: blur(90px);
   border-radius: 50%;
   pointer-events: none;
 }
 
 .resource-hero-content {
-  width: 54%;
-  max-width: 640px;
+  width: 55%;
+  max-width: 690px;
   position: relative;
   z-index: 2;
 }
@@ -54,25 +54,25 @@
 .resource-badge {
   display: inline-flex;
   align-items: center;
-  padding: 5px 12px;
+  padding: 7px 15px;
   border: 1px solid rgba(67, 169, 255, 0.28);
   border-radius: 999px;
   background: rgba(23, 77, 140, 0.16);
   color: #6ed8ff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 1px;
-  box-shadow: 0 0 15px rgba(31, 153, 255, 0.08);
-  margin-bottom: 14px;
+  letter-spacing: 1.2px;
+  box-shadow: 0 0 20px rgba(31, 153, 255, 0.08);
+  margin-bottom: 20px;
 }
 
 /* Hero heading */
 .resource-hero h1 {
-  margin: 0 0 14px;
-  font-size: clamp(32px, 3.8vw, 46px);
-  line-height: 1.12;
+  margin: 0 0 18px;
+  font-size: clamp(40px, 4.6vw, 56px);
+  line-height: 1.08;
   font-weight: 800;
-  letter-spacing: -1.2px;
+  letter-spacing: -1.8px;
 }
 
 .resource-hero h1 span {
@@ -84,26 +84,26 @@
 
 /* Hero paragraph */
 .resource-hero p {
-  max-width: 560px;
+  max-width: 620px;
   color: #8fa0b8;
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 0 0 24px;
+  font-size: 16px;
+  line-height: 1.7;
+  margin: 0 0 30px;
 }
 
 /* Buttons */
 .resource-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .resource-primary-btn,
 .resource-secondary-btn {
-  min-height: 40px;
-  padding: 0 18px;
-  border-radius: 10px;
-  font-size: 13px;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 12px;
+  font-size: 14.5px;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -116,18 +116,18 @@
   border: none;
   color: white;
   background: linear-gradient(100deg, #356dff, #21c8ff);
-  box-shadow: 0 6px 20px rgba(31, 151, 255, 0.22);
+  box-shadow: 0 8px 25px rgba(31, 151, 255, 0.25);
 }
 
 .resource-primary-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(31, 151, 255, 0.35);
+  box-shadow: 0 12px 35px rgba(31, 151, 255, 0.38);
 }
 
 .resource-secondary-btn {
   color: #dbe8f7;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.035);
   backdrop-filter: blur(10px);
 }
 
@@ -139,12 +139,12 @@
 
 
 /* =========================================================
-   HERO VISUAL (COMPACT)
+   HERO VISUAL (MEDIUM SIZE)
    ========================================================= */
 
 .resource-visual {
   width: 42%;
-  min-height: 320px;
+  min-height: 390px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -154,47 +154,47 @@
 .resource-orbit {
   position: absolute;
   border-radius: 50%;
-  border: 1px solid rgba(43, 165, 255, 0.14);
+  border: 1px solid rgba(43, 165, 255, 0.16);
   transform: rotate(-20deg);
 }
 
 .orbit-one {
-  width: 280px;
-  height: 160px;
+  width: 350px;
+  height: 195px;
 }
 
 .orbit-two {
-  width: 230px;
-  height: 230px;
-  border-color: rgba(48, 119, 255, 0.12);
+  width: 290px;
+  height: 290px;
+  border-color: rgba(48, 119, 255, 0.14);
   transform: rotate(35deg);
 }
 
 .orbit-three {
-  width: 320px;
-  height: 120px;
-  border-color: rgba(0, 201, 255, 0.08);
+  width: 410px;
+  height: 150px;
+  border-color: rgba(0, 201, 255, 0.09);
   transform: rotate(65deg);
 }
 
 .resource-core {
-  width: 110px;
-  height: 110px;
+  width: 145px;
+  height: 145px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #4c7cff, #13204d 55%, #071020);
   border: 1px solid rgba(101, 191, 255, 0.35);
-  box-shadow: 0 0 35px rgba(38, 121, 255, 0.25), inset 0 0 25px rgba(49, 171, 255, 0.15);
+  box-shadow: 0 0 45px rgba(38, 121, 255, 0.28), inset 0 0 32px rgba(49, 171, 255, 0.15);
   position: relative;
   z-index: 3;
 }
 
 .resource-core span {
-  font-size: 34px;
+  font-size: 44px;
   color: #ffffff;
-  text-shadow: 0 0 15px rgba(91, 206, 255, 0.8);
+  text-shadow: 0 0 20px rgba(91, 206, 255, 0.85);
 }
 
 /* Floating cards */
@@ -203,50 +203,50 @@
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 13px;
-  min-width: 155px;
+  gap: 12px;
+  padding: 11px 16px;
+  min-width: 175px;
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 12px;
+  border-radius: 14px;
   background: linear-gradient(145deg, rgba(19, 28, 49, 0.95), rgba(8, 13, 26, 0.9));
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(14px);
   animation: floatingCard 4s ease-in-out infinite;
 }
 
 .resource-floating-card > span {
-  width: 28px;
-  height: 28px;
+  width: 33px;
+  height: 33px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 9px;
   background: rgba(42, 157, 255, 0.12);
   color: #42c9ff;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .resource-floating-card strong {
   display: block;
   color: #f1f6ff;
-  font-size: 12px;
+  font-size: 13px;
   margin-bottom: 2px;
 }
 
 .resource-floating-card small {
   color: #7f8da4;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .card-top {
-  top: 40px;
-  right: 5px;
+  top: 55px;
+  right: 10px;
 }
 
 .card-bottom {
-  bottom: 40px;
-  left: -5px;
+  bottom: 50px;
+  left: 0px;
   animation-delay: -2s;
 }
 
@@ -255,20 +255,20 @@
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-7px);
+    transform: translateY(-8px);
   }
 }
 
 
 /* =========================================================
-   HUB NAVIGATION SWITCHER (COMPACT)
+   HUB NAVIGATION SWITCHER (MEDIUM BALANCED)
    ========================================================= */
 
 .resource-hub-nav-wrap {
   width: 100%;
-  max-width: 1200px;
-  margin: 10px auto 30px;
-  padding: 0 6%;
+  max-width: 1260px;
+  margin: 10px auto 40px;
+  padding: 0 7%;
   position: relative;
   z-index: 5;
 }
@@ -276,10 +276,10 @@
 .resource-hub-nav {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  background: rgba(10, 15, 28, 0.7);
-  padding: 6px;
-  border-radius: 14px;
+  gap: 12px;
+  background: rgba(10, 15, 28, 0.75);
+  padding: 8px;
+  border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
 }
@@ -288,7 +288,7 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .resource-hub-nav,
   .resource-hub-nav-three {
     grid-template-columns: 1fr;
@@ -298,9 +298,9 @@
 .hub-nav-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 10px;
+  gap: 12px;
+  padding: 13px 18px;
+  border-radius: 12px;
   background: transparent;
   border: 1px solid transparent;
   color: #8fa0b8;
@@ -318,18 +318,18 @@
   background: linear-gradient(135deg, rgba(37, 121, 255, 0.18), rgba(0, 191, 255, 0.1));
   border-color: rgba(37, 214, 255, 0.35);
   color: #ffffff;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2), 0 0 15px rgba(37, 214, 255, 0.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22), 0 0 18px rgba(37, 214, 255, 0.1);
 }
 
 .hub-nav-icon {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.05);
-  font-size: 15px;
+  font-size: 17px;
   color: #25d6ff;
   flex-shrink: 0;
   transition: all 0.25s ease;
@@ -338,12 +338,12 @@
 .hub-nav-btn.active .hub-nav-icon {
   background: linear-gradient(135deg, #356dff, #25d6ff);
   color: #ffffff;
-  box-shadow: 0 0 10px rgba(37, 214, 255, 0.35);
+  box-shadow: 0 0 12px rgba(37, 214, 255, 0.35);
 }
 
 .hub-nav-text strong {
   display: block;
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 700;
   margin-bottom: 2px;
   color: #ffffff;
@@ -351,7 +351,7 @@
 
 .hub-nav-text small {
   display: block;
-  font-size: 11px;
+  font-size: 11.5px;
   color: #7d8b9f;
 }
 
@@ -361,14 +361,14 @@
 
 
 /* =========================================================
-   SECTIONS (COMPACT PADDING & PROPORTIONS)
+   SECTIONS (MEDIUM SPACING & PROPORTIONS)
    ========================================================= */
 
 .resource-section {
   width: 100%;
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 35px 6% 45px;
+  padding: 55px 7% 65px;
   position: relative;
 }
 
@@ -377,22 +377,22 @@
 }
 
 .resource-section-heading {
-  max-width: 680px;
-  margin-bottom: 26px;
+  max-width: 700px;
+  margin-bottom: 35px;
 }
 
 .resource-section-heading > span {
   color: #4ccaff;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 1.5px;
 }
 
 .resource-section-heading h2 {
-  margin: 8px 0 10px;
-  font-size: clamp(24px, 2.8vw, 34px);
-  line-height: 1.15;
-  letter-spacing: -0.8px;
+  margin: 10px 0 12px;
+  font-size: clamp(28px, 3.2vw, 40px);
+  line-height: 1.12;
+  letter-spacing: -1px;
   font-weight: 800;
 }
 
@@ -405,61 +405,61 @@
 
 .resource-section-heading p {
   color: #8995a8;
-  font-size: 13.5px;
-  line-height: 1.55;
-  max-width: 580px;
+  font-size: 15px;
+  line-height: 1.62;
+  max-width: 620px;
   margin: 0;
 }
 
 
 /* =========================================================
-   DSA TOPICS GRID (CLEAN, BALANCED CARDS)
+   DSA TOPICS GRID (MEDIUM BALANCED CARDS)
    ========================================================= */
 
 .dsa-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
 }
 
 .dsa-card {
-  min-height: 165px;
-  padding: 16px 18px;
+  min-height: 195px;
+  padding: 19px 20px;
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
-  background: linear-gradient(145deg, rgba(16, 23, 40, 0.8), rgba(8, 12, 22, 0.75));
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(16, 23, 40, 0.82), rgba(8, 12, 22, 0.78));
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.16);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dsa-card:hover,
 .dsa-card.active {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
   border-color: rgba(46, 190, 255, 0.35);
-  background: linear-gradient(145deg, rgba(20, 36, 62, 0.9), rgba(9, 16, 30, 0.88));
-  box-shadow: 0 12px 30px rgba(0, 110, 255, 0.1);
+  background: linear-gradient(145deg, rgba(20, 38, 66, 0.9), rgba(9, 16, 32, 0.88));
+  box-shadow: 0 15px 35px rgba(0, 110, 255, 0.12);
 }
 
 .dsa-card-icon {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9px;
+  border-radius: 11px;
   color: #4ecfff;
   background: linear-gradient(145deg, rgba(42, 151, 255, 0.18), rgba(34, 89, 255, 0.08));
   border: 1px solid rgba(63, 173, 255, 0.15);
-  font-size: 15px;
-  margin-bottom: 10px;
+  font-size: 17px;
+  margin-bottom: 12px;
 }
 
 .dsa-card h3 {
-  margin: 0 0 5px;
-  font-size: 15px;
+  margin: 0 0 6px;
+  font-size: 16.5px;
   font-weight: 700;
   color: #f2f6fc;
 }
@@ -467,14 +467,14 @@
 .dsa-card p {
   margin: 0;
   color: #7d8b9f;
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.5;
   flex: 1;
 }
 
 .dsa-card-bottom {
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 15px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -483,7 +483,7 @@
 
 .dsa-card-bottom span {
   color: #5dcaef;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -491,7 +491,7 @@
   border: none;
   background: transparent;
   color: #25d6ff;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   transition: color 0.2s ease;
@@ -504,29 +504,29 @@
 
 
 /* =========================================================
-   QUESTIONS PANEL (LEETCODE PRACTICE)
+   QUESTIONS PANEL (LEETCODE PRACTICE - MEDIUM)
    ========================================================= */
 
 .questions-panel {
-  margin-top: 24px;
-  padding: 22px 24px;
-  border-radius: 16px;
+  margin-top: 30px;
+  padding: 26px 28px;
+  border-radius: 18px;
   background: rgba(10, 16, 32, 0.9);
   border: 1px solid rgba(90, 150, 255, 0.18);
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(10px);
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
 }
 
 .questions-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 18px;
+  margin-bottom: 22px;
 }
 
 .questions-header h2 {
   margin: 6px 0 4px;
-  font-size: 20px;
+  font-size: 23px;
   color: #fff;
   font-weight: 700;
 }
@@ -537,19 +537,19 @@
 
 .questions-header p {
   color: #8f9bb3;
-  font-size: 13px;
+  font-size: 14px;
   margin: 0;
 }
 
 .close-questions {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
   color: #fff;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -560,34 +560,82 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+.questions-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.questions-toolbar input {
+  flex: 1;
+  max-width: 380px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.1);
+  outline: none;
+  background: rgba(255,255,255,.04);
+  color: #fff;
+  font-size: 13.5px;
+}
+
+.questions-toolbar input::placeholder {
+  color: #7f8ba3;
+}
+
+.difficulty-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.difficulty-filters button {
+  padding: 7px 13px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  background: rgba(255,255,255,.04);
+  color: #aeb8cb;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.difficulty-filters button:hover,
+.difficulty-filters button.active-filter {
+  color: #fff;
+  border-color: rgba(37,214,255,.45);
+  background: rgba(37,214,255,.12);
+}
+
 .questions-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 11px;
 }
 
 .question-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 11px 16px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 16px;
+  padding: 13px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   transition: all 0.2s ease;
 }
 
 .question-item:hover {
-  transform: translateX(3px);
-  border-color: rgba(45, 180, 255, 0.3);
-  background: rgba(45, 180, 255, 0.05);
+  transform: translateX(4px);
+  border-color: rgba(45, 180, 255, 0.35);
+  background: rgba(45, 180, 255, 0.06);
 }
 
 .question-number {
   color: #36bfff;
   font-weight: 700;
-  font-size: 12px;
-  min-width: 24px;
+  font-size: 13px;
+  min-width: 26px;
 }
 
 .question-info {
@@ -595,15 +643,15 @@
 }
 
 .question-info h3 {
-  margin: 0 0 4px;
+  margin: 0 0 5px;
   color: #fff;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
 }
 
 .difficulty {
-  font-size: 11px;
-  padding: 3px 8px;
+  font-size: 11.5px;
+  padding: 3px 9px;
   border-radius: 6px;
   font-weight: 600;
   text-transform: uppercase;
@@ -625,12 +673,12 @@
 }
 
 .leetcode-btn {
-  padding: 6px 14px;
-  border-radius: 8px;
+  padding: 8px 15px;
+  border-radius: 9px;
   text-decoration: none;
   color: #fff;
   background: linear-gradient(90deg, #356dff, #25d6ff);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -638,16 +686,16 @@
 
 .leetcode-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(37, 214, 255, 0.3);
+  box-shadow: 0 6px 18px rgba(37, 214, 255, 0.3);
 }
 
 .solve-toggle {
-  padding: 5px 12px;
-  border-radius: 8px;
+  padding: 6px 13px;
+  border-radius: 9px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
   color: #94a3b8;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -676,43 +724,43 @@
 
 .no-questions {
   text-align: center;
-  padding: 35px 20px;
+  padding: 40px 20px;
   border: 1px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.02);
 }
 
 .no-questions div {
-  font-size: 24px;
+  font-size: 26px;
   margin-bottom: 8px;
 }
 
 .no-questions h3 {
-  margin: 0 0 4px;
+  margin: 0 0 5px;
   color: #fff;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .no-questions p {
   margin: 0;
   color: #7f8ba3;
-  font-size: 13px;
+  font-size: 13.5px;
 }
 
 
 /* =========================================================
-   APTITUDE & LOGICAL REASONING HUB (COMPACT & BALANCED)
+   APTITUDE & LOGICAL REASONING HUB (MEDIUM SWEET SPOT)
    ========================================================= */
 
 .aptitude-resources-hub {
-  padding-top: 10px;
+  padding-top: 15px;
 }
 
 .aptitude-domain-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-bottom: 24px;
+  gap: 16px;
+  margin-bottom: 28px;
 }
 
 @media (max-width: 900px) {
@@ -722,11 +770,11 @@
 }
 
 .aptitude-domain-card {
-  padding: 16px 18px;
-  border-radius: 14px;
-  background: rgba(12, 17, 30, 0.75);
+  padding: 19px 21px;
+  border-radius: 16px;
+  background: rgba(12, 17, 30, 0.78);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -734,42 +782,42 @@
 }
 
 .aptitude-domain-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
   border-color: rgba(37, 214, 255, 0.3);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
 }
 
 .aptitude-domain-card.active {
   border-color: rgba(37, 214, 255, 0.45);
-  background: linear-gradient(145deg, rgba(14, 22, 42, 0.9), rgba(8, 13, 26, 0.85));
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(37, 214, 255, 0.1);
+  background: linear-gradient(145deg, rgba(14, 23, 44, 0.9), rgba(8, 13, 27, 0.86));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32), 0 0 18px rgba(37, 214, 255, 0.1);
 }
 
 .domain-card-icon {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9px;
+  border-radius: 10px;
   background: rgba(37, 214, 255, 0.1);
-  font-size: 16px;
-  margin-bottom: 10px;
+  font-size: 18px;
+  margin-bottom: 11px;
   color: #25d6ff;
 }
 
 .aptitude-domain-card h3 {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #ffffff;
-  margin: 0 0 5px;
+  margin: 0 0 6px;
 }
 
 .aptitude-domain-card p {
   color: #8fa0b8;
-  font-size: 12px;
-  line-height: 1.45;
-  margin-bottom: 12px;
+  font-size: 12.8px;
+  line-height: 1.5;
+  margin-bottom: 14px;
   flex: 1;
 }
 
@@ -778,28 +826,28 @@
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  margin-bottom: 12px;
-  padding-top: 10px;
+  margin-bottom: 14px;
+  padding-top: 11px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .domain-card-meta span {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #60a5fa;
   background: rgba(59, 130, 246, 0.1);
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 5px;
 }
 
 .domain-select-btn {
   width: 100%;
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 9px 14px;
+  border-radius: 9px;
   background: rgba(37, 214, 255, 0.08);
   border: 1px solid rgba(37, 214, 255, 0.2);
   color: #25d6ff;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -820,20 +868,20 @@
 
 /* Practice Panel */
 .aptitude-practice-panel {
-  padding: 22px 24px;
-  border-radius: 16px;
-  background: rgba(8, 12, 22, 0.85);
+  padding: 24px 26px;
+  border-radius: 18px;
+  background: rgba(8, 12, 23, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.28);
 }
 
 .aptitude-panel-header {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .aptitude-panel-header h2 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   color: #ffffff;
   margin: 6px 0 4px;
@@ -841,7 +889,7 @@
 
 .aptitude-panel-header p {
   color: #8fa0b8;
-  font-size: 13px;
+  font-size: 13.5px;
   margin: 0;
 }
 
@@ -849,23 +897,23 @@
 .aptitude-hub-filter-bar {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 12px;
+  gap: 13px;
+  padding: 15px 18px;
+  border-radius: 13px;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .aptitude-hub-search {
   width: 100%;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 8px;
+  height: 40px;
+  padding: 0 15px;
+  border-radius: 9px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #ffffff;
-  font-size: 13px;
+  font-size: 13.5px;
   outline: none;
   transition: all 0.2s ease;
 }
@@ -873,25 +921,25 @@
 .aptitude-hub-search:focus {
   border-color: #25d6ff;
   background: rgba(37, 214, 255, 0.05);
-  box-shadow: 0 0 12px rgba(37, 214, 255, 0.15);
+  box-shadow: 0 0 14px rgba(37, 214, 255, 0.15);
 }
 
 .aptitude-filter-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .filter-group {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
 }
 
 .filter-group label {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   color: #7d8b9f;
   margin-right: 4px;
@@ -900,9 +948,9 @@
 }
 
 .filter-btn {
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 11px;
+  padding: 5px 11px;
+  border-radius: 7px;
+  font-size: 11.5px;
   font-weight: 600;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
@@ -920,31 +968,31 @@
   background: rgba(37, 214, 255, 0.2);
   border-color: #25d6ff;
   color: #67e8f9;
-  box-shadow: 0 0 8px rgba(37, 214, 255, 0.2);
+  box-shadow: 0 0 10px rgba(37, 214, 255, 0.2);
 }
 
 /* Question Cards Stream */
 .aptitude-questions-stream {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .apt-resource-card {
-  padding: 16px 18px;
-  border-radius: 13px;
+  padding: 18px 20px;
+  border-radius: 14px;
   background: rgba(12, 17, 30, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(8px);
   transition: all 0.25s ease;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 11px;
 }
 
 .apt-resource-card:hover {
-  border-color: rgba(37, 214, 255, 0.25);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  border-color: rgba(37, 214, 255, 0.28);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 .apt-resource-card.solved {
@@ -963,34 +1011,34 @@
 .apt-card-badges {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   flex-wrap: wrap;
 }
 
 .apt-index-badge {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 800;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 5px;
   background: rgba(37, 214, 255, 0.15);
   color: #25d6ff;
 }
 
 .apt-topic-badge {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #93c5fd;
-  padding: 2px 8px;
-  border-radius: 5px;
+  padding: 3px 9px;
+  border-radius: 6px;
   background: rgba(59, 130, 246, 0.12);
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .apt-diff-badge {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
   text-transform: uppercase;
 }
 
@@ -1015,25 +1063,25 @@
 }
 
 .company-tag {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
   color: #a78bfa;
   background: rgba(139, 92, 246, 0.12);
   border: 1px solid rgba(139, 92, 246, 0.25);
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
 }
 
 .apt-card-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .apt-copy-btn {
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 11px;
+  padding: 5px 11px;
+  border-radius: 7px;
+  font-size: 11.5px;
   font-weight: 500;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1048,7 +1096,7 @@
 }
 
 .apt-card-title {
-  font-size: 15px;
+  font-size: 15.5px;
   font-weight: 700;
   color: #ffffff;
   margin: 0;
@@ -1056,9 +1104,9 @@
 }
 
 .apt-card-question {
-  font-size: 13px;
+  font-size: 13.5px;
   color: #cbd5e1;
-  line-height: 1.55;
+  line-height: 1.58;
   margin: 0;
   white-space: pre-line;
 }
@@ -1067,8 +1115,8 @@
 .apt-mcq-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-top: 2px;
+  gap: 9px;
+  margin-top: 3px;
 }
 
 @media (max-width: 768px) {
@@ -1080,13 +1128,13 @@
 .apt-mcq-choice {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  gap: 9px;
+  padding: 9px 13px;
+  border-radius: 9px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.07);
   color: #e2e8f0;
-  font-size: 12.5px;
+  font-size: 13px;
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1099,15 +1147,15 @@
 }
 
 .mcq-badge {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.08);
   font-weight: 700;
-  font-size: 10.5px;
+  font-size: 11px;
   color: #94a3b8;
   flex-shrink: 0;
 }
@@ -1147,22 +1195,22 @@
 
 /* Solution Drawer */
 .apt-solution-action {
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .reveal-solution-btn {
   background: transparent;
   border: 1px dashed rgba(37, 214, 255, 0.3);
-  border-radius: 7px;
+  border-radius: 8px;
   color: #25d6ff;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
-  padding: 6px 12px;
+  padding: 7px 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .reveal-solution-btn:hover {
@@ -1177,14 +1225,14 @@
 }
 
 .apt-solution-drawer {
-  margin-top: 6px;
-  padding: 14px 16px;
-  border-radius: 10px;
+  margin-top: 7px;
+  padding: 16px 18px;
+  border-radius: 12px;
   background: rgba(6, 10, 20, 0.95);
   border: 1px solid rgba(37, 214, 255, 0.2);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 11px;
   animation: slideFade 0.2s ease forwards;
 }
 
@@ -1201,33 +1249,33 @@
 
 .solution-correct-banner {
   display: inline-block;
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 5px 11px;
+  border-radius: 7px;
   background: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.3);
   color: #34d399;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
 }
 
 .solution-text-block h4 {
-  font-size: 12px;
+  font-size: 12.5px;
   color: #93c5fd;
-  margin: 0 0 4px;
+  margin: 0 0 5px;
   font-weight: 700;
 }
 
 .solution-text-block p {
-  font-size: 12px;
+  font-size: 12.8px;
   color: #cbd5e1;
-  line-height: 1.55;
+  line-height: 1.58;
   margin: 0;
   white-space: pre-line;
 }
 
 .solution-formula-block {
-  padding: 8px 12px;
-  border-radius: 7px;
+  padding: 9px 13px;
+  border-radius: 8px;
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.25);
   display: flex;
@@ -1236,51 +1284,51 @@
 }
 
 .solution-formula-block span {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   color: #fbbf24;
 }
 
 .solution-formula-block code {
   font-family: 'Fira Code', monospace, Consolas;
-  font-size: 11.5px;
+  font-size: 12px;
   color: #fde68a;
   background: rgba(0, 0, 0, 0.3);
-  padding: 3px 6px;
+  padding: 3px 7px;
   border-radius: 5px;
 }
 
 .no-aptitude-questions {
   text-align: center;
-  padding: 35px 20px;
+  padding: 40px 20px;
   color: #7d8b9f;
 }
 
 .no-q-icon {
-  font-size: 24px;
+  font-size: 26px;
   margin-bottom: 8px;
 }
 
 .no-aptitude-questions h3 {
-  font-size: 15px;
+  font-size: 16px;
   color: #ffffff;
-  margin: 0 0 4px;
+  margin: 0 0 5px;
 }
 
 .no-aptitude-questions p {
-  font-size: 12.5px;
+  font-size: 13px;
   margin: 0;
 }
 
 
 /* =========================================================
-   LEARNING HUB (COMPACT 4-CARD GRID)
+   LEARNING HUB (MEDIUM 4-CARD GRID)
    ========================================================= */
 
 .resource-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: 18px;
 }
 
 .resource-grid-four {
@@ -1302,11 +1350,11 @@
 }
 
 .resource-card {
-  padding: 20px 22px;
-  min-height: 185px;
+  padding: 24px 25px;
+  min-height: 215px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: linear-gradient(145deg, rgba(16, 24, 40, 0.85), rgba(7, 11, 22, 0.85));
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(16, 24, 40, 0.88), rgba(7, 11, 22, 0.86));
   position: relative;
   overflow: hidden;
   display: flex;
@@ -1317,38 +1365,38 @@
 .resource-card::before {
   content: "";
   position: absolute;
-  width: 120px;
-  height: 120px;
-  top: -70px;
-  right: -50px;
+  width: 140px;
+  height: 140px;
+  top: -80px;
+  right: -60px;
   border-radius: 50%;
-  background: rgba(34, 165, 255, 0.1);
-  filter: blur(35px);
+  background: rgba(34, 165, 255, 0.11);
+  filter: blur(40px);
 }
 
 .resource-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
   border-color: rgba(55, 192, 255, 0.3);
-  box-shadow: 0 10px 30px rgba(0, 109, 255, 0.12);
+  box-shadow: 0 12px 35px rgba(0, 109, 255, 0.12);
 }
 
 .resource-icon {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 12px;
   color: #5dd6ff;
   background: rgba(41, 147, 255, 0.12);
   border: 1px solid rgba(52, 171, 255, 0.15);
-  font-size: 17px;
-  margin-bottom: 12px;
+  font-size: 19px;
+  margin-bottom: 14px;
 }
 
 .resource-card h3 {
-  margin: 0 0 6px;
-  font-size: 15.5px;
+  margin: 0 0 7px;
+  font-size: 17px;
   font-weight: 700;
   color: #ffffff;
 }
@@ -1356,18 +1404,18 @@
 .resource-card p {
   margin: 0;
   color: #8792a6;
-  line-height: 1.5;
-  font-size: 12.5px;
+  line-height: 1.55;
+  font-size: 13px;
   flex: 1;
 }
 
 .resource-card button {
-  margin-top: 14px;
+  margin-top: 16px;
   padding: 0;
   border: none;
   background: transparent;
   color: #55cfff;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   text-align: left;
@@ -1380,33 +1428,33 @@
 
 
 /* =========================================================
-   LEETCODE CTA SECTION (COMPACT)
+   LEETCODE CTA SECTION (MEDIUM SWEET SPOT)
    ========================================================= */
 
 .dsa-resource-section {
-  margin: 30px 6% 60px;
-  padding: 40px 6%;
-  border-radius: 20px;
+  margin: 40px 7% 70px;
+  padding: 50px 7%;
+  border-radius: 22px;
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 85% 30%, rgba(36, 164, 255, 0.14), transparent 35%),
+    radial-gradient(circle at 85% 30%, rgba(36, 164, 255, 0.15), transparent 35%),
     linear-gradient(135deg, #0c1428, #07101f);
   border: 1px solid rgba(72, 170, 255, 0.16);
-  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.24);
 }
 
 .dsa-resource-content {
-  max-width: 680px;
+  max-width: 700px;
   position: relative;
   z-index: 2;
 }
 
 .dsa-resource-content h2 {
-  margin: 10px 0 8px;
-  font-size: clamp(24px, 2.8vw, 32px);
-  line-height: 1.15;
-  letter-spacing: -0.6px;
+  margin: 12px 0 10px;
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1.14;
+  letter-spacing: -0.8px;
   font-weight: 800;
 }
 
@@ -1415,23 +1463,23 @@
 }
 
 .dsa-resource-content p {
-  max-width: 580px;
+  max-width: 600px;
   color: #8997aa;
-  line-height: 1.55;
-  font-size: 13.5px;
+  line-height: 1.62;
+  font-size: 14.5px;
   margin: 0;
 }
 
 .dsa-stats {
   display: flex;
-  gap: 35px;
-  margin-top: 24px;
+  gap: 40px;
+  margin-top: 28px;
 }
 
 .dsa-stats-four {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 24px;
 }
 
 @media (max-width: 768px) {
@@ -1443,11 +1491,11 @@
 .dsa-stats div {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .dsa-stats strong {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 800;
   background: linear-gradient(90deg, #ffffff, #42cfff);
   -webkit-background-clip: text;
@@ -1457,7 +1505,7 @@
 
 .dsa-stats span {
   color: #7f8da2;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 
@@ -1468,7 +1516,7 @@
 @media (max-width: 1024px) {
   .resource-hero {
     flex-direction: column;
-    padding-top: 40px;
+    padding-top: 50px;
     text-align: center;
   }
 
@@ -1488,8 +1536,8 @@
 
   .resource-visual {
     width: 100%;
-    min-height: 260px;
-    transform: scale(0.9);
+    min-height: 320px;
+    transform: scale(0.92);
   }
 
   .resource-section-heading {
@@ -1501,20 +1549,20 @@
 
 @media (max-width: 600px) {
   .resource-page {
-    padding-top: 65px;
+    padding-top: 75px;
   }
 
   .resource-hero {
-    padding: 30px 16px;
+    padding: 40px 20px;
   }
 
   .resource-hero h1 {
-    font-size: 28px;
-    letter-spacing: -0.8px;
+    font-size: 34px;
+    letter-spacing: -1px;
   }
 
   .resource-hero p {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .resource-actions {
@@ -1528,7 +1576,7 @@
   }
 
   .resource-section {
-    padding: 25px 16px;
+    padding: 35px 20px;
   }
 
   .dsa-grid {
@@ -1536,8 +1584,8 @@
   }
 
   .dsa-resource-section {
-    margin: 20px 12px 40px;
-    padding: 28px 18px;
+    margin: 25px 16px 50px;
+    padding: 35px 22px;
   }
 
   .question-item {
