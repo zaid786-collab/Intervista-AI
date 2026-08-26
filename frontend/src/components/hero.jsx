@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+import DemoModal from "./DemoModal";
 import "./Hero.css";
 
 function Hero() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
   const handleStart = () => {
     if (isAuthenticated) {
@@ -48,7 +51,10 @@ function Hero() {
               🎤 Start Interview
             </button>
 
-            <button className="secondary">
+            <button
+              className="secondary"
+              onClick={() => setIsDemoModalOpen(true)}
+            >
               ▶ Watch Demo
             </button>
 
@@ -450,6 +456,12 @@ function Hero() {
         </div>
 
       </section>
+
+      {/* Interactive Demo Video & Walkthrough Modal */}
+      <DemoModal
+        isOpen={isDemoModalOpen}
+        onClose={() => setIsDemoModalOpen(false)}
+      />
 
     </>
   );
