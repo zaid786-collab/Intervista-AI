@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchResources, fetchSolvedResources, toggleSolvedResource } from "../api";
+import { aptitudeTopics } from "./aptitudeResourcesData";
 import "./Resources.css";
 
 const dsaTopics = [
@@ -1266,11 +1267,22 @@ const dsaQuestions = {
 };
 
 function Resources() {
+  const [activeHubTab, setActiveHubTab] = useState("all"); // "all" | "dsa" | "aptitude"
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("All");
   const [apiTopics, setApiTopics] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Aptitude specific states
+  const [selectedAptDomainIndex, setSelectedAptDomainIndex] = useState(0);
+  const [aptSearch, setAptSearch] = useState("");
+  const [aptDifficulty, setAptDifficulty] = useState("All");
+  const [aptCompanyFilter, setAptCompanyFilter] = useState("All");
+  const [expandedAptSolutions, setExpandedAptSolutions] = useState({});
+  const [selectedAptOptions, setSelectedAptOptions] = useState({});
+  const [copiedAptId, setCopiedAptId] = useState(null);
+
   const [solvedQuestions, setSolvedQuestions] = useState(() => {
     try {
       return JSON.parse(
@@ -1281,7 +1293,8 @@ function Resources() {
     }
   });
 
-  const activeTopics = apiTopics || dsaTopics;
+  // Always preserve full 15 DSA topics
+  const activeTopics = (apiTopics && apiTopics.length >= dsaTopics.length) ? apiTopics : dsaTopics;
 
   useEffect(() => {
     let isMounted = true;
@@ -1371,19 +1384,70 @@ function Resources() {
       .catch(() => {});
   };
 
+  const filteredQuestions =
+    dsaQuestions[dsaTopics[selectedTopic]?.title]
+      ?.filter((question) =>
+        question.title
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      )
+      .filter(
+        (question) =>
+          difficultyFilter === "All" ||
+          question.difficulty === difficultyFilter
+      ) || [];
 
-const filteredQuestions =
-  dsaQuestions[dsaTopics[selectedTopic]?.title]
-    ?.filter((question) =>
-      question.title
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase())
-    )
-    .filter(
-      (question) =>
-        difficultyFilter === "All" ||
-        question.difficulty === difficultyFilter
-    ) || [];
+  // Aptitude logic
+  const currentAptDomain = aptitudeTopics[selectedAptDomainIndex] || aptitudeTopics[0];
+
+  const filteredAptQuestions = currentAptDomain.questions.filter((q) => {
+    const matchesSearch =
+      !aptSearch ||
+      q.title.toLowerCase().includes(aptSearch.toLowerCase()) ||
+      q.question.toLowerCase().includes(aptSearch.toLowerCase()) ||
+      q.topic.toLowerCase().includes(aptSearch.toLowerCase()) ||
+      q.companies?.some((c) => c.toLowerCase().includes(aptSearch.toLowerCase()));
+
+    const matchesDifficulty =
+      aptDifficulty === "All" || q.difficulty === aptDifficulty;
+
+    const matchesCompany =
+      aptCompanyFilter === "All" ||
+      q.companies?.some((c) => c.toLowerCase() === aptCompanyFilter.toLowerCase());
+
+    return matchesSearch && matchesDifficulty && matchesCompany;
+  });
+
+  const toggleAptSolution = (id) => {
+    setExpandedAptSolutions((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const selectAptOption = (questionId, optionIndex) => {
+    setSelectedAptOptions((prev) => ({
+      ...prev,
+      [questionId]: optionIndex,
+    }));
+  };
+
+  const copyAptToClipboard = (text, id) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedAptId(id);
+      setTimeout(() => setCopiedAptId(null), 2000);
+    }
+  };
+
+  const switchToTab = (tab) => {
+    setActiveHubTab(tab);
+    setTimeout(() => {
+      document.getElementById("hub-navigation")?.scrollIntoView({
+        behavior: "smooth",
+      });
+    }, 50);
+  };
 
   return (
     <div className="resource-page">
@@ -1404,9 +1468,8 @@ const filteredQuestions =
           </h1>
 
           <p>
-            Master DSA, strengthen your technical fundamentals,
-            and prepare for real-world interviews with personalized
-            resources designed around your career path.
+            Master DSA algorithms, Quantitative Aptitude, Logical Reasoning puzzles,
+            and sharpen your technical skills for top tier product and service companies.
           </p>
 
           <div className="resource-actions">
@@ -1414,29 +1477,17 @@ const filteredQuestions =
             <button
               className="resource-primary-btn"
               type="button"
-              onClick={() =>
-                document
-                  .getElementById("dsa-topics")
-                  ?.scrollIntoView({
-                    behavior: "smooth",
-                  })
-              }
+              onClick={() => switchToTab("dsa")}
             >
-              Explore Resources
+              Explore DSA Roadmap
             </button>
 
             <button
               className="resource-secondary-btn"
               type="button"
-              onClick={() =>
-                document
-                  .getElementById("dsa-topics")
-                  ?.scrollIntoView({
-                    behavior: "smooth",
-                  })
-              }
+              onClick={() => switchToTab("aptitude")}
             >
-              Practice DSA →
+              Aptitude & Logic Hub →
             </button>
 
           </div>
@@ -1464,11 +1515,11 @@ const filteredQuestions =
           </div>
 
           <div className="resource-floating-card card-bottom">
-            <span>AI</span>
+            <span>🧮</span>
 
             <div>
-              <strong>Personalized Notes</strong>
-              <small>Based on your domain</small>
+              <strong>Aptitude & Logic</strong>
+              <small>Verified Top Company Questions</small>
             </div>
           </div>
 
@@ -1476,473 +1527,615 @@ const filteredQuestions =
 
       </section>
 
-      {/* DSA Topics */}
-      <section
-        className="resource-section dsa-section"
-        id="dsa-topics"
-      >
-
-        <div className="resource-section-heading">
-
-          <span>DSA ROADMAP</span>
-
-          <h2>
-            Master DSA,
-            <br />
-            <span>one topic at a time.</span>
-          </h2>
-
-          <p>
-            Select a topic and start solving curated
-            interview problems directly on LeetCode.
-          </p>
-
-        </div>
-
-        <div className="dsa-grid">
-
-          {activeTopics.map((topic, index) => (
-
-            <div
-              className={`dsa-card ${
-                selectedTopic === index ? "active" : ""
-              }`}
-              key={topic.title}
-              onClick={() => openTopic(index)}
-            >
-
-              <div className="dsa-card-icon">
-                {topic.icon}
-              </div>
-
-              <h3>{topic.title}</h3>
-
-              <p>{topic.description}</p>
-
-              <div className="dsa-card-bottom">
-
-                <span>
-                  {topic.problemCount} Problems
-                </span>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openTopic(index);
-                  }}
-                >
-                  Practice →
-                </button>
-
-              </div>
-
-            </div>
-
-          ))}
-
-        </div>
-
-        {selectedTopic !== null && (
-  <div className="questions-panel" id="questions-section">
-    <div className="questions-header">
-      <div>
-        <span className="resource-badge">PRACTICE SET</span>
-
-        <h2>
-          {dsaTopics[selectedTopic].title}
-          <span> Questions</span>
-        </h2>
-
-        <p>
-          Solve curated questions and practice directly on LeetCode.
-        </p>
-      </div>
-
-      <button
-        type="button"
-        className="close-questions"
-        onClick={() => setSelectedTopic(null)}
-      >
-        ✕
-      </button>
-    </div>
-
-    {/* Search and Difficulty Filter Controls */}
-    <div style={{ display: "flex", gap: "12px", margin: "16px 0", flexWrap: "wrap" }}>
-      <input
-        type="text"
-        placeholder="Search questions in this topic..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        style={{
-          flex: 1,
-          minWidth: "200px",
-          padding: "10px 14px",
-          borderRadius: "8px",
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.15)",
-          color: "#fff",
-          outline: "none"
-        }}
-      />
-      <div style={{ display: "flex", gap: "8px" }}>
-        {["All", "Easy", "Medium", "Hard"].map((level) => (
-          <button
-            key={level}
-            type="button"
-            onClick={() => setDifficultyFilter(level)}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "8px",
-              border: difficultyFilter === level ? "1px solid #3b82f6" : "1px solid rgba(255,255,255,0.12)",
-              background: difficultyFilter === level ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)",
-              color: difficultyFilter === level ? "#60a5fa" : "#94a3b8",
-              cursor: "pointer",
-              fontWeight: 500
-            }}
-          >
-            {level}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    {/* <div className="questions-list">
-      {dsaQuestions[dsaTopics[selectedTopic].title]?.map(
-        (question, index) => (
-          <div className="question-item" key={question.title}>
-            <div className="question-number">
-              {String(index + 1).padStart(2, "0")}
-            </div>
-
-            <div className="question-info">
-              <h3>{question.title}</h3>
-
-              <span
-                className={`difficulty ${question.difficulty.toLowerCase()}`}
-              >
-                {question.difficulty}
-              </span>
-            </div>
-
-            <a
-              href={question.leetcode}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="leetcode-btn"
-            >
-              Solve on LeetCode →
-            </a>
-          </div>
-        )
-      )}
-    </div> */}
-
-    <div className="questions-list">
-
-  {filteredQuestions.length > 0 ? (
-    filteredQuestions.map((question, index) => {
-
-      const isSolved = solvedQuestions.includes(question.title);
-
-      return (
-        <div
-          className={`question-item ${isSolved ? "question-solved" : ""}`}
-          key={question.title}
-        >
-
-          {/* Number */}
-          <div className="question-number">
-            {String(index + 1).padStart(2, "0")}
-          </div>
-
-          {/* Question Information */}
-          <div className="question-info">
-
-            <h3>{question.title}</h3>
-
-            <span
-              className={`difficulty ${question.difficulty.toLowerCase()}`}
-            >
-              {question.difficulty}
-            </span>
-
-          </div>
-
-          {/* Solved Button */}
+      {/* ========================================================= */}
+      {/* HUB NAVIGATION SWITCHER */}
+      {/* ========================================================= */}
+      <div className="resource-hub-nav-wrap" id="hub-navigation">
+        <div className="resource-hub-nav resource-hub-nav-three">
           <button
             type="button"
-            className={`solve-toggle ${
-              isSolved ? "solved" : ""
-            }`}
-            onClick={() => toggleSolved(question.title)}
+            className={`hub-nav-btn ${activeHubTab === "all" ? "active" : ""}`}
+            onClick={() => setActiveHubTab("all")}
           >
-            {isSolved ? "✓ Solved" : "Mark Solved"}
+            <span className="hub-nav-icon">✦</span>
+            <div className="hub-nav-text">
+              <strong>All Resources</strong>
+              <small>15 DSA Topics & Aptitude Modules</small>
+            </div>
           </button>
 
-          {/* LeetCode */}
-          <a
-            href={question.leetcode}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="leetcode-btn"
+          <button
+            type="button"
+            className={`hub-nav-btn ${activeHubTab === "dsa" ? "active" : ""}`}
+            onClick={() => setActiveHubTab("dsa")}
           >
-            Solve on LeetCode →
-          </a>
+            <span className="hub-nav-icon">⌘</span>
+            <div className="hub-nav-text">
+              <strong>DSA Roadmap</strong>
+              <small>All 15 DSA Topic Cards</small>
+            </div>
+          </button>
 
+          <button
+            type="button"
+            className={`hub-nav-btn ${activeHubTab === "aptitude" ? "active" : ""}`}
+            onClick={() => setActiveHubTab("aptitude")}
+          >
+            <span className="hub-nav-icon">🧮</span>
+            <div className="hub-nav-text">
+              <strong>Aptitude & Logic Hub</strong>
+              <small>Quant, Logic & Interview Puzzles</small>
+            </div>
+          </button>
         </div>
-      );
-    })
-  ) : (
-    <div className="no-questions">
-      <div>🔎</div>
+      </div>
 
-      <h3>No questions found</h3>
+      {/* ========================================================= */}
+      {/* TAB 1: DSA ROADMAP SECTION */}
+      {/* ========================================================= */}
+      {(activeHubTab === "all" || activeHubTab === "dsa") && (
+        <>
+          <section className="resource-section dsa-section" id="dsa-topics">
+            <div className="resource-section-heading">
+              <span>DSA ROADMAP</span>
+              <h2>
+                Master DSA,
+                <br />
+                <span>one topic at a time.</span>
+              </h2>
+              <p>
+                Select a topic and start solving curated interview problems directly on LeetCode.
+              </p>
+            </div>
 
-      <p>
-        Try another search term or difficulty level.
-      </p>
-    </div>
-  )}
-
-</div>
-  </div>
-)}
-
-      </section>
-
-      {/* Problems */}
-      {selectedData && (
-
-        <section
-          className="resource-section"
-          id="problem-section"
-        >
-
-          <div className="resource-section-heading">
-
-            <span>LEETCODE PROBLEMS</span>
-
-            <h2>
-              {selectedData.title}
-              <br />
-              <span>Practice Set</span>
-            </h2>
-
-            <p>
-              Solve these curated problems to strengthen
-              your {selectedData.title.toLowerCase()} concepts.
-            </p>
-
-          </div>
-
-          {/* Difficulty Filter */}
-          <div className="difficulty-filter">
-
-            {["All", "Easy", "Medium", "Hard"].map(
-              (level) => (
-
-                <button
-                  key={level}
-                  type="button"
-                  className={
-                    difficultyFilter === level
-                      ? "difficulty-btn active"
-                      : "difficulty-btn"
-                  }
-                  onClick={() => setDifficultyFilter(level)}
-                >
-                  {level}
-                </button>
-
-              )
-            )}
-
-          </div>
-
-          {/* Problem List */}
-          <div className="problem-list">
-
-            {filteredProblems.length === 0 ? (
-
-              <div className="no-problems">
-                No {difficultyFilter} problems available
-                for this topic yet.
-              </div>
-
-            ) : (
-
-              filteredProblems.map((problem, index) => (
-
+            <div className="dsa-grid">
+              {activeTopics.map((topic, index) => (
                 <div
-                  className="problem-card"
-                  key={`${selectedData.title}-${problem.name}`}
+                  className={`dsa-card ${selectedTopic === index ? "active" : ""}`}
+                  key={topic.title}
+                  onClick={() => openTopic(index)}
                 >
-
-                  <div className="problem-number">
-                    {String(index + 1).padStart(2, "0")}
-                  </div>
-
-                  <div className="problem-info">
-
-                    <h3>{problem.name}</h3>
-
-                    <span
-                      className={`difficulty ${problem.difficulty.toLowerCase()}`}
+                  <div className="dsa-card-icon">{topic.icon}</div>
+                  <h3>{topic.title}</h3>
+                  <p>{topic.description}</p>
+                  <div className="dsa-card-bottom">
+                    <span>{topic.problemCount} Problems</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openTopic(index);
+                      }}
                     >
-                      {problem.difficulty}
-                    </span>
-
+                      Practice →
+                    </button>
                   </div>
+                </div>
+              ))}
+            </div>
 
-                  <a
-                    href={problem.leetcode}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="leetcode-btn"
+            {selectedTopic !== null && (
+              <div className="questions-panel" id="questions-section">
+                <div className="questions-header">
+                  <div>
+                    <span className="resource-badge">PRACTICE SET</span>
+                    <h2>
+                      {dsaTopics[selectedTopic].title}
+                      <span> Questions</span>
+                    </h2>
+                    <p>Solve curated questions and practice directly on LeetCode.</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="close-questions"
+                    onClick={() => setSelectedTopic(null)}
                   >
-                    Solve on LeetCode ↗
-                  </a>
-
+                    ✕
+                  </button>
                 </div>
 
-              ))
+                {/* Search and Difficulty Filter Controls */}
+                <div style={{ display: "flex", gap: "12px", margin: "16px 0", flexWrap: "wrap" }}>
+                  <input
+                    type="text"
+                    placeholder="Search questions in this topic..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      flex: 1,
+                      minWidth: "200px",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      color: "#fff",
+                      outline: "none"
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    {["All", "Easy", "Medium", "Hard"].map((level) => (
+                      <button
+                        key={level}
+                        type="button"
+                        onClick={() => setDifficultyFilter(level)}
+                        style={{
+                          padding: "8px 16px",
+                          borderRadius: "8px",
+                          border: difficultyFilter === level ? "1px solid #3b82f6" : "1px solid rgba(255,255,255,0.12)",
+                          background: difficultyFilter === level ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)",
+                          color: difficultyFilter === level ? "#60a5fa" : "#94a3b8",
+                          cursor: "pointer",
+                          fontWeight: 500
+                        }}
+                      >
+                        {level}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
+                <div className="questions-list">
+                  {filteredQuestions.length > 0 ? (
+                    filteredQuestions.map((question, index) => {
+                      const isSolved = solvedQuestions.includes(question.title);
+
+                      return (
+                        <div
+                          className={`question-item ${isSolved ? "question-solved" : ""}`}
+                          key={question.title}
+                        >
+                          <div className="question-number">
+                            {String(index + 1).padStart(2, "0")}
+                          </div>
+
+                          <div className="question-info">
+                            <h3>{question.title}</h3>
+                            <span className={`difficulty ${question.difficulty.toLowerCase()}`}>
+                              {question.difficulty}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            className={`solve-toggle ${isSolved ? "solved" : ""}`}
+                            onClick={() => toggleSolved(question.title)}
+                          >
+                            {isSolved ? "✓ Solved" : "Mark Solved"}
+                          </button>
+
+                          <a
+                            href={question.leetcode}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="leetcode-btn"
+                          >
+                            Solve on LeetCode →
+                          </a>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="no-questions">
+                      <div>🔎</div>
+                      <h3>No questions found</h3>
+                      <p>Try another search term or difficulty level.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
+          </section>
 
-          </div>
+          {/* Problems */}
+          {selectedData && (
+            <section className="resource-section" id="problem-section">
+              <div className="resource-section-heading">
+                <span>LEETCODE PROBLEMS</span>
+                <h2>
+                  {selectedData.title}
+                  <br />
+                  <span>Practice Set</span>
+                </h2>
+                <p>
+                  Solve these curated problems to strengthen your {selectedData.title.toLowerCase()} concepts.
+                </p>
+              </div>
 
-        </section>
+              <div className="difficulty-filter">
+                {["All", "Easy", "Medium", "Hard"].map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    className={difficultyFilter === level ? "difficulty-btn active" : "difficulty-btn"}
+                    onClick={() => setDifficultyFilter(level)}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
 
+              <div className="problem-list">
+                {filteredProblems.length === 0 ? (
+                  <div className="no-problems">
+                    No {difficultyFilter} problems available for this topic yet.
+                  </div>
+                ) : (
+                  filteredProblems.map((problem, index) => (
+                    <div
+                      className="problem-card"
+                      key={`${selectedData.title}-${problem.name}`}
+                    >
+                      <div className="problem-number">
+                        {String(index + 1).padStart(2, "0")}
+                      </div>
+
+                      <div className="problem-info">
+                        <h3>{problem.name}</h3>
+                        <span className={`difficulty ${problem.difficulty.toLowerCase()}`}>
+                          {problem.difficulty}
+                        </span>
+                      </div>
+
+                      <a
+                        href={problem.leetcode}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="leetcode-btn"
+                      >
+                        Solve on LeetCode ↗
+                      </a>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
-      {/* Learning Hub */}
+      {/* ========================================================= */}
+      {/* TAB 2: APTITUDE & LOGICAL REASONING HUB */}
+      {/* ========================================================= */}
+      {(activeHubTab === "all" || activeHubTab === "aptitude") && (
+        <section className="resource-section aptitude-resources-hub" id="aptitude-hub">
+          <div className="resource-section-heading">
+            <span className="resource-badge">APTITUDE & REASONING HUB</span>
+            <h2>
+              Ace Aptitude & Logic Tests,
+              <br />
+              <span>topic by topic with verified solutions.</span>
+            </h2>
+            <p>
+              Master Quantitative Aptitude, Logical Reasoning, and Classic Tech Puzzles
+              asked in online assessments (TCS, Infosys, Amazon, Google, Microsoft, Meta).
+            </p>
+          </div>
+
+          {/* 3 Domain Selector Cards */}
+          <div className="aptitude-domain-grid">
+            {aptitudeTopics.map((domain, index) => (
+              <div
+                key={domain.id}
+                className={`aptitude-domain-card ${selectedAptDomainIndex === index ? "active" : ""}`}
+                onClick={() => {
+                  setSelectedAptDomainIndex(index);
+                  setAptSearch("");
+                  setAptDifficulty("All");
+                  setAptCompanyFilter("All");
+                }}
+              >
+                <div className="domain-card-icon">{domain.icon}</div>
+                <h3>{domain.title}</h3>
+                <p>{domain.description}</p>
+                <div className="domain-card-meta">
+                  <span>{domain.problemCount} Curated Sets</span>
+                  <span>{domain.formulaCount} Core Formulas</span>
+                </div>
+                <button
+                  type="button"
+                  className="domain-select-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedAptDomainIndex(index);
+                  }}
+                >
+                  {selectedAptDomainIndex === index ? "Viewing Questions ✓" : "Explore Set →"}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Active Domain Practice Set */}
+          <div className="aptitude-practice-panel">
+            <div className="aptitude-panel-header">
+              <div>
+                <span className="resource-badge">{currentAptDomain.category.toUpperCase()}</span>
+                <h2>{currentAptDomain.title} Practice Set</h2>
+                <p>
+                  Comprehensive practice questions with step-by-step mathematical logic and company insights.
+                </p>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="aptitude-hub-filter-bar">
+              <input
+                type="text"
+                placeholder="Search questions, topics, formulas, or companies..."
+                value={aptSearch}
+                onChange={(e) => setAptSearch(e.target.value)}
+                className="aptitude-hub-search"
+              />
+
+              <div className="aptitude-filter-row">
+                <div className="filter-group">
+                  <label>Difficulty:</label>
+                  {["All", "Easy", "Medium", "Hard"].map((diff) => (
+                    <button
+                      key={diff}
+                      type="button"
+                      className={`filter-btn ${aptDifficulty === diff ? "active" : ""}`}
+                      onClick={() => setAptDifficulty(diff)}
+                    >
+                      {diff}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="filter-group">
+                  <label>Target Company:</label>
+                  {["All", "Google", "Amazon", "Microsoft", "Meta", "TCS", "Infosys", "Apple", "Adobe"].map((comp) => (
+                    <button
+                      key={comp}
+                      type="button"
+                      className={`filter-btn ${aptCompanyFilter === comp ? "active" : ""}`}
+                      onClick={() => setAptCompanyFilter(comp)}
+                    >
+                      {comp}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Question Cards List */}
+            <div className="aptitude-questions-stream">
+              {filteredAptQuestions.length > 0 ? (
+                filteredAptQuestions.map((q, qIndex) => {
+                  const isQSolved = solvedQuestions.includes(q.title || q.id);
+                  const isExpanded = !!expandedAptSolutions[q.id];
+                  const selectedOpt = selectedAptOptions[q.id];
+
+                  return (
+                    <div
+                      key={q.id}
+                      className={`apt-resource-card ${isQSolved ? "solved" : ""}`}
+                    >
+                      {/* Header */}
+                      <div className="apt-card-top">
+                        <div className="apt-card-badges">
+                          <span className="apt-index-badge">#{qIndex + 1}</span>
+                          <span className="apt-topic-badge">{q.topic}</span>
+                          <span className={`apt-diff-badge ${q.difficulty.toLowerCase()}`}>
+                            {q.difficulty}
+                          </span>
+                          {q.companies && q.companies.length > 0 && (
+                            <div className="apt-companies-tags">
+                              {q.companies.slice(0, 3).map((comp) => (
+                                <span key={comp} className="company-tag">
+                                  {comp}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="apt-card-actions">
+                          <button
+                            type="button"
+                            className={`solve-toggle ${isQSolved ? "solved" : ""}`}
+                            onClick={() => toggleSolved(q.title || q.id)}
+                          >
+                            {isQSolved ? "✓ Solved" : "Mark Solved"}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="apt-copy-btn"
+                            onClick={() => copyAptToClipboard(`${q.title}\n\n${q.question}\n\nAnswer: ${q.correctAnswer}\n\nExplanation:\n${q.explanation}`, q.id)}
+                          >
+                            {copiedAptId === q.id ? "✓ Copied!" : "Copy"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Question Content */}
+                      <h3 className="apt-card-title">{q.title}</h3>
+                      <p className="apt-card-question">{q.question}</p>
+
+                      {/* Options */}
+                      {q.options && (
+                        <div className="apt-mcq-grid">
+                          {q.options.map((opt, optIdx) => {
+                            const isSelected = selectedOpt === optIdx;
+                            const isCorrect = q.correctAnswer && opt.trim().startsWith(q.correctAnswer.slice(0, 2));
+
+                            let optClass = "apt-mcq-choice";
+                            if (isExpanded) {
+                              if (isCorrect) optClass += " correct";
+                              else if (isSelected) optClass += " wrong";
+                            } else if (isSelected) {
+                              optClass += " selected";
+                            }
+
+                            return (
+                              <button
+                                key={optIdx}
+                                type="button"
+                                className={optClass}
+                                onClick={() => selectAptOption(q.id, optIdx)}
+                              >
+                                <span className="mcq-badge">{String.fromCharCode(65 + optIdx)}</span>
+                                <span className="mcq-text">{opt.replace(/^[A-D]\)\s*/, "")}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Solution Toggle Button */}
+                      <div className="apt-solution-action">
+                        <button
+                          type="button"
+                          className={`reveal-solution-btn ${isExpanded ? "active" : ""}`}
+                          onClick={() => toggleAptSolution(q.id)}
+                        >
+                          {isExpanded ? "▾ Hide Step-by-Step Derivation" : "▸ View Answer & Step-by-Step Derivation"}
+                        </button>
+                      </div>
+
+                      {/* Detailed Derivation Box */}
+                      {isExpanded && (
+                        <div className="apt-solution-drawer">
+                          <div className="solution-correct-banner">
+                            <strong>✓ Verified Answer:</strong> {q.correctAnswer}
+                          </div>
+
+                          <div className="solution-text-block">
+                            <h4>Step-by-Step Mathematical Derivation:</h4>
+                            <p>{q.explanation}</p>
+                          </div>
+
+                          {q.formula && (
+                            <div className="solution-formula-block">
+                              <span>⚡ Core Formula & Shortcut:</span>
+                              <code>{q.formula}</code>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="no-aptitude-questions">
+                  <div className="no-q-icon">🔍</div>
+                  <h3>No matching aptitude questions</h3>
+                  <p>Try clearing your search term or selecting "All" for filters.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ========================================================= */}
+      {/* LEARNING HUB */}
+      {/* ========================================================= */}
       <section className="resource-section">
-
         <div className="resource-section-heading">
-
           <span>LEARNING HUB</span>
-
           <h2>
             Everything you need to
             <br />
             <span>ace your interview.</span>
           </h2>
-
           <p>
-            Choose your domain and start learning with
-            curated notes, interview questions and coding problems.
+            Choose your domain and start learning with curated notes,
+            aptitude practice, interview questions, and coding roadmaps.
           </p>
-
         </div>
 
-        <div className="resource-grid">
-
+        <div className="resource-grid resource-grid-four">
+          {/* 1. DSA */}
           <div className="resource-card">
-
             <div className="resource-icon">⌘</div>
-
             <h3>DSA Questions</h3>
-
             <p>
-              Practice topic-wise Data Structures and
-              Algorithms questions directly connected with LeetCode.
+              Practice topic-wise Data Structures and Algorithms questions directly connected with LeetCode.
             </p>
-
             <button
               type="button"
-              onClick={() =>
-                document
-                  .getElementById("dsa-topics")
-                  ?.scrollIntoView({
-                    behavior: "smooth",
-                  })
-              }
+              onClick={() => switchToTab("dsa")}
             >
               Explore DSA →
             </button>
-
           </div>
 
+          {/* 2. APTITUDE & LOGICAL */}
           <div className="resource-card">
-
-            <div className="resource-icon">◈</div>
-
-            <h3>Domain Notes</h3>
-
+            <div className="resource-icon">🧮</div>
+            <h3>Aptitude & Logic</h3>
             <p>
-              Get personalized technical notes based
-              on your selected development or engineering domain.
+              Quantitative aptitude, logical reasoning, and tech interview puzzles with verified step-by-step solutions.
             </p>
+            <button
+              type="button"
+              onClick={() => switchToTab("aptitude")}
+            >
+              Practice Aptitude →
+            </button>
+          </div>
 
+          {/* 3. DOMAIN NOTES */}
+          <div className="resource-card">
+            <div className="resource-icon">◈</div>
+            <h3>Domain Notes</h3>
+            <p>
+              Get personalized technical notes based on your selected development or engineering domain.
+            </p>
             <button type="button">
               View Notes →
             </button>
-
           </div>
 
+          {/* 4. INTERVIEW QUESTIONS */}
           <div className="resource-card">
-
             <div className="resource-icon">✦</div>
-
             <h3>Interview Questions</h3>
-
             <p>
-              Prepare with frequently asked technical
-              and conceptual questions from real interviews.
+              Prepare with frequently asked technical and conceptual questions from real company interviews.
             </p>
-
             <button type="button">
               Practice Questions →
             </button>
-
           </div>
-
         </div>
-
       </section>
 
-      {/* LeetCode CTA */}
+      {/* LeetCode & Aptitude CTA */}
       <section className="dsa-resource-section">
-
         <div className="dsa-resource-content">
-
           <span className="resource-badge">
-            LEETCODE CONNECTED
+            COMPREHENSIVE PREPARATION
           </span>
-
           <h2>
             Turn preparation into
             <span> measurable progress.</span>
           </h2>
-
           <p>
-            Solve curated DSA problems according to difficulty
-            and topic. Each problem takes you directly to LeetCode.
+            Master DSA algorithms, quantitative aptitude, logical reasoning, and company-specific interview rounds in one unified platform.
           </p>
 
-          <div className="dsa-stats">
-
+          <div className="dsa-stats dsa-stats-four">
             <div>
               <strong>860+</strong>
               <span>Curated Problems</span>
             </div>
-
             <div>
               <strong>15</strong>
               <span>DSA Topics</span>
             </div>
-
             <div>
               <strong>3</strong>
-              <span>Difficulty Levels</span>
+              <span>Aptitude Domains</span>
             </div>
-
+            <div>
+              <strong>15+</strong>
+              <span>Target Companies</span>
+            </div>
           </div>
-
         </div>
-
       </section>
 
     </div>

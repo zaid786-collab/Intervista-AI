@@ -1,3 +1,5 @@
+import { companyAptitudeData } from "./aptitudeCompanyData";
+
 const companyData = {
   Google: {
     stats: ["150+", "100+", "30+"],
@@ -1188,5 +1190,19 @@ const companyData = {
     ],
   },
 };
+
+// Enrich all companies with aptitude & logical questions and 4-stat metrics
+Object.keys(companyData).forEach((comp) => {
+  companyData[comp].aptitudeQuestions = companyAptitudeData[comp] || [];
+  if (companyData[comp].stats && companyData[comp].stats.length === 3) {
+    const aptCount = (companyAptitudeData[comp] || []).length;
+    companyData[comp].stats = [
+      companyData[comp].stats[0],
+      companyData[comp].stats[1],
+      `${aptCount > 0 ? aptCount + " Sets" : "20+"}`,
+      companyData[comp].stats[2],
+    ];
+  }
+});
 
 export default companyData;
