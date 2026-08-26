@@ -113,32 +113,6 @@
   gap: 14px;
 }
 
-.view-mode-toggle {
-  display: flex;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 3px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.mode-btn {
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.mode-btn.active {
-  background: rgba(37, 214, 255, 0.18);
-  color: #25d6ff;
-  box-shadow: 0 0 10px rgba(37, 214, 255, 0.2);
-}
-
 .demo-close-btn {
   width: 36px;
   height: 36px;
@@ -861,106 +835,6 @@
 .sidebar-cta-wrap small {
   font-size: 10.5px;
   color: #64748b;
-}
-
-/* Custom Video Stage */
-.custom-video-stage {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.video-player-container {
-  width: 100%;
-  height: 100%;
-  min-height: 420px;
-  background: #000000;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.video-iframe-wrap {
-  width: 100%;
-  height: 100%;
-}
-
-.video-iframe-wrap iframe,
-.custom-video-element {
-  width: 100%;
-  height: 100%;
-  min-height: 450px;
-}
-
-.no-video-placeholder {
-  max-width: 480px;
-  text-align: center;
-  padding: 30px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.placeholder-icon {
-  font-size: 40px;
-}
-
-.no-video-placeholder h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #ffffff;
-}
-
-.no-video-placeholder p {
-  margin: 0;
-  font-size: 13px;
-  color: #94a3b8;
-  line-height: 1.5;
-}
-
-.video-url-input-row {
-  width: 100%;
-  display: flex;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.video-url-input-row input {
-  flex: 1;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  font-size: 13px;
-}
-
-.video-url-input-row button {
-  padding: 0 16px;
-  border-radius: 8px;
-  background: #25d6ff;
-  border: none;
-  color: #05070f;
-  font-weight: 700;
-  font-size: 12.5px;
-  cursor: pointer;
-}
-
-.switch-back-btn {
-  margin-top: 8px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #94a3b8;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 12px;
-  cursor: pointer;
 }
 
 /* Player Controls */

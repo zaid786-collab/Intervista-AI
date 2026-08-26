@@ -84,8 +84,6 @@ export default function DemoModal({ isOpen, onClose }) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [activeViewMode, setActiveViewMode] = useState("interactive"); // "interactive" | "custom_video"
-  const [customVideoUrl, setCustomVideoUrl] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const containerRef = useRef(null);
@@ -94,7 +92,7 @@ export default function DemoModal({ isOpen, onClose }) {
 
   // Auto-play timer for interactive tour
   useEffect(() => {
-    if (!isOpen || !isPlaying || activeViewMode !== "interactive") return;
+    if (!isOpen || !isPlaying) return;
 
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -108,7 +106,7 @@ export default function DemoModal({ isOpen, onClose }) {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [isOpen, isPlaying, activeChapterIndex, playbackSpeed, activeViewMode, currentChapter]);
+  }, [isOpen, isPlaying, activeChapterIndex, playbackSpeed, currentChapter]);
 
   // Handle ESC key to close
   useEffect(() => {
@@ -165,23 +163,6 @@ export default function DemoModal({ isOpen, onClose }) {
           </div>
 
           <div className="demo-header-actions">
-            <div className="view-mode-toggle">
-              <button
-                type="button"
-                className={`mode-btn ${activeViewMode === "interactive" ? "active" : ""}`}
-                onClick={() => setActiveViewMode("interactive")}
-              >
-                🎮 Interactive Tour
-              </button>
-              <button
-                type="button"
-                className={`mode-btn ${activeViewMode === "custom_video" ? "active" : ""}`}
-                onClick={() => setActiveViewMode("custom_video")}
-              >
-                📹 Video Stream
-              </button>
-            </div>
-
             <button
               type="button"
               className="demo-close-btn"
@@ -219,10 +200,9 @@ export default function DemoModal({ isOpen, onClose }) {
 
         {/* Main Showcase Stage */}
         <div className="demo-stage-area">
-          {activeViewMode === "interactive" ? (
-            <div className="interactive-stage">
-              {/* Simulated Screen */}
-              <div className="simulated-device-frame">
+          <div className="interactive-stage">
+            {/* Simulated Screen */}
+            <div className="simulated-device-frame">
                 <div className="device-top-bar">
                   <div className="window-dots">
                     <span className="dot red"></span>
@@ -452,71 +432,6 @@ export default function DemoModal({ isOpen, onClose }) {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="custom-video-stage">
-              <div className="video-player-container">
-                {customVideoUrl ? (
-                  <div className="video-iframe-wrap">
-                    {customVideoUrl.includes("youtube.com") || customVideoUrl.includes("youtu.be") ? (
-                      <iframe
-                        src={
-                          customVideoUrl.includes("embed")
-                            ? customVideoUrl
-                            : customVideoUrl.replace("watch?v=", "embed/")
-                        }
-                        title="Intervista AI Demo Video"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      ></iframe>
-                    ) : (
-                      <video
-                        src={customVideoUrl}
-                        controls
-                        autoPlay
-                        className="custom-video-element"
-                      ></video>
-                    )}
-                  </div>
-                ) : (
-                  <div className="no-video-placeholder">
-                    <div className="placeholder-icon">📹</div>
-                    <h3>Interactive Demo Player is Active</h3>
-                    <p>
-                      You can watch our interactive simulated live walkthrough above, or paste an external video link (MP4, YouTube) below to stream directly.
-                    </p>
-
-                    <div className="video-url-input-row">
-                      <input
-                        type="url"
-                        placeholder="Paste YouTube or MP4 video URL..."
-                        value={customVideoUrl}
-                        onChange={(e) => setCustomVideoUrl(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!customVideoUrl) {
-                            setCustomVideoUrl("https://www.youtube.com/embed/dQw4w9WgXcQ");
-                          }
-                        }}
-                      >
-                        Load Video
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="switch-back-btn"
-                      onClick={() => setActiveViewMode("interactive")}
-                    >
-                      ← Back to Interactive Live Tour
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Player Controls Bar */}
