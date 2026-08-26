@@ -1274,8 +1274,8 @@ function Resources() {
   const [apiTopics, setApiTopics] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Aptitude specific states
-  const [selectedAptDomainIndex, setSelectedAptDomainIndex] = useState(0);
+  // Aptitude specific states (hidden by default until a card is clicked)
+  const [selectedAptDomainIndex, setSelectedAptDomainIndex] = useState(null);
   const [aptSearch, setAptSearch] = useState("");
   const [aptDifficulty, setAptDifficulty] = useState("All");
   const [aptCompanyFilter, setAptCompanyFilter] = useState("All");
@@ -1321,7 +1321,6 @@ function Resources() {
       .then((solvedList) => {
         if (isMounted && Array.isArray(solvedList)) {
           setSolvedQuestions(solvedList);
-          localStorage.setItem("intervista-solved-questions", JSON.stringify(solvedList));
         }
       })
       .catch(() => {});
@@ -1331,13 +1330,34 @@ function Resources() {
     };
   }, []);
 
-  const selectedData = selectedTopic !== null ? activeTopics[selectedTopic] : null;
+  const toggleSolved = (problemName) => {
+    const updated = solvedQuestions.includes(problemName)
+      ? solvedQuestions.filter((name) => name !== problemName)
+      : [...solvedQuestions, problemName];
 
-  const filteredProblems =
-    selectedData?.problems.filter((problem) => {
-      if (difficultyFilter === "All") return true;
-      return problem.difficulty === difficultyFilter;
-    }) || [];
+    setSolvedQuestions(updated);
+    try {
+      localStorage.setItem(
+        "intervista-solved-questions",
+        JSON.stringify(updated)
+      );
+    } catch {
+      // LocalStorage fallback
+    }
+
+    toggleSolvedResource(problemName).catch(() => {});
+  };
+
+  const selectedData = selectedTopic
+    ? activeTopics.find((t) => t.title === selectedTopic)
+    : null;
+
+  const filteredProblems = selectedData
+    ? (selectedData.problems || []).filter((problem) => {
+        if (difficultyFilter === "All") return true;
+        return problem.difficulty === difficultyFilter;
+      })
+    : [];
 
   const openTopic = (index) => {
     setSelectedTopic(index);
@@ -1358,65 +1378,46 @@ function Resources() {
     }, 120);
   };
 
-  const toggleSolved = (questionTitle) => {
-    // Optimistic update locally
-    setSolvedQuestions((prev) => {
-      const updated = prev.includes(questionTitle)
-        ? prev.filter((title) => title !== questionTitle)
-        : [...prev, questionTitle];
-
-      localStorage.setItem(
-        "intervista-solved-questions",
-        JSON.stringify(updated)
-      );
-
-      return updated;
-    });
-
-    // Sync with backend if logged in
-    toggleSolvedResource(questionTitle)
-      .then((res) => {
-        if (res && res.solved_titles) {
-          setSolvedQuestions(res.solved_titles);
-          localStorage.setItem("intervista-solved-questions", JSON.stringify(res.solved_titles));
-        }
-      })
-      .catch(() => {});
-  };
-
-  const filteredQuestions =
-    dsaQuestions[dsaTopics[selectedTopic]?.title]
-      ?.filter((question) =>
-        question.title
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      )
-      .filter(
-        (question) =>
-          difficultyFilter === "All" ||
-          question.difficulty === difficultyFilter
-      ) || [];
-
   // Aptitude logic
-  const currentAptDomain = aptitudeTopics[selectedAptDomainIndex] || aptitudeTopics[0];
+  const currentAptDomain =
+    selectedAptDomainIndex !== null ? aptitudeTopics[selectedAptDomainIndex] : null;
 
-  const filteredAptQuestions = currentAptDomain.questions.filter((q) => {
-    const matchesSearch =
-      !aptSearch ||
-      q.title.toLowerCase().includes(aptSearch.toLowerCase()) ||
-      q.question.toLowerCase().includes(aptSearch.toLowerCase()) ||
-      q.topic.toLowerCase().includes(aptSearch.toLowerCase()) ||
-      q.companies?.some((c) => c.toLowerCase().includes(aptSearch.toLowerCase()));
+  const filteredAptQuestions = currentAptDomain
+    ? currentAptDomain.questions.filter((q) => {
+        const matchesSearch =
+          !aptSearch ||
+          q.title.toLowerCase().includes(aptSearch.toLowerCase()) ||
+          q.question.toLowerCase().includes(aptSearch.toLowerCase()) ||
+          q.topic.toLowerCase().includes(aptSearch.toLowerCase()) ||
+          q.companies?.some((c) => c.toLowerCase().includes(aptSearch.toLowerCase()));
 
-    const matchesDifficulty =
-      aptDifficulty === "All" || q.difficulty === aptDifficulty;
+        const matchesDifficulty =
+          aptDifficulty === "All" || q.difficulty === aptDifficulty;
 
-    const matchesCompany =
-      aptCompanyFilter === "All" ||
-      q.companies?.some((c) => c.toLowerCase() === aptCompanyFilter.toLowerCase());
+        const matchesCompany =
+          aptCompanyFilter === "All" ||
+          q.companies?.some((c) => c.toLowerCase() === aptCompanyFilter.toLowerCase());
 
-    return matchesSearch && matchesDifficulty && matchesCompany;
-  });
+        return matchesSearch && matchesDifficulty && matchesCompany;
+      })
+    : [];
+
+  const toggleAptDomain = (index) => {
+    if (selectedAptDomainIndex === index) {
+      setSelectedAptDomainIndex(null);
+    } else {
+      setSelectedAptDomainIndex(index);
+      setAptSearch("");
+      setAptDifficulty("All");
+      setAptCompanyFilter("All");
+      setTimeout(() => {
+        document.getElementById("aptitude-practice-panel")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 50);
+    }
+  };
 
   const toggleAptSolution = (id) => {
     setExpandedAptSolutions((prev) => ({
@@ -1817,12 +1818,7 @@ function Resources() {
               <div
                 key={domain.id}
                 className={`aptitude-domain-card ${selectedAptDomainIndex === index ? "active" : ""}`}
-                onClick={() => {
-                  setSelectedAptDomainIndex(index);
-                  setAptSearch("");
-                  setAptDifficulty("All");
-                  setAptCompanyFilter("All");
-                }}
+                onClick={() => toggleAptDomain(index)}
               >
                 <div className="domain-card-icon">{domain.icon}</div>
                 <h3>{domain.title}</h3>
@@ -1836,196 +1832,195 @@ function Resources() {
                   className="domain-select-btn"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSelectedAptDomainIndex(index);
+                    toggleAptDomain(index);
                   }}
                 >
-                  {selectedAptDomainIndex === index ? "Viewing Questions ✓" : "Explore Set →"}
+                  {selectedAptDomainIndex === index ? "Hide Questions ✕" : "View Questions →"}
                 </button>
               </div>
             ))}
           </div>
 
-          {/* Active Domain Practice Set */}
-          <div className="aptitude-practice-panel">
-            <div className="aptitude-panel-header">
-              <div>
-                <span className="resource-badge">{currentAptDomain.category.toUpperCase()}</span>
-                <h2>{currentAptDomain.title} Practice Set</h2>
-                <p>
-                  Comprehensive practice questions with step-by-step mathematical logic and company insights.
-                </p>
-              </div>
-            </div>
-
-            {/* Filter and Search Bar */}
-            <div className="aptitude-hub-filter-bar">
-              <input
-                type="text"
-                placeholder="Search questions, topics, formulas, or companies..."
-                value={aptSearch}
-                onChange={(e) => setAptSearch(e.target.value)}
-                className="aptitude-hub-search"
-              />
-
-              <div className="aptitude-filter-row">
-                <div className="filter-group">
-                  <label>Difficulty:</label>
-                  {["All", "Easy", "Medium", "Hard"].map((diff) => (
-                    <button
-                      key={diff}
-                      type="button"
-                      className={`filter-btn ${aptDifficulty === diff ? "active" : ""}`}
-                      onClick={() => setAptDifficulty(diff)}
-                    >
-                      {diff}
-                    </button>
-                  ))}
+          {/* Active Domain Practice Set - Hidden until a domain card is clicked */}
+          {selectedAptDomainIndex !== null && currentAptDomain && (
+            <div className="aptitude-practice-panel" id="aptitude-practice-panel">
+              <div className="aptitude-panel-header questions-header">
+                <div>
+                  <span className="resource-badge">{currentAptDomain.category.toUpperCase()}</span>
+                  <h2>{currentAptDomain.title} Practice Set</h2>
+                  <p>
+                    Comprehensive practice questions with step-by-step mathematical logic and company insights.
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  className="close-questions"
+                  onClick={() => setSelectedAptDomainIndex(null)}
+                  title="Close Aptitude questions"
+                >
+                  ✕
+                </button>
+              </div>
 
-                <div className="filter-group">
-                  <label>Target Company:</label>
-                  {["All", "Google", "Amazon", "Microsoft", "Meta", "TCS", "Infosys", "Apple", "Adobe"].map((comp) => (
-                    <button
-                      key={comp}
-                      type="button"
-                      className={`filter-btn ${aptCompanyFilter === comp ? "active" : ""}`}
-                      onClick={() => setAptCompanyFilter(comp)}
-                    >
-                      {comp}
-                    </button>
-                  ))}
+              {/* Filter and Search Bar */}
+              <div className="aptitude-hub-filter-bar">
+                <input
+                  type="text"
+                  placeholder="Search questions, topics, formulas, or companies..."
+                  value={aptSearch}
+                  onChange={(e) => setAptSearch(e.target.value)}
+                  className="aptitude-hub-search"
+                />
+
+                <div className="aptitude-filter-row">
+                  <div className="filter-group">
+                    <label>Difficulty:</label>
+                    {["All", "Easy", "Medium", "Hard"].map((diff) => (
+                      <button
+                        key={diff}
+                        type="button"
+                        className={`filter-btn ${aptDifficulty === diff ? "active" : ""}`}
+                        onClick={() => setAptDifficulty(diff)}
+                      >
+                        {diff}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="filter-group">
+                    <label>Target Company:</label>
+                    {["All", "Google", "Amazon", "Microsoft", "Meta", "TCS", "Infosys", "Apple", "Adobe"].map((comp) => (
+                      <button
+                        key={comp}
+                        type="button"
+                        className={`filter-btn ${aptCompanyFilter === comp ? "active" : ""}`}
+                        onClick={() => setAptCompanyFilter(comp)}
+                      >
+                        {comp}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Question Cards List */}
-            <div className="aptitude-questions-stream">
-              {filteredAptQuestions.length > 0 ? (
-                filteredAptQuestions.map((q, qIndex) => {
-                  const isQSolved = solvedQuestions.includes(q.title || q.id);
-                  const isExpanded = !!expandedAptSolutions[q.id];
-                  const selectedOpt = selectedAptOptions[q.id];
+              {/* Question Stream */}
+              <div className="aptitude-questions-stream">
+                {filteredAptQuestions.length > 0 ? (
+                  filteredAptQuestions.map((q, idx) => {
+                    const isSolved = solvedQuestions.includes(q.title);
+                    const isExpanded = !!expandedAptSolutions[q.id];
+                    const selectedOpt = selectedAptOptions[q.id];
+                    const isCopied = copiedAptId === q.id;
 
-                  return (
-                    <div
-                      key={q.id}
-                      className={`apt-resource-card ${isQSolved ? "solved" : ""}`}
-                    >
-                      {/* Header */}
-                      <div className="apt-card-top">
-                        <div className="apt-card-badges">
-                          <span className="apt-index-badge">#{qIndex + 1}</span>
-                          <span className="apt-topic-badge">{q.topic}</span>
-                          <span className={`apt-diff-badge ${q.difficulty.toLowerCase()}`}>
-                            {q.difficulty}
-                          </span>
-                          {q.companies && q.companies.length > 0 && (
-                            <div className="apt-companies-tags">
-                              {q.companies.slice(0, 3).map((comp) => (
-                                <span key={comp} className="company-tag">
-                                  {comp}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="apt-card-actions">
-                          <button
-                            type="button"
-                            className={`solve-toggle ${isQSolved ? "solved" : ""}`}
-                            onClick={() => toggleSolved(q.title || q.id)}
-                          >
-                            {isQSolved ? "✓ Solved" : "Mark Solved"}
-                          </button>
-
-                          <button
-                            type="button"
-                            className="apt-copy-btn"
-                            onClick={() => copyAptToClipboard(`${q.title}\n\n${q.question}\n\nAnswer: ${q.correctAnswer}\n\nExplanation:\n${q.explanation}`, q.id)}
-                          >
-                            {copiedAptId === q.id ? "✓ Copied!" : "Copy"}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Question Content */}
-                      <h3 className="apt-card-title">{q.title}</h3>
-                      <p className="apt-card-question">{q.question}</p>
-
-                      {/* Options */}
-                      {q.options && (
-                        <div className="apt-mcq-grid">
-                          {q.options.map((opt, optIdx) => {
-                            const isSelected = selectedOpt === optIdx;
-                            const isCorrect = q.correctAnswer && opt.trim().startsWith(q.correctAnswer.slice(0, 2));
-
-                            let optClass = "apt-mcq-choice";
-                            if (isExpanded) {
-                              if (isCorrect) optClass += " correct";
-                              else if (isSelected) optClass += " wrong";
-                            } else if (isSelected) {
-                              optClass += " selected";
-                            }
-
-                            return (
-                              <button
-                                key={optIdx}
-                                type="button"
-                                className={optClass}
-                                onClick={() => selectAptOption(q.id, optIdx)}
-                              >
-                                <span className="mcq-badge">{String.fromCharCode(65 + optIdx)}</span>
-                                <span className="mcq-text">{opt.replace(/^[A-D]\)\s*/, "")}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* Solution Toggle Button */}
-                      <div className="apt-solution-action">
-                        <button
-                          type="button"
-                          className={`reveal-solution-btn ${isExpanded ? "active" : ""}`}
-                          onClick={() => toggleAptSolution(q.id)}
-                        >
-                          {isExpanded ? "▾ Hide Step-by-Step Derivation" : "▸ View Answer & Step-by-Step Derivation"}
-                        </button>
-                      </div>
-
-                      {/* Detailed Derivation Box */}
-                      {isExpanded && (
-                        <div className="apt-solution-drawer">
-                          <div className="solution-correct-banner">
-                            <strong>✓ Verified Answer:</strong> {q.correctAnswer}
+                    return (
+                      <div
+                        key={q.id}
+                        className={`apt-resource-card ${isSolved ? "solved" : ""}`}
+                      >
+                        <div className="apt-card-top">
+                          <div className="apt-card-badges">
+                            <span className="apt-index-badge">#{String(idx + 1).padStart(2, "0")}</span>
+                            <span className="apt-topic-badge">{q.topic}</span>
+                            <span className={`apt-diff-badge ${q.difficulty.toLowerCase()}`}>
+                              {q.difficulty}
+                            </span>
+                            {q.companies && q.companies.length > 0 && (
+                              <div className="apt-companies-tags">
+                                {q.companies.slice(0, 3).map((comp) => (
+                                  <span key={comp} className="company-tag">{comp}</span>
+                                ))}
+                              </div>
+                            )}
                           </div>
 
-                          <div className="solution-text-block">
-                            <h4>Step-by-Step Mathematical Derivation:</h4>
-                            <p>{q.explanation}</p>
+                          <div className="apt-card-actions">
+                            <button
+                              type="button"
+                              className={`solve-toggle ${isSolved ? "solved" : ""}`}
+                              onClick={() => toggleSolved(q.title)}
+                            >
+                              {isSolved ? "✓ Solved" : "Mark Solved"}
+                            </button>
+                            <button
+                              type="button"
+                              className="apt-copy-btn"
+                              onClick={() => copyAptToClipboard(`${q.title}\n\n${q.question}\n\nOptions:\n${q.options ? q.options.join("\n") : ""}`, q.id)}
+                            >
+                              {isCopied ? "Copied!" : "Copy"}
+                            </button>
                           </div>
-
-                          {q.formula && (
-                            <div className="solution-formula-block">
-                              <span>⚡ Core Formula & Shortcut:</span>
-                              <code>{q.formula}</code>
-                            </div>
-                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="no-aptitude-questions">
-                  <div className="no-q-icon">🔍</div>
-                  <h3>No matching aptitude questions</h3>
-                  <p>Try clearing your search term or selecting "All" for filters.</p>
-                </div>
-              )}
+
+                        <h3 className="apt-card-title">{q.title}</h3>
+                        <p className="apt-card-question">{q.question}</p>
+
+                        {/* MCQ Options */}
+                        {q.options && q.options.length > 0 && (
+                          <div className="apt-mcq-grid">
+                            {q.options.map((opt, oIdx) => {
+                              const letter = String.fromCharCode(65 + oIdx);
+                              const isSelected = selectedOpt === oIdx;
+                              const isCorrect = isExpanded && opt.startsWith(q.correctAnswer.charAt(0));
+                              const isWrong = isSelected && !opt.startsWith(q.correctAnswer.charAt(0)) && isExpanded;
+
+                              return (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  className={`apt-mcq-choice ${isSelected ? "selected" : ""} ${isCorrect ? "correct" : ""} ${isWrong ? "wrong" : ""}`}
+                                  onClick={() => selectAptOption(q.id, oIdx)}
+                                >
+                                  <span className="mcq-badge">{letter}</span>
+                                  <span className="mcq-text">{opt}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Solution Toggle & Drawer */}
+                        <div className="apt-solution-action">
+                          <button
+                            type="button"
+                            className={`reveal-solution-btn ${isExpanded ? "active" : ""}`}
+                            onClick={() => toggleAptSolution(q.id)}
+                          >
+                            {isExpanded ? "Hide Answer & Derivation ▲" : "View Answer & Detailed Derivation ▼"}
+                          </button>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="apt-solution-drawer">
+                            <div className="solution-correct-banner">
+                              <strong>✓ Verified Answer:</strong> {q.correctAnswer}
+                            </div>
+
+                            <div className="solution-text-block">
+                              <h4>Step-by-Step Mathematical Derivation:</h4>
+                              <p>{q.explanation}</p>
+                            </div>
+
+                            {q.formula && (
+                              <div className="solution-formula-block">
+                                <span>⚡ Core Formula & Shortcut:</span>
+                                <code>{q.formula}</code>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="no-aptitude-questions">
+                    <div className="no-q-icon">🔍</div>
+                    <h3>No matching aptitude questions</h3>
+                    <p>Try clearing your search term or selecting "All" for filters.</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </section>
       )}
 
@@ -2071,7 +2066,10 @@ function Resources() {
             </p>
             <button
               type="button"
-              onClick={() => switchToTab("aptitude")}
+              onClick={() => {
+                setActiveHubTab("all");
+                toggleAptDomain(0);
+              }}
             >
               Practice Aptitude →
             </button>
