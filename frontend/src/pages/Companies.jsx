@@ -37,6 +37,9 @@ function Companies() {
   const [selectedCompany, setSelectedCompany] =
     useState("Google");
 
+  const [isCollapsed, setIsCollapsed] =
+    useState(false);
+
   const [solvedQuestions, setSolvedQuestions] =
     useState({});
 
@@ -73,20 +76,34 @@ function Companies() {
   };
 
   return (
-    <div className="companies-page">
+    <div className={`companies-page ${isCollapsed ? "sidebar-is-collapsed" : ""}`}>
 
       {/* ================= SIDEBAR ================= */}
 
-      <aside className="companies-sidebar">
+      <aside className={`companies-sidebar ${isCollapsed ? "collapsed" : ""}`}>
 
         <div className="companies-sidebar-header">
-          <span>✦</span>
-          <h2>Companies</h2>
+          <div className="companies-sidebar-title">
+            <span>✦</span>
+            {!isCollapsed && <h2>Companies</h2>}
+          </div>
+
+          <button
+            type="button"
+            className="sidebar-collapse-toggle"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? "»" : "«"}
+          </button>
         </div>
 
-        <p className="companies-sidebar-label">
-          INTERVIEW PREPARATION
-        </p>
+        {!isCollapsed && (
+          <p className="companies-sidebar-label">
+            INTERVIEW PREPARATION
+          </p>
+        )}
 
         <div className="company-list">
 
@@ -101,13 +118,14 @@ function Companies() {
                   : ""
               }`}
               onClick={() => changeCompany(company)}
+              title={isCollapsed ? company : undefined}
             >
 
               <span className="company-icon">
                 {company.charAt(0)}
               </span>
 
-              <span>{company}</span>
+              {!isCollapsed && <span className="company-name">{company}</span>}
 
             </button>
 

@@ -27,7 +27,7 @@
 
 
 /* =========================================
-   SIDEBAR (STICKY - NO OVERLAPPING FOOTER)
+   SIDEBAR (STICKY & COLLAPSIBLE)
 ========================================= */
 
 .companies-sidebar {
@@ -40,6 +40,7 @@
 
   padding: 20px 14px;
   overflow-y: auto;
+  overflow-x: hidden;
   z-index: 10;
 
   background:
@@ -51,6 +52,7 @@
     #070a14;
 
   border-right: 1px solid rgba(255, 255, 255, 0.07);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease;
 }
 
 /* Custom scrollbar for sidebar */
@@ -77,20 +79,55 @@
 .companies-sidebar-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   margin-bottom: 20px;
   padding: 0 4px;
 }
 
+.companies-sidebar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 .companies-sidebar-header span {
   color: #25d6ff;
   font-size: 18px;
+  flex-shrink: 0;
 }
 
 .companies-sidebar-header h2 {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.3px;
+}
+
+/* Sidebar collapse toggle button */
+.sidebar-collapse-toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #25d6ff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-collapse-toggle:hover {
+  background: rgba(37, 214, 255, 0.15);
+  border-color: rgba(37, 214, 255, 0.35);
+  color: #ffffff;
+  transform: scale(1.06);
 }
 
 
@@ -103,6 +140,8 @@
   letter-spacing: 1.2px;
   margin-bottom: 12px;
   padding: 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 
@@ -143,6 +182,12 @@
   transition: all 0.25s ease;
 }
 
+.company-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 
 /* Company icon */
 
@@ -160,6 +205,7 @@
   color: #8c97aa;
   font-size: 12px;
   font-weight: 700;
+  flex-shrink: 0;
 
   transition: all 0.25s ease;
 }
@@ -196,6 +242,44 @@
   color: #ffffff;
   box-shadow: 0 0 10px rgba(37, 214, 255, 0.35);
 }
+
+
+/* =========================================
+   COLLAPSED SIDEBAR STATE
+========================================= */
+
+.companies-sidebar.collapsed {
+  width: 66px;
+  padding: 20px 8px;
+}
+
+.companies-sidebar.collapsed .companies-sidebar-header {
+  justify-content: center;
+  padding: 0;
+}
+
+.companies-sidebar.collapsed .companies-sidebar-title {
+  display: none;
+}
+
+.companies-sidebar.collapsed .company-sidebar-btn {
+  padding: 0;
+  justify-content: center;
+  width: 44px;
+  height: 42px;
+  margin: 0 auto;
+}
+
+.companies-sidebar.collapsed .company-sidebar-btn:hover {
+  transform: scale(1.08);
+}
+
+.companies-sidebar.collapsed .company-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+}
+
 
 
 /* =========================================
