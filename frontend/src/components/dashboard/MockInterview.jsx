@@ -37,11 +37,20 @@ import {
   FaStop,
   FaStar,
   FaColumns,
+  FaCheck,
+  FaTerminal,
+  FaBug,
+  FaUndo,
+  FaListAlt,
+  FaLayerGroup,
+  FaCodeBranch,
 } from "react-icons/fa";
 import { useAuth } from "../../context/useAuth";
 import { generateInterviewPDF } from "../../utils/pdfGenerator";
 import { evaluateInterview } from "../../utils/evaluator";
 import { getToken, recordLocalInterviewSession, recordLocalScheduledInterview } from "../../api";
+import { STRUCTURED_DSA_BY_ROLE } from "../../utils/dsaQuestions";
+import { runTestCases } from "../../utils/codeRunner";
 import aiBotImage from "../../assets/ai_bot.jpg";
 
 const COMPANIES = [
@@ -282,7 +291,7 @@ const DSA_BY_ROLE = {
 
 function generate20Questions(companyName, roleName) {
   const r1 = APTITUDE_QUESTIONS;
-  const r2 = DSA_BY_ROLE[roleName] || DSA_BY_ROLE["Frontend Developer"];
+  const r2 = STRUCTURED_DSA_BY_ROLE[roleName] || STRUCTURED_DSA_BY_ROLE["Frontend Developer"];
   const r3 = [
     {
       id: 11,
@@ -442,6 +451,18 @@ function MockInterview({ onInterviewCompleted }) {
   const [showScreenExpanded, setShowScreenExpanded] = useState(false);
   const [aiSpeechState, setAiSpeechState] = useState("observing"); // observing | analyzing | listening
   const [editorScreenMode, setEditorScreenMode] = useState("normal"); // "normal" | "half" | "max"
+
+  // DSA & Coding Live Execution States
+  const [selectedLanguage, setSelectedLanguage] = useState("javascript");
+  const [activeTestCaseTab, setActiveTestCaseTab] = useState(0);
+  const [testcaseSubTab, setTestcaseSubTab] = useState("testcase"); // "testcase" | "result"
+  const [isConsoleDrawerOpen, setIsConsoleDrawerOpen] = useState(true);
+  const [testResultsMap, setTestResultsMap] = useState({});
+  const [isRunningTests, setIsRunningTests] = useState(false);
+  const [submittedCodeMap, setSubmittedCodeMap] = useState({});
+  const [customTestInput, setCustomTestInput] = useState("");
+  const [customExpected, setCustomExpected] = useState("");
+  const [runSuccessToast, setRunSuccessToast] = useState("");
 
   // Manage Fullscreen immersion & suppress Navbar/Sidebar during active interview or max editor mode
   useEffect(() => {
@@ -954,6 +975,170 @@ function solution() {
     }
   };
 
+  // Helper to reset DSA code to language starter template
+  const handleResetDSAStarter = (q) => {
+    if (!q) return;
+    const starter = q.starter_templates?.[selectedLanguage] || q.starter_templates?.javascript || "";
+    if (starter) {
+      setAnswers((prev) => ({
+        ...prev,
+        [q.id]: starter,
+      }));
+      setRunSuccessToast("Reset to official starter boilerplate.");
+      setTimeout(() => setRunSuccessToast(""), 3000);
+    }
+  };
+
+  // Helper to change coding language
+  const handleLanguageChange = (newLang, q) => {
+    setSelectedLanguage(newLang);
+    if (q && q.starter_templates) {
+      const currentCode = answers[q.id] || "";
+      const isUnchangedOrEmpty = !currentCode.trim() || Object.values(q.starter_templates).some((tpl) => tpl.trim() === currentCode.trim());
+      if (isUnchangedOrEmpty && q.starter_templates[newLang]) {
+        setAnswers((prev) => ({
+          ...prev,
+          [q.id]: q.starter_templates[newLang],
+        }));
+      }
+    }
+  };
+
+  // 1. RUN CODE / UNIT TESTS HANDLER
+  const handleRunCodeTests = async (q) => {
+    if (!q) return;
+    const userCode = answers[q.id] || "";
+    if (!userCode.trim()) {
+      setRunSuccessToast("Please write or paste your solution before running tests.");
+      setTimeout(() => setRunSuccessToast(""), 3500);
+      return;
+    }
+
+    setIsRunningTests(true);
+    setAiSpeechState("analyzing");
+    setTestcaseSubTab("result");
+    setIsConsoleDrawerOpen(true);
+
+    try {
+      const testSuite = q.test_cases || [];
+      const functionName = q.function_name || "solution";
+
+      // Execute locally with resilient sandboxed runner
+      const results = await runTestCases(userCode, functionName, testSuite, selectedLanguage);
+
+      setTestResultsMap((prev) => ({
+        ...prev,
+        [q.id]: results,
+      }));
+
+      if (results.success) {
+        setRunSuccessToast(`✓ All ${results.passedCount}/${results.totalCount} test cases passed! (${results.executionTimeMs}ms)`);
+      } else {
+        setRunSuccessToast(`⚠️ ${results.passedCount}/${results.totalCount} test cases passed. Review diagnostics below.`);
+      }
+      setTimeout(() => setRunSuccessToast(""), 4500);
+    } catch (err) {
+      console.error("Test execution failed:", err);
+      setRunSuccessToast("Execution error: " + (err.message || String(err)));
+      setTimeout(() => setRunSuccessToast(""), 4000);
+    } finally {
+      setIsRunningTests(false);
+      setAiSpeechState("observing");
+    }
+  };
+
+  // 2. SUBMIT CODE SOLUTION HANDLER
+  const handleSubmitCodeSolution = async (q) => {
+    if (!q) return;
+    const userCode = answers[q.id] || "";
+    if (!userCode.trim()) {
+      alert("Please write your code solution before submitting.");
+      return;
+    }
+
+    setIsRunningTests(true);
+    setAiSpeechState("analyzing");
+    setTestcaseSubTab("result");
+    setIsConsoleDrawerOpen(true);
+
+    try {
+      const testSuite = q.test_cases || [];
+      const functionName = q.function_name || "solution";
+
+      const results = await runTestCases(userCode, functionName, testSuite, selectedLanguage);
+
+      setTestResultsMap((prev) => ({
+        ...prev,
+        [q.id]: results,
+      }));
+
+      setSubmittedCodeMap((prev) => ({
+        ...prev,
+        [q.id]: true,
+      }));
+
+      if (results.passedCount === results.totalCount) {
+        setRunSuccessToast(`🎉 Solution Accepted! ${results.passedCount}/${results.totalCount} Test Cases Passed.`);
+      } else {
+        setRunSuccessToast(`📝 Code Solution Submitted (${results.passedCount}/${results.totalCount} test cases passed).`);
+      }
+      setTimeout(() => setRunSuccessToast(""), 4500);
+    } catch (err) {
+      setRunSuccessToast("Submission error: " + (err.message || String(err)));
+      setTimeout(() => setRunSuccessToast(""), 4000);
+    } finally {
+      setIsRunningTests(false);
+      setAiSpeechState("observing");
+    }
+  };
+
+  // 3. RUN CUSTOM TEST CASE HANDLER
+  const handleRunCustomTest = async (q) => {
+    if (!q) return;
+    const userCode = answers[q.id] || "";
+    if (!userCode.trim()) return;
+
+    let parsedInput;
+    try {
+      parsedInput = JSON.parse(customTestInput);
+    } catch {
+      parsedInput = customTestInput;
+    }
+
+    let parsedExpected;
+    try {
+      parsedExpected = JSON.parse(customExpected);
+    } catch {
+      parsedExpected = customExpected;
+    }
+
+    const customTC = [
+      {
+        id: 999,
+        name: "Custom Test Case",
+        input: parsedInput,
+        inputStr: customTestInput || "Custom Input",
+        expectedOutput: parsedExpected,
+        expectedOutputStr: customExpected || "Custom Expected",
+        isHidden: false,
+      },
+    ];
+
+    setIsRunningTests(true);
+    try {
+      const results = await runTestCases(userCode, q.function_name || "solution", customTC, selectedLanguage);
+      setTestResultsMap((prev) => ({
+        ...prev,
+        [q.id]: {
+          ...(prev[q.id] || {}),
+          customResult: results.results?.[0],
+        },
+      }));
+    } finally {
+      setIsRunningTests(false);
+    }
+  };
+
   // Countdown timer during active interview
   useEffect(() => {
     let timer = null;
@@ -1052,6 +1237,8 @@ function solution() {
     setTimeLeft(60 * 60); // 60 minutes for 20 questions
     setSessionStartTime(Date.now());
     setAiSpeechState("observing");
+    setTestResultsMap({});
+    setSubmittedCodeMap({});
 
     const token = getToken();
     const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
@@ -1089,7 +1276,11 @@ function solution() {
     setSessionQuestions(fetchedQuestions);
     const initialAns = {};
     fetchedQuestions.forEach((q) => {
-      initialAns[q.id] = "";
+      if (q.starter_templates && q.starter_templates.javascript) {
+        initialAns[q.id] = q.starter_templates.javascript;
+      } else {
+        initialAns[q.id] = "";
+      }
     });
     setAnswers(initialAns);
     setInterviewActive(true);
@@ -1111,6 +1302,7 @@ function solution() {
       question_id: q.id,
       question: q.question,
       answer: answers[q.id] || "No answer provided.",
+      test_results: testResultsMap[q.id] || null,
     }));
 
     const token = getToken();
@@ -2002,223 +2194,667 @@ function solution() {
                             })}
                           </div>
 
-                          {/* Question Prompt Card */}
-                          <div className={`cockpit-question-box ${currentRoundIdx === 3 ? "hr-round-box" : ""}`}>
-                            <div className="question-box-header">
-                              <div className="q-badge-group">
-                                <span className="round-badge">
-                                  {activeRound.icon} Round {activeRound.id}/4: {activeRound.title}
-                                </span>
-                                <span className="q-badge">
-                                  Question {currentQIndex + 1} of {sessionQuestions.length} • {sessionQuestions[currentQIndex]?.category}
-                                </span>
-                              </div>
-
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                {sessionQuestions[currentQIndex]?.hint && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setShowHint(!showHint)}
-                                    className="hint-toggle-btn"
-                                  >
-                                    <FaLightbulb />
-                                    {showHint ? "Hide Guidance" : "💡 View Guidance"}
-                                  </button>
-                                )}
-                              </div>
+                          {/* Top Run / Submission Toast Notification */}
+                          {runSuccessToast && (
+                            <div className="cockpit-toast-banner animate-fade-in">
+                              <span>{runSuccessToast}</span>
                             </div>
+                          )}
 
-                            {/* HR & CULTURE AUDIO QUESTION NARRATOR BAR */}
-                            {currentRoundIdx === 3 && (
-                              <div className={`hr-audio-question-banner ${isSpeakingQuestion ? "speaking" : ""}`}>
-                                <div className="hr-audio-status-wrap">
-                                  <div className={`hr-audio-eq-bars ${isSpeakingQuestion ? "active" : ""}`}>
-                                    <span className="eq-bar bar-1"></span>
-                                    <span className="eq-bar bar-2"></span>
-                                    <span className="eq-bar bar-3"></span>
-                                    <span className="eq-bar bar-4"></span>
-                                    <span className="eq-bar bar-5"></span>
+                          {/* ================= QUESTION PROMPT / DSA PROBLEM CARD ================= */}
+                          {(() => {
+                            const curQ = sessionQuestions[currentQIndex];
+                            const isDSA = currentRoundIdx === 1 || (curQ?.test_cases && curQ.test_cases.length > 0);
+                            const qTestResults = testResultsMap[curQ?.id];
+                            const isSubmitted = !!submittedCodeMap[curQ?.id];
+
+                            return (
+                              <>
+                                <div className={`cockpit-question-box ${currentRoundIdx === 3 ? "hr-round-box" : ""} ${isDSA ? "dsa-structured-box" : ""}`}>
+                                  <div className="question-box-header">
+                                    <div className="q-badge-group">
+                                      <span className="round-badge">
+                                        {activeRound.icon} Round {activeRound.id}/4: {activeRound.title}
+                                      </span>
+                                      <span className="q-badge">
+                                        Question {currentQIndex + 1} of {sessionQuestions.length} • {curQ?.category}
+                                      </span>
+                                      {curQ?.difficulty && (
+                                        <span className={`dsa-diff-pill ${curQ.difficulty.toLowerCase()}`}>
+                                          {curQ.difficulty}
+                                        </span>
+                                      )}
+                                      {isSubmitted && (
+                                        <span className="dsa-solved-pill">
+                                          <FaCheck /> Solved & Verified
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                      {curQ?.hint && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setShowHint(!showHint)}
+                                          className="hint-toggle-btn"
+                                        >
+                                          <FaLightbulb />
+                                          {showHint ? "Hide Guidance" : "💡 View Guidance"}
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="hr-audio-text-info">
-                                    <span className="hr-audio-state-tag">
-                                      {isSpeakingQuestion ? "🎙️ AI HR Interviewer Asking Question (Audio Live)..." : "🔊 Audio Question Narrator Ready"}
-                                    </span>
-                                    <small>Round 4 requires answering in both spoken audio and text.</small>
-                                  </div>
+
+                                  {/* HR AUDIO NARRATOR (Round 4) */}
+                                  {currentRoundIdx === 3 && (
+                                    <div className={`hr-audio-question-banner ${isSpeakingQuestion ? "speaking" : ""}`}>
+                                      <div className="hr-audio-status-wrap">
+                                        <div className={`hr-audio-eq-bars ${isSpeakingQuestion ? "active" : ""}`}>
+                                          <span className="eq-bar bar-1"></span>
+                                          <span className="eq-bar bar-2"></span>
+                                          <span className="eq-bar bar-3"></span>
+                                          <span className="eq-bar bar-4"></span>
+                                          <span className="eq-bar bar-5"></span>
+                                        </div>
+                                        <div className="hr-audio-text-info">
+                                          <span className="hr-audio-state-tag">
+                                            {isSpeakingQuestion ? "🎙️ AI HR Interviewer Asking Question (Audio Live)..." : "🔊 Audio Question Narrator Ready"}
+                                          </span>
+                                          <small>Round 4 requires answering in both spoken audio and text.</small>
+                                        </div>
+                                      </div>
+
+                                      <div className="hr-audio-controls-row">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (isSpeakingQuestion) {
+                                              stopQuestionAudio();
+                                            } else {
+                                              speakQuestionAudio(`Question ${currentQIndex + 1}. ${curQ?.question}`);
+                                            }
+                                          }}
+                                          className={`hr-audio-action-btn ${isSpeakingQuestion ? "stop" : "play"}`}
+                                        >
+                                          {isSpeakingQuestion ? <FaStop /> : <FaVolumeUp />}
+                                          {isSpeakingQuestion ? "Stop Audio" : "Listen to Question"}
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => setAutoPlayAudio(!autoPlayAudio)}
+                                          className={`hr-autoplay-toggle-btn ${autoPlayAudio ? "active" : ""}`}
+                                          title="Automatically speak each HR question when navigated to"
+                                        >
+                                          ⚡ Auto-Speak: <strong>{autoPlayAudio ? "ON" : "OFF"}</strong>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Question Title & Description */}
+                                  {curQ?.title && (
+                                    <h3 className="dsa-problem-title">
+                                      {curQ.title}
+                                    </h3>
+                                  )}
+                                  <p className="question-prompt-text">
+                                    {curQ?.description || curQ?.question}
+                                  </p>
+
+                                  {/* Structured Examples (For DSA / Coding Questions) */}
+                                  {curQ?.examples && curQ.examples.length > 0 && (
+                                    <div className="dsa-examples-container">
+                                      <span className="dsa-section-label">📋 Examples:</span>
+                                      <div className="dsa-examples-grid">
+                                        {curQ.examples.map((ex, exIdx) => (
+                                          <div key={exIdx} className="dsa-example-card">
+                                            <div className="dsa-example-header">Example {exIdx + 1}:</div>
+                                            <div className="dsa-example-body">
+                                              <div className="dsa-io-row">
+                                                <strong>Input:</strong> <code>{ex.input}</code>
+                                              </div>
+                                              <div className="dsa-io-row">
+                                                <strong>Output:</strong> <code>{ex.output}</code>
+                                              </div>
+                                              {ex.explanation && (
+                                                <div className="dsa-io-row explanation">
+                                                  <strong>Explanation:</strong> <span>{ex.explanation}</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Constraints Pills */}
+                                  {curQ?.constraints && curQ.constraints.length > 0 && (
+                                    <div className="dsa-constraints-container">
+                                      <span className="dsa-section-label">⚡ Constraints & Complexity:</span>
+                                      <div className="dsa-constraints-wrap">
+                                        {curQ.constraints.map((cStr, cIdx) => (
+                                          <span key={cIdx} className="dsa-constraint-pill">
+                                            • {cStr}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {showHint && curQ?.hint && (
+                                    <div className="hint-revealed-box">
+                                      💡 <strong>Interviewer Guidance:</strong> {curQ.hint}
+                                    </div>
+                                  )}
                                 </div>
 
-                                <div className="hr-audio-controls-row">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (isSpeakingQuestion) {
-                                        stopQuestionAudio();
-                                      } else {
-                                        speakQuestionAudio(`Question ${currentQIndex + 1}. ${sessionQuestions[currentQIndex]?.question}`);
-                                      }
+                                {/* ================= CODE / SOLUTION EDITOR CONTAINER ================= */}
+                                <div className={`solution-editor-container ${currentRoundIdx === 3 ? "hr-editor-mode" : ""} ${isDSA ? "dsa-editor-mode" : ""} editor-screen-${editorScreenMode}`}>
+                                  {currentRoundIdx === 3 && (
+                                    <div className="hr-dual-mode-banner">
+                                      <div className="hr-banner-left">
+                                        <span className="hr-mode-badge">🎙️ Audio + ✍️ Text Response Active</span>
+                                        <span className="hr-mode-desc">Speak naturally with your microphone or type your structured STAR response. Both are synchronized.</span>
+                                      </div>
+                                      {isDictating && (
+                                        <div className="hr-live-recording-badge">
+                                          <span className="live-pulse-dot"></span>
+                                          Listening & Transcribing Live...
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  <div className="editor-header">
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                                      {isDSA ? (
+                                        <>
+                                          <div className="dsa-lang-selector-wrap">
+                                            <FaCode style={{ color: "#38bdf8" }} />
+                                            <select
+                                              value={selectedLanguage}
+                                              onChange={(e) => handleLanguageChange(e.target.value, curQ)}
+                                              className="dsa-lang-select"
+                                            >
+                                              <option value="javascript">JavaScript (Live Sandbox)</option>
+                                              <option value="python">Python 3</option>
+                                              <option value="cpp">C++ (GCC)</option>
+                                              <option value="java">Java 17</option>
+                                            </select>
+                                          </div>
+                                          {isSubmitted && (
+                                            <span className="editor-verified-badge">
+                                              <FaCheckCircle /> Solution Submitted
+                                            </span>
+                                          )}
+                                        </>
+                                      ) : currentRoundIdx === 3 ? (
+                                        <>
+                                          <FaMicrophone style={{ color: "#38bdf8" }} />
+                                          <label>Your HR Voice & Text Response:</label>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <FaCode style={{ color: "#38bdf8" }} />
+                                          <label>Your Structured Solution & Response:</label>
+                                        </>
+                                      )}
+                                    </div>
+
+                                    {/* Actions Toolbar */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                      {/* Sizing Pills: Normal / Half / Max */}
+                                      <div className="editor-screen-mode-pills">
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditorScreenMode("normal")}
+                                          className={`editor-mode-pill-btn ${editorScreenMode === "normal" ? "active" : ""}`}
+                                          title="Standard Split View"
+                                        >
+                                          <FaDesktop /> Normal
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditorScreenMode("half")}
+                                          className={`editor-mode-pill-btn ${editorScreenMode === "half" ? "active" : ""}`}
+                                          title="50% Half Screen Editor"
+                                        >
+                                          <FaColumns /> Half
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditorScreenMode("max")}
+                                          className={`editor-mode-pill-btn ${editorScreenMode === "max" ? "active" : ""}`}
+                                          title="Maximize Full Viewport Code Editor"
+                                        >
+                                          <FaExpand /> Max
+                                        </button>
+                                      </div>
+
+                                      {isDSA && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleResetDSAStarter(curQ)}
+                                          className="editor-tool-btn"
+                                          title="Reset to Starter Code"
+                                        >
+                                          <FaUndo /> Reset
+                                        </button>
+                                      )}
+
+                                      {currentRoundIdx === 3 ? (
+                                        <button
+                                          type="button"
+                                          onClick={handleInsertSTARTemplate}
+                                          className="editor-tool-btn star-btn"
+                                          title="Insert STAR Template"
+                                        >
+                                          <FaStar style={{ color: "#fbbf24" }} /> STAR Template
+                                        </button>
+                                      ) : !isDSA ? (
+                                        <button
+                                          type="button"
+                                          onClick={handleInsertTemplate}
+                                          className="editor-tool-btn"
+                                          title="Insert Solution Template"
+                                        >
+                                          <FaFileAlt /> Template
+                                        </button>
+                                      ) : null}
+
+                                      <button
+                                        type="button"
+                                        onClick={handleClearAnswer}
+                                        className="editor-tool-btn clear"
+                                        title="Clear Response"
+                                      >
+                                        <FaTrashAlt />
+                                      </button>
+
+                                      {/* DSA RUN & SUBMIT BUTTONS */}
+                                      {isDSA ? (
+                                        <div className="dsa-execution-btn-cluster">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRunCodeTests(curQ)}
+                                            disabled={isRunningTests}
+                                            className="dsa-run-code-btn"
+                                            title="Run code against visible and custom test cases"
+                                          >
+                                            {isRunningTests ? <FaSpinner className="fa-spin" /> : <FaPlay />}
+                                            {isRunningTests ? "Running Tests..." : "Run Code"}
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSubmitCodeSolution(curQ)}
+                                            disabled={isRunningTests}
+                                            className={`dsa-submit-solution-btn ${isSubmitted ? "already-submitted" : ""}`}
+                                            title="Submit solution for formal evaluation against all test suites"
+                                          >
+                                            <FaCheckCircle />
+                                            {isSubmitted ? "✓ Submitted" : "Submit Code"}
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        /* VOICE DICTATION (Non-DSA rounds) */
+                                        <button
+                                          type="button"
+                                          onClick={toggleVoiceDictation}
+                                          className={`voice-dictation-btn ${isDictating ? "active pulse" : ""} ${currentRoundIdx === 3 ? "hr-primary-voice" : ""}`}
+                                          title="Record your voice response with real-time speech transcription"
+                                        >
+                                          <FaMicrophone className={isDictating ? "pulse-dot" : ""} />
+                                          {isDictating ? "🎙️ Recording..." : currentRoundIdx === 3 ? "🎙️ Answer with Voice" : "🎙️ Dictate"}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Code Textarea */}
+                                  <textarea
+                                    rows={isDSA ? 12 : currentRoundIdx === 3 ? 11 : 10}
+                                    value={answers[curQ?.id] || ""}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setAnswers((prev) => ({
+                                        ...prev,
+                                        [curQ.id]: val,
+                                      }));
                                     }}
-                                    className={`hr-audio-action-btn ${isSpeakingQuestion ? "stop" : "play"}`}
-                                  >
-                                    {isSpeakingQuestion ? <FaStop /> : <FaVolumeUp />}
-                                    {isSpeakingQuestion ? "Stop Audio" : "Listen to Question"}
-                                  </button>
+                                    placeholder={
+                                      isDSA
+                                        ? `// Write your ${selectedLanguage} solution here...\n// Function signature: ${curQ?.function_name || "solution"}(...)`
+                                        : currentRoundIdx === 3
+                                        ? "// Speak into your microphone (click 'Answer with Voice' above) or type your response here...\n// [Situation]: Outline the specific scenario or production challenge.\n// [Task]: What was your goal and ownership?\n// [Action]: What concrete technical and leadership steps did you take?\n// [Result]: What was the measurable impact and takeaway?"
+                                        : "// Type or voice-dictate your structured response here:\n// 1. High-Level Technical Approach\n// 2. Implementation & Architecture\n// 3. Time/Space Complexity O(...) & Trade-offs\n// 4. Edge Cases, Resiliency & Scale..."
+                                    }
+                                    className={`technical-code-textarea ${isDSA ? "dsa-code-mono" : ""}`}
+                                    spellCheck={false}
+                                  />
 
-                                  <button
-                                    type="button"
-                                    onClick={() => setAutoPlayAudio(!autoPlayAudio)}
-                                    className={`hr-autoplay-toggle-btn ${autoPlayAudio ? "active" : ""}`}
-                                    title="Automatically speak each HR question when navigated to"
-                                  >
-                                    ⚡ Auto-Speak: <strong>{autoPlayAudio ? "ON" : "OFF"}</strong>
-                                  </button>
-                                </div>
-                              </div>
-                            )}
+                                  {/* ================= LEETCODE-STYLE TEST CASES & RESULTS DRAWER (DSA Round) ================= */}
+                                  {isDSA && curQ?.test_cases && curQ.test_cases.length > 0 && (
+                                    <div className={`lc-testcase-drawer ${isConsoleDrawerOpen ? "open" : "collapsed"}`}>
+                                      {/* Drawer Top Tab Bar (Testcase / Test Result) */}
+                                      <div className="lc-drawer-top-tabs">
+                                        <div className="lc-tabs-left">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setTestcaseSubTab("testcase");
+                                              setIsConsoleDrawerOpen(true);
+                                            }}
+                                            className={`lc-subtab-btn ${testcaseSubTab === "testcase" ? "active" : ""}`}
+                                          >
+                                            <FaListAlt className="lc-subtab-icon" /> Testcase
+                                          </button>
 
-                            <h3 className="question-prompt-text">
-                              {sessionQuestions[currentQIndex]?.question}
-                            </h3>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setTestcaseSubTab("result");
+                                              setIsConsoleDrawerOpen(true);
+                                            }}
+                                            className={`lc-subtab-btn ${testcaseSubTab === "result" ? "active" : ""}`}
+                                          >
+                                            <FaTerminal className="lc-subtab-icon" /> Test Result
+                                            {qTestResults && (
+                                              <span className={`lc-tab-badge ${qTestResults.success ? "success" : "fail"}`}>
+                                                {qTestResults.passedCount}/{qTestResults.totalCount}
+                                              </span>
+                                            )}
+                                          </button>
+                                        </div>
 
-                            {showHint && sessionQuestions[currentQIndex]?.hint && (
-                              <div className="hint-revealed-box">
-                                💡 <strong>Interviewer Guidance:</strong> {sessionQuestions[currentQIndex].hint}
-                              </div>
-                            )}
-                          </div>
+                                        <div className="lc-tabs-right">
+                                          <button
+                                            type="button"
+                                            onClick={() => setIsConsoleDrawerOpen(!isConsoleDrawerOpen)}
+                                            className="lc-collapse-toggle-btn"
+                                            title={isConsoleDrawerOpen ? "Collapse Console Drawer" : "Expand Console Drawer"}
+                                          >
+                                            {isConsoleDrawerOpen ? "▼ Collapse" : "▲ Expand Console"}
+                                          </button>
+                                        </div>
+                                      </div>
 
-                          {/* Solution Code / Text Editor Box */}
-                          <div className={`solution-editor-container ${currentRoundIdx === 3 ? "hr-editor-mode" : ""} editor-screen-${editorScreenMode}`}>
-                            {currentRoundIdx === 3 && (
-                              <div className="hr-dual-mode-banner">
-                                <div className="hr-banner-left">
-                                  <span className="hr-mode-badge">🎙️ Audio + ✍️ Text Response Active</span>
-                                  <span className="hr-mode-desc">Speak naturally with your microphone or type your structured STAR response. Both are synchronized.</span>
-                                </div>
-                                {isDictating && (
-                                  <div className="hr-live-recording-badge">
-                                    <span className="live-pulse-dot"></span>
-                                    Listening & Transcribing Live...
+                                      {/* Drawer Main Body */}
+                                      {isConsoleDrawerOpen && (
+                                        <div className="lc-drawer-content animate-fade-in">
+                                          {/* ================= SUBTAB 1: TESTCASE ================= */}
+                                          {testcaseSubTab === "testcase" && (
+                                            <div className="lc-testcase-view">
+                                              {/* Case Pills */}
+                                              <div className="lc-case-pills-row">
+                                                {curQ.test_cases.map((tc, tcIdx) => (
+                                                  <button
+                                                    key={tc.id || tcIdx}
+                                                    type="button"
+                                                    onClick={() => setActiveTestCaseTab(tcIdx)}
+                                                    className={`lc-case-pill ${activeTestCaseTab === tcIdx ? "active" : ""}`}
+                                                  >
+                                                    Case {tcIdx + 1}
+                                                  </button>
+                                                ))}
+
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setActiveTestCaseTab("custom")}
+                                                  className={`lc-case-pill custom-add ${activeTestCaseTab === "custom" ? "active" : ""}`}
+                                                  title="Add Custom Test Case"
+                                                >
+                                                  + Custom Case
+                                                </button>
+                                              </div>
+
+                                              {/* Active Case Parameter Breakdown */}
+                                              {activeTestCaseTab !== "custom" && curQ.test_cases[activeTestCaseTab] && (() => {
+                                                const tc = curQ.test_cases[activeTestCaseTab];
+                                                const rawInput = tc.input;
+                                                const isArrayInput = Array.isArray(rawInput);
+
+                                                return (
+                                                  <div className="lc-case-inputs-body">
+                                                    <div className="lc-param-block">
+                                                      <span className="lc-param-label">Input:</span>
+                                                      <div className="lc-param-value-card">
+                                                        <pre>{tc.inputStr || (isArrayInput ? JSON.stringify(rawInput) : JSON.stringify(rawInput, null, 2))}</pre>
+                                                      </div>
+                                                    </div>
+
+                                                    <div className="lc-param-block">
+                                                      <span className="lc-param-label">Expected Output:</span>
+                                                      <div className="lc-param-value-card expected">
+                                                        <pre>{tc.expectedOutputStr || JSON.stringify(tc.expectedOutput)}</pre>
+                                                      </div>
+                                                    </div>
+
+                                                    {tc.explanation && (
+                                                      <div className="lc-case-explanation">
+                                                        <span>💡 <strong>Note:</strong> {tc.explanation}</span>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                );
+                                              })()}
+
+                                              {/* Custom Input Tab */}
+                                              {activeTestCaseTab === "custom" && (
+                                                <div className="lc-custom-case-editor">
+                                                  <div className="lc-custom-grid">
+                                                    <div className="lc-custom-col">
+                                                      <label>Custom Input Parameters:</label>
+                                                      <textarea
+                                                        rows={3}
+                                                        value={customTestInput}
+                                                        onChange={(e) => setCustomTestInput(e.target.value)}
+                                                        placeholder='e.g. [[1, 2, 3, 5, 6, 8, 9, 10]] or [4, [[0,1],[1,2]]]'
+                                                        className="lc-custom-textarea"
+                                                      />
+                                                    </div>
+                                                    <div className="lc-custom-col">
+                                                      <label>Expected Output (Optional):</label>
+                                                      <textarea
+                                                        rows={3}
+                                                        value={customExpected}
+                                                        onChange={(e) => setCustomExpected(e.target.value)}
+                                                        placeholder='e.g. 5 or [0, 5, 7, 11]'
+                                                        className="lc-custom-textarea"
+                                                      />
+                                                    </div>
+                                                  </div>
+
+                                                  <div className="lc-custom-footer-actions">
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleRunCustomTest(curQ)}
+                                                      disabled={isRunningTests || !customTestInput.trim()}
+                                                      className="lc-run-custom-action-btn"
+                                                    >
+                                                      {isRunningTests ? <FaSpinner className="fa-spin" /> : <FaPlay />} Run Custom Input
+                                                    </button>
+
+                                                    {qTestResults?.customResult && (
+                                                      <div className={`lc-custom-feedback ${qTestResults.customResult.passed ? "passed" : "failed"}`}>
+                                                        <span>Actual Output: <code>{qTestResults.customResult.actual}</code></span>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {/* ================= SUBTAB 2: TEST RESULT ================= */}
+                                          {testcaseSubTab === "result" && (
+                                            <div className="lc-testresult-view">
+                                              {!qTestResults ? (
+                                                <div className="lc-empty-result-state">
+                                                  <FaTerminal style={{ fontSize: "28px", color: "#64748b", marginBottom: "8px" }} />
+                                                  <h4>You must run your code first.</h4>
+                                                  <p>Click the <strong>Run Code</strong> button below to execute your solution against all test suites.</p>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleRunCodeTests(curQ)}
+                                                    disabled={isRunningTests}
+                                                    className="dsa-run-code-btn"
+                                                    style={{ marginTop: "12px" }}
+                                                  >
+                                                    {isRunningTests ? <FaSpinner className="fa-spin" /> : <FaPlay />} Run Code
+                                                  </button>
+                                                </div>
+                                              ) : (
+                                                <div className="lc-result-populated-wrap">
+                                                  {/* LeetCode Verdict Header */}
+                                                  <div className="lc-verdict-header">
+                                                    <div className="lc-verdict-main">
+                                                      {qTestResults.passedCount === qTestResults.totalCount ? (
+                                                        <div className="lc-verdict-title accepted">
+                                                          <span>Accepted</span>
+                                                          <small className="lc-runtime-tag">Runtime: {qTestResults.executionTimeMs} ms</small>
+                                                        </div>
+                                                      ) : (
+                                                        <div className="lc-verdict-title wrong-answer">
+                                                          <span>Wrong Answer</span>
+                                                          <small className="lc-runtime-tag">{qTestResults.passedCount} / {qTestResults.totalCount} testcases passed</small>
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  </div>
+
+                                                  {/* Result Case Selector Pills */}
+                                                  <div className="lc-result-pills-row">
+                                                    {curQ.test_cases.map((tc, tcIdx) => {
+                                                      const tcResult = qTestResults.results?.find((r) => r.id === tc.id || r.name === tc.name);
+                                                      const isPassed = tcResult?.passed;
+                                                      const isFailed = tcResult && !tcResult.passed;
+
+                                                      return (
+                                                        <button
+                                                          key={tc.id || tcIdx}
+                                                          type="button"
+                                                          onClick={() => setActiveTestCaseTab(tcIdx)}
+                                                          className={`lc-result-case-pill ${activeTestCaseTab === tcIdx ? "active" : ""} ${isPassed ? "passed" : isFailed ? "failed" : ""}`}
+                                                        >
+                                                          <span className={`lc-status-dot ${isPassed ? "pass" : "fail"}`}>
+                                                            {isPassed ? "✓" : "✗"}
+                                                          </span>
+                                                          Case {tcIdx + 1}
+                                                        </button>
+                                                      );
+                                                    })}
+                                                  </div>
+
+                                                  {/* Selected Case Result Comparison */}
+                                                  {activeTestCaseTab !== "custom" && curQ.test_cases[activeTestCaseTab] && (() => {
+                                                    const tc = curQ.test_cases[activeTestCaseTab];
+                                                    const tcResult = qTestResults.results?.find((r) => r.id === tc.id || r.name === tc.name);
+
+                                                    return (
+                                                      <div className="lc-result-comparison-cards">
+                                                        <div className="lc-result-card">
+                                                          <span className="lc-card-label">Input:</span>
+                                                          <div className="lc-card-content">
+                                                            <pre>{tc.inputStr || JSON.stringify(tc.input, null, 2)}</pre>
+                                                          </div>
+                                                        </div>
+
+                                                        <div className="lc-result-card">
+                                                          <span className="lc-card-label">Output:</span>
+                                                          <div className={`lc-card-content ${tcResult?.passed ? "output-pass" : "output-fail"}`}>
+                                                            <pre>{tcResult ? tcResult.actual : "Pending execution"}</pre>
+                                                          </div>
+                                                        </div>
+
+                                                        <div className="lc-result-card">
+                                                          <span className="lc-card-label">Expected:</span>
+                                                          <div className="lc-card-content expected">
+                                                            <pre>{tc.expectedOutputStr || JSON.stringify(tc.expectedOutput, null, 2)}</pre>
+                                                          </div>
+                                                        </div>
+
+                                                        {/* Stdout Console Stream */}
+                                                        {qTestResults.logs && qTestResults.logs.length > 0 && (
+                                                          <div className="lc-result-card stdout">
+                                                            <span className="lc-card-label">Stdout:</span>
+                                                            <div className="lc-stdout-box">
+                                                              {qTestResults.logs.map((log, lIdx) => (
+                                                                <div key={lIdx} className="lc-stdout-line">
+                                                                  {log}
+                                                                </div>
+                                                              ))}
+                                                            </div>
+                                                          </div>
+                                                        )}
+                                                      </div>
+                                                    );
+                                                  })()}
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* LeetCode Bottom Drawer Action Bar */}
+                                      <div className="lc-drawer-bottom-bar">
+                                        <div className="lc-bottom-bar-left">
+                                          <button
+                                            type="button"
+                                            onClick={() => setIsConsoleDrawerOpen(!isConsoleDrawerOpen)}
+                                            className="lc-console-toggle-btn"
+                                          >
+                                            <FaTerminal className="console-icon" /> Console {isConsoleDrawerOpen ? "▼" : "▲"}
+                                          </button>
+                                        </div>
+
+                                        <div className="lc-bottom-bar-right">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRunCodeTests(curQ)}
+                                            disabled={isRunningTests}
+                                            className="lc-action-run-btn"
+                                            title="Run code against test cases"
+                                          >
+                                            {isRunningTests ? <FaSpinner className="fa-spin" /> : <FaPlay />}
+                                            {isRunningTests ? "Running..." : "Run"}
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSubmitCodeSolution(curQ)}
+                                            disabled={isRunningTests}
+                                            className={`lc-action-submit-btn ${isSubmitted ? "submitted" : ""}`}
+                                            title="Submit solution for formal evaluation"
+                                          >
+                                            <FaCheckCircle />
+                                            {isSubmitted ? "Submitted" : "Submit"}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Editor Stats Footer */}
+                                  <div className="editor-stats-footer">
+                                    <span>Words: <strong>{wordCount}</strong> | Chars: <strong>{charCount}</strong></span>
+                                    {isDSA ? (
+                                      <span className="dsa-footer-hint">
+                                        ✦ LeetCode Assessment Sandbox • Tests verified in real-time
+                                      </span>
+                                    ) : currentRoundIdx === 3 ? (
+                                      <span className="hr-footer-hint">✦ Audio Speech & Written Text Synchronized • STAR Evaluation</span>
+                                    ) : (
+                                      <span>✦ Round {activeRound.id} of 4 ({activeRound.range})</span>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            )}
-
-                            <div className="editor-header">
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                {currentRoundIdx === 3 ? (
-                                  <>
-                                    <FaMicrophone style={{ color: "#38bdf8" }} />
-                                    <label>Your HR Voice & Text Response:</label>
-                                  </>
-                                ) : (
-                                  <>
-                                    <FaCode style={{ color: "#38bdf8" }} />
-                                    <label>Your Structured Solution & Response:</label>
-                                  </>
-                                )}
-                              </div>
-
-                              {/* Actions Toolbar */}
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                                {/* Screen Size Sizing Options: Half / Max / Normal */}
-                                <div className="editor-screen-mode-pills" style={{ display: "flex", background: "rgba(255,255,255,0.06)", padding: "2px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditorScreenMode("normal")}
-                                    className={`editor-mode-pill-btn ${editorScreenMode === "normal" ? "active" : ""}`}
-                                    title="Standard Split View"
-                                  >
-                                    <FaDesktop /> Normal
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditorScreenMode("half")}
-                                    className={`editor-mode-pill-btn ${editorScreenMode === "half" ? "active" : ""}`}
-                                    title="50% Half Screen Editor"
-                                  >
-                                    <FaColumns /> Half
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditorScreenMode("max")}
-                                    className={`editor-mode-pill-btn ${editorScreenMode === "max" ? "active" : ""}`}
-                                    title="Maximize Full Viewport Code Editor"
-                                  >
-                                    <FaExpand /> Max
-                                  </button>
                                 </div>
-
-                                {currentRoundIdx === 3 ? (
-                                  <button
-                                    type="button"
-                                    onClick={handleInsertSTARTemplate}
-                                    className="editor-tool-btn star-btn"
-                                    title="Insert STAR (Situation, Task, Action, Result) Template"
-                                  >
-                                    <FaStar style={{ color: "#fbbf24" }} /> STAR Template
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={handleInsertTemplate}
-                                    className="editor-tool-btn"
-                                    title="Insert Solution Template"
-                                  >
-                                    <FaFileAlt /> Template
-                                  </button>
-                                )}
-
-                                <button
-                                  type="button"
-                                  onClick={handleClearAnswer}
-                                  className="editor-tool-btn clear"
-                                  title="Clear Response"
-                                >
-                                  <FaTrashAlt />
-                                </button>
-
-                                {/* VOICE-TO-TEXT DICTATION BUTTON */}
-                                <button
-                                  type="button"
-                                  onClick={toggleVoiceDictation}
-                                  className={`voice-dictation-btn ${isDictating ? "active pulse" : ""} ${currentRoundIdx === 3 ? "hr-primary-voice" : ""}`}
-                                  title="Record your voice response with real-time speech transcription"
-                                >
-                                  <FaMicrophone className={isDictating ? "pulse-dot" : ""} />
-                                  {isDictating ? "🎙️ Recording..." : currentRoundIdx === 3 ? "🎙️ Answer with Voice" : "🎙️ Dictate"}
-                                </button>
-                              </div>
-                            </div>
-
-                            <textarea
-                              rows={currentRoundIdx === 3 ? 11 : 10}
-                              value={answers[sessionQuestions[currentQIndex]?.id] || ""}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setAnswers((prev) => ({
-                                  ...prev,
-                                  [sessionQuestions[currentQIndex].id]: val,
-                                }));
-                              }}
-                              placeholder={
-                                currentRoundIdx === 3
-                                  ? "// Speak into your microphone (click 'Answer with Voice' above) or type your response here...\n// [Situation]: Outline the specific scenario or production challenge.\n// [Task]: What was your goal and ownership?\n// [Action]: What concrete technical and leadership steps did you take?\n// [Result]: What was the measurable impact and takeaway?"
-                                  : "// Type or voice-dictate your structured response here:\n// 1. High-Level Technical Approach & STAR Context\n// 2. Code Implementation, Algorithms & Architecture\n// 3. Time/Space Complexity O(...) & Trade-offs\n// 4. Edge Cases, Resiliency & Scale..."
-                              }
-                              className="technical-code-textarea"
-                            />
-
-                            {/* Editor Stats Footer */}
-                            <div className="editor-stats-footer">
-                              <span>Words: <strong>{wordCount}</strong></span>
-                              <span>Characters: <strong>{charCount}</strong></span>
-                              {currentRoundIdx === 3 ? (
-                                <span className="hr-footer-hint">✦ Audio Speech & Written Text Synchronized • STAR Evaluation</span>
-                              ) : (
-                                <span>✦ Round {activeRound.id} of 4 ({activeRound.range})</span>
-                              )}
-                            </div>
-                          </div>
+                              </>
+                            );
+                          })()}
 
                           {/* Navigation & Submit Bar */}
                           <div className="cockpit-footer-actions">
@@ -2227,6 +2863,7 @@ function solution() {
                               onClick={() => {
                                 setCurrentQIndex((prev) => Math.max(prev - 1, 0));
                                 setShowHint(false);
+                                setActiveTestCaseTab(0);
                               }}
                               disabled={currentQIndex === 0}
                               className="cockpit-prev-btn"
@@ -2240,6 +2877,7 @@ function solution() {
                                 onClick={() => {
                                   setCurrentQIndex((prev) => Math.min(prev + 1, sessionQuestions.length - 1));
                                   setShowHint(false);
+                                  setActiveTestCaseTab(0);
                                 }}
                                 className="cockpit-next-btn"
                               >

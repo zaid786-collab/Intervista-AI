@@ -231,6 +231,21 @@ class StartInterviewRequest(BaseModel):
     duration_minutes: int = 45
 
 
+class TestCaseSchema(BaseModel):
+    id: Optional[int] = 1
+    name: Optional[str] = "Test Case 1"
+    inputStr: Optional[str] = None
+    expectedOutputStr: Optional[str] = None
+    isHidden: Optional[bool] = False
+    explanation: Optional[str] = None
+
+
+class ExampleSchema(BaseModel):
+    input: str
+    output: str
+    explanation: Optional[str] = None
+
+
 class InterviewQuestion(BaseModel):
     id: int
     category: str
@@ -239,6 +254,44 @@ class InterviewQuestion(BaseModel):
     round_number: Optional[int] = 1
     round_title: Optional[str] = None
     expected_key_points: Optional[List[str]] = []
+    title: Optional[str] = None
+    description: Optional[str] = None
+    difficulty: Optional[str] = "Medium"
+    examples: Optional[List[dict]] = []
+    constraints: Optional[List[str]] = []
+    test_cases: Optional[List[dict]] = []
+    starter_templates: Optional[dict] = None
+    function_name: Optional[str] = None
+
+
+class RunCodeRequest(BaseModel):
+    question_id: int
+    code: str
+    language: Optional[str] = "javascript"
+    function_name: Optional[str] = None
+    test_cases: Optional[List[dict]] = []
+
+
+class TestCaseResult(BaseModel):
+    id: int
+    name: str
+    passed: bool
+    input: str
+    expected: str
+    actual: str
+    error: Optional[str] = None
+    executionTimeMs: int = 1
+    isHidden: bool = False
+    explanation: Optional[str] = None
+
+
+class RunCodeResponse(BaseModel):
+    success: bool
+    passedCount: int
+    totalCount: int
+    results: List[TestCaseResult]
+    executionTimeMs: int
+    logs: Optional[List[str]] = []
 
 
 class StartInterviewResponse(BaseModel):

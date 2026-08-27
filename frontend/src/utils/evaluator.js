@@ -163,9 +163,25 @@ function evaluateSingleQuestion(questionObj) {
     };
   }
 
-  // 2. Keyword & Concept Detection
+  // 2. Test Case & Automated Code Execution Factor
+  const testResults = questionObj.test_results || questionObj.testResults;
+  let testScoreBonus = 0;
+  let testDiagnostics = "";
+  if (testResults && typeof testResults.totalCount === "number" && testResults.totalCount > 0) {
+    const passedRatio = testResults.passedCount / testResults.totalCount;
+    testScoreBonus = Math.round(passedRatio * 40); // Up to +40 points for test cases
+    if (testResults.passedCount === testResults.totalCount) {
+      testDiagnostics = ` All ${testResults.totalCount}/${testResults.totalCount} automated test cases passed in ${testResults.executionTimeMs || 12}ms.`;
+    } else if (testResults.passedCount > 0) {
+      testDiagnostics = ` Passed ${testResults.passedCount}/${testResults.totalCount} test cases. Some edge cases failed.`;
+    } else {
+      testDiagnostics = ` 0/${testResults.totalCount} test cases passed. Ensure function signatures and edge cases are handled.`;
+    }
+  }
+
+  // 3. Keyword & Concept Detection
   const allKeywords = rubric ? rubric.keywords : [
-    "o(1)", "o(n)", "complexity", "trade-off", "performance", "architecture", "data structure"
+    "o(1)", "o(n)", "complexity", "trade-off", "performance", "architecture", "data structure", "algorithm", "pointer", "stack", "queue", "hash", "tree", "dp", "dynamic programming", "sliding window"
   ];
 
   const matchedKeywords = allKeywords.filter((kw) => lowerAns.includes(kw));
@@ -173,14 +189,20 @@ function evaluateSingleQuestion(questionObj) {
   const hasComplexity = ["o(", "o (", "complexity", "big-o", "big o", "time complexity", "space complexity", "runtime"].some((c) => lowerAns.includes(c));
   const hasTradeoffs = ["trade-off", "tradeoff", "pros", "cons", "advantage", "disadvantage", "bottleneck", "edge case", "vs", "versus"].some((t) => lowerAns.includes(t));
   const hasStructure = ["1.", "2.", "•", "-", "step", "first", "second", "finally", "\n\n"].some((s) => ansText.includes(s));
-  const hasCodeOrTechnical = ["const", "let", "function", "class", "async", "await", "return", "()", "{}", "import", "def "].some((c) => lowerAns.includes(c));
+  const hasCodeOrTechnical = ["const", "let", "function", "class", "async", "await", "return", "()", "{}", "import", "def ", "int ", "vector"].some((c) => lowerAns.includes(c));
 
-  // 3. Strict Scoring Rubric
+  // 4. Strict Scoring Rubric
   let techScore = 0;
   let commScore = 0;
   let probScore = 0;
 
-  if (matchedKeywords.length === 0) {
+  if (testResults && testResults.totalCount > 0) {
+    // Coding / DSA question with automated runner results
+    const passRatio = testResults.passedCount / testResults.totalCount;
+    techScore = Math.min(Math.round(passRatio * 75 + matchedKeywords.length * 5 + (hasComplexity ? 10 : 0) + (hasCodeOrTechnical ? 10 : 0)), 100);
+    commScore = Math.min(Math.round(50 + (hasStructure ? 15 : 0) + wordCount * 0.4), 95);
+    probScore = Math.min(Math.round(passRatio * 80 + (hasComplexity ? 15 : 0)), 100);
+  } else if (matchedKeywords.length === 0) {
     // Answer lacks domain concepts -> Off-topic or very superficial
     techScore = Math.min(15 + wordCount * 0.4, 28);
     commScore = Math.min(25 + wordCount * 0.5, 45);
@@ -203,7 +225,7 @@ function evaluateSingleQuestion(questionObj) {
   }
 
   // Length penalties
-  if (wordCount < 12) {
+  if (wordCount < 10 && (!testResults || testResults.passedCount === 0)) {
     techScore = Math.max(techScore - 25, 10);
     commScore = Math.max(commScore - 20, 15);
     probScore = Math.max(probScore - 20, 10);
@@ -211,16 +233,16 @@ function evaluateSingleQuestion(questionObj) {
 
   const finalQScore = Math.round(0.50 * techScore + 0.30 * commScore + 0.20 * probScore);
 
-  // 4. Actionable, Contextual Feedback
+  // 5. Actionable, Contextual Feedback
   let feedbackMsg = "";
   if (finalQScore >= 85) {
-    feedbackMsg = `Outstanding technical articulation! Thoroughly addressed ${matchedKeywords.length} key concepts (${matchedKeywords.slice(0, 4).join(", ")}). Strong trade-off evaluation and structured reasoning.`;
+    feedbackMsg = `Outstanding technical execution! ${testDiagnostics} Thoroughly covered key concepts (${matchedKeywords.slice(0, 4).join(", ") || "optimal algorithms"}). Strong trade-off evaluation and structured reasoning.`;
   } else if (finalQScore >= 70) {
-    feedbackMsg = `Solid grasp of core principles (${matchedKeywords.join(", ") || "fundamental concepts"}). To reach Staff/Principal tier, explicitly discuss Big-O runtime/memory bounds and concurrency failure modes.`;
+    feedbackMsg = `Solid grasp of core principles (${matchedKeywords.join(", ") || "fundamental concepts"}). ${testDiagnostics} To reach Principal tier, optimize Big-O runtime and handle edge boundary conditions.`;
   } else if (finalQScore >= 45) {
-    feedbackMsg = `Basic conceptual understanding. Lacks technical depth and architectural mechanics. Elaborate on internal algorithms, data structures, and production trade-offs.`;
+    feedbackMsg = `Basic conceptual understanding. ${testDiagnostics} Lacks algorithmic depth. Elaborate on internal mechanics, optimal data structures, and edge cases.`;
   } else {
-    feedbackMsg = `Answer was too brief or off-topic. Missed critical core concepts required for this problem. Review the model points below.`;
+    feedbackMsg = `Answer lacked required algorithmic rigor. ${testDiagnostics} Review the optimal solution and test case guidelines below.`;
   }
 
   return {
@@ -229,12 +251,13 @@ function evaluateSingleQuestion(questionObj) {
     score: finalQScore,
     technical_accuracy: Math.round(techScore),
     communication_clarity: Math.round(commScore),
-    feedback: feedbackMsg,
+    feedback: feedbackMsg.trim(),
     identified_keywords: matchedKeywords.slice(0, 6),
+    test_results: testResults || null,
     suggested_answer_points: rubric ? rubric.coreConcepts : [
       "State core problem constraints and assumptions upfront",
       "Explicitly explain asymptotic time and space complexities (Big-O)",
-      "Detail production failure modes, concurrency handling, and caching/indexing strategies",
+      "Detail boundary edge cases, input validation, and optimal data structure choices",
     ],
   };
 }
