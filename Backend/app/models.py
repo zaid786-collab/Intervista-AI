@@ -27,6 +27,11 @@ class User(Base):
     avatar = Column(String(500), nullable=True)
 
     is_active = Column(Boolean, default=True, nullable=False)
+    
+    # Subscription fields
+    subscription_plan = Column(String(50), default="free", nullable=False)  # free, starter, pro, team
+    subscription_cycle = Column(String(20), default="monthly", nullable=False)  # monthly, yearly
+    subscription_expires_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
@@ -177,3 +182,27 @@ class CompanyTopicSolved(Base):
     company = Column(String(100), index=True, nullable=False)
     topic = Column(String(100), nullable=False)
     solved_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class PaymentTransaction(Base):
+    __tablename__ = "payment_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=False)
+    user_email = Column(String(255), nullable=True)
+    user_name = Column(String(120), nullable=True)
+    plan_name = Column(String(50), nullable=False)  # starter, pro, team
+    billing_cycle = Column(String(20), default="monthly", nullable=False)  # monthly, yearly
+    amount = Column(Integer, nullable=False)  # Amount in cents / smallest currency unit or integer dollar
+    currency = Column(String(10), default="USD", nullable=False)
+    payment_method = Column(String(50), nullable=False)  # card, upi, netbanking, paypal, apple_pay
+    payment_status = Column(String(50), default="succeeded", nullable=False)  # succeeded, pending, failed
+    transaction_id = Column(String(100), unique=True, index=True, nullable=False)
+    invoice_id = Column(String(100), unique=True, index=True, nullable=False)
+    promo_code = Column(String(50), nullable=True)
+    discount_amount = Column(Integer, default=0, nullable=False)
+    card_last4 = Column(String(10), nullable=True)
+    card_brand = Column(String(30), nullable=True)
+    receipt_url = Column(String(500), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+

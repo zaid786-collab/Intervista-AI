@@ -9,7 +9,10 @@ function Profile() {
   const navigate = useNavigate();
   const name = user?.name || "Interview Candidate";
   const email = user?.email || "candidate@example.com";
-  const accountType = user?.is_admin ? "Admin" : "Free Member";
+  const planKey = (user?.subscription_plan || "free").toLowerCase();
+  const isProOrTeam = planKey === "pro" || planKey === "team";
+  const planDisplay = planKey === "team" ? "Team Plan ✦" : planKey === "pro" ? "Pro Plan ✦" : "Starter (Free)";
+  const accountType = user?.is_admin ? "Admin" : planDisplay;
   const memberSince = user?.created_at
     ? new Date(user.created_at).getFullYear()
     : "2026";
@@ -47,9 +50,23 @@ function Profile() {
           </div>
 
           <div className="profile-heading">
-            <span className="profile-badge">
-              ✦ MY PROFILE
-            </span>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px" }}>
+              <span className="profile-badge">
+                ✦ MY PROFILE
+              </span>
+              {isProOrTeam && (
+                <span style={{
+                  background: "linear-gradient(135deg, #8b5cf6, #00d4ff)",
+                  color: "#fff",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  padding: "3px 10px",
+                  borderRadius: "20px"
+                }}>
+                  {user?.subscription_plan?.toUpperCase()} MEMBER ⚡
+                </span>
+              )}
+            </div>
 
             <h1>
               Welcome, <span>{name}</span>
@@ -61,9 +78,18 @@ function Profile() {
             </p>
           </div>
 
-          <button className="edit-profile-btn" onClick={() => navigate("/dashboard")}>
-            ⚙ Open Dashboard
-          </button>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button className="edit-profile-btn" onClick={() => navigate("/dashboard")}>
+              ⚙ Dashboard
+            </button>
+            <button
+              className="edit-profile-btn"
+              style={{ background: "linear-gradient(135deg, #8b5cf6, #00d4ff)", border: "none", color: "#fff" }}
+              onClick={() => navigate("/pricing")}
+            >
+              {isProOrTeam ? "Manage Plan" : "⚡ Upgrade Plan"}
+            </button>
+          </div>
 
         </section>
 
@@ -74,13 +100,13 @@ function Profile() {
           <div className="profile-card-header">
             <div>
               <span className="section-label">
-                ACCOUNT
+                ACCOUNT & MEMBERSHIP
               </span>
 
-              <h2>Personal Information</h2>
+              <h2>Personal Information & Subscription</h2>
 
               <p>
-                Your basic account information.
+                Your account credentials and current active subscription tier.
               </p>
             </div>
           </div>
@@ -99,8 +125,10 @@ function Profile() {
             </div>
 
             <div className="profile-field">
-              <span>ACCOUNT TYPE</span>
-              <strong>{accountType}</strong>
+              <span>SUBSCRIPTION TIER</span>
+              <strong style={{ color: isProOrTeam ? "#00d4ff" : "#fff" }}>
+                {planDisplay}
+              </strong>
             </div>
 
             <div className="profile-field">

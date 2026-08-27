@@ -17,6 +17,7 @@ from app.routers import (
     companies,
     interviews,
     leaderboard_jobs,
+    payments,
 )
 from app.seed import seed_db
 
@@ -38,6 +39,17 @@ def ensure_db_columns():
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE interviews ADD COLUMN {col} {col_type}"))
+                conn.commit()
+            except Exception:
+                pass
+
+        for col, col_type in [
+            ("subscription_plan", "VARCHAR(50) DEFAULT 'free'"),
+            ("subscription_cycle", "VARCHAR(20) DEFAULT 'monthly'"),
+            ("subscription_expires_at", "DATETIME"),
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
                 conn.commit()
             except Exception:
                 pass
@@ -78,6 +90,7 @@ app.include_router(challenges.router)
 app.include_router(companies.router)
 app.include_router(interviews.router)
 app.include_router(leaderboard_jobs.router)
+app.include_router(payments.router)
 
 
 @app.get("/")

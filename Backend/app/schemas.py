@@ -50,6 +50,9 @@ class UserOut(BaseModel):
     bio: Optional[str] = None
     skills: Optional[str] = None
     avatar: Optional[str] = None
+    subscription_plan: Optional[str] = "free"
+    subscription_cycle: Optional[str] = "monthly"
+    subscription_expires_at: Optional[datetime] = None
     created_at: datetime
 
     class Config:
@@ -412,4 +415,99 @@ class JobApplyResponse(BaseModel):
     email_sent_to: str
 
 
+# ---------- Payments & Subscriptions ----------
+
+class CouponValidationRequest(BaseModel):
+    code: str
+    plan_name: str
+    billing_cycle: str = "monthly"
+
+
+class CouponValidationResponse(BaseModel):
+    valid: bool
+    code: str
+    discount_percentage: int
+    discount_amount: float
+    original_price: float
+    final_price: float
+    message: str
+
+
+class CreatePaymentOrderRequest(BaseModel):
+    plan_name: str  # "starter", "pro", "team"
+    billing_cycle: str = "monthly"  # "monthly", "yearly"
+    promo_code: Optional[str] = None
+    currency: Optional[str] = "USD"
+
+
+class CreatePaymentOrderResponse(BaseModel):
+    order_id: str
+    plan_name: str
+    billing_cycle: str
+    original_price: float
+    discount_amount: float
+    tax_amount: float
+    final_amount: float
+    currency: str
+    promo_code: Optional[str] = None
+    features: List[str]
+
+
+class ConfirmPaymentRequest(BaseModel):
+    order_id: str
+    plan_name: str
+    billing_cycle: str = "monthly"
+    amount: float
+    currency: str = "USD"
+    payment_method: str  # "card", "upi", "netbanking", "paypal", "apple_pay"
+    promo_code: Optional[str] = None
+    discount_amount: Optional[float] = 0.0
+    # Card specific (safe simulated or tokenized details)
+    card_last4: Optional[str] = None
+    card_brand: Optional[str] = None
+    # UPI specific
+    upi_id: Optional[str] = None
+    # Bank specific
+    bank_name: Optional[str] = None
+
+
+class PaymentTransactionOut(BaseModel):
+    id: int
+    user_id: int
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    plan_name: str
+    billing_cycle: str
+    amount: int
+    currency: str
+    payment_method: str
+    payment_status: str
+    transaction_id: str
+    invoice_id: str
+    promo_code: Optional[str] = None
+    discount_amount: int
+    card_last4: Optional[str] = None
+    card_brand: Optional[str] = None
+    receipt_url: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ConfirmPaymentResponse(BaseModel):
+    success: bool
+    message: str
+    transaction_id: str
+    invoice_id: str
+    plan_name: str
+    billing_cycle: str
+    amount_paid: float
+    currency: str
+    payment_method: str
+    subscription_expires_at: datetime
+    receipt: dict
+
+
 TokenResponse.model_rebuild()
+
