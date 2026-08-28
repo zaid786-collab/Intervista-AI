@@ -379,8 +379,8 @@ export async function fetchPricingPlans() {
         },
         pro: {
           name: "Pro",
-          monthly_price: 49,
-          yearly_price: 470,
+          monthly_price: 99,
+          yearly_price: 950,
           features: [
             "Unlimited AI Interviews",
             "AI Performance Analysis",
@@ -393,8 +393,8 @@ export async function fetchPricingPlans() {
         },
         team: {
           name: "Team",
-          monthly_price: 99,
-          yearly_price: 950,
+          monthly_price: 199,
+          yearly_price: 1910,
           features: [
             "Team Dashboard & Seat Management",
             "Recruiter & Manager Analytics",
@@ -408,7 +408,7 @@ export async function fetchPricingPlans() {
       yearly_discount_percent: 20,
       active_promos: [
         { code: "INTERVISTA20", description: "20% off on all plans" },
-        { code: "AIREADY", description: "$15 instant discount" },
+        { code: "AIREADY", description: "₹15 instant discount" },
         { code: "STUDENT", description: "30% off with student pass" },
       ],
     };
@@ -426,13 +426,13 @@ export async function validateCoupon({ code, plan_name, billing_cycle = "monthly
     const clean = (code || "").trim().toUpperCase();
     const discounts = {
       INTERVISTA20: { pct: 20, fixed: 0, desc: "20% off" },
-      AIREADY: { pct: 0, fixed: 15, desc: "$15 off" },
+      AIREADY: { pct: 0, fixed: 15, desc: "₹15 off" },
       STUDENT: { pct: 30, fixed: 0, desc: "30% off" },
       LAUNCH50: { pct: 50, fixed: 0, desc: "50% off" },
     };
 
     if (discounts[clean]) {
-      const base = plan_name === "team" ? (billing_cycle === "yearly" ? 950 : 99) : (billing_cycle === "yearly" ? 470 : 49);
+      const base = plan_name === "team" ? (billing_cycle === "yearly" ? 1910 : 199) : (billing_cycle === "yearly" ? 950 : 99);
       const discount = discounts[clean].pct > 0 ? (base * discounts[clean].pct) / 100 : Math.min(base, discounts[clean].fixed);
       const final = Math.max(0, base - discount);
       return {
@@ -442,7 +442,7 @@ export async function validateCoupon({ code, plan_name, billing_cycle = "monthly
         discount_amount: discount,
         original_price: base,
         final_price: final,
-        message: `Coupon ${clean} applied! You saved $${discount.toFixed(2)}.`,
+        message: `Coupon ${clean} applied! You saved ₹${discount.toFixed(2)}.`,
       };
     }
     throw new Error(err.message || "Invalid coupon code. Try INTERVISTA20 or AIREADY.");
@@ -456,7 +456,7 @@ export async function createPaymentOrder(orderData) {
       body: orderData,
     });
   } catch (err) {
-    const base = orderData.plan_name === "team" ? (orderData.billing_cycle === "yearly" ? 950 : 99) : (orderData.billing_cycle === "yearly" ? 470 : 49);
+    const base = orderData.plan_name === "team" ? (orderData.billing_cycle === "yearly" ? 1910 : 199) : (orderData.billing_cycle === "yearly" ? 950 : 99);
     return {
       order_id: `ord_${Date.now()}`,
       plan_name: orderData.plan_name ? orderData.plan_name.toUpperCase() : "PRO",
@@ -465,7 +465,7 @@ export async function createPaymentOrder(orderData) {
       discount_amount: 0,
       tax_amount: 0,
       final_amount: base,
-      currency: "USD",
+      currency: "INR",
       promo_code: orderData.promo_code || null,
       features: ["Unlimited Interviews", "ATS Resume Review", "Voice & Video AI", "Real-Time AI Hints"],
     };
@@ -501,7 +501,7 @@ export async function confirmPayment(paymentData) {
       customer_email: "candidate@example.com",
       plan: (paymentData.plan_name || "Pro").toUpperCase(),
       billing_cycle: (paymentData.billing_cycle || "monthly").toUpperCase(),
-      amount_paid: `$${(paymentData.amount || 49).toFixed(2)}`,
+      amount_paid: `₹${(paymentData.amount || 99).toFixed(2)}`,
       payment_method: (paymentData.payment_method || "card").replace("_", " ").toUpperCase(),
       card_last4: paymentData.card_last4 || "4242",
       card_brand: paymentData.card_brand || "Visa",
@@ -511,9 +511,9 @@ export async function confirmPayment(paymentData) {
       line_items: [
         {
           description: `Intervista AI ${(paymentData.plan_name || "Pro").toUpperCase()} Subscription (${(paymentData.billing_cycle || "monthly")})`,
-          original_price: `$${(paymentData.amount || 49).toFixed(2)}`,
-          discount: paymentData.discount_amount ? `-$${paymentData.discount_amount.toFixed(2)}` : "$0.00",
-          total: `$${(paymentData.amount || 49).toFixed(2)}`,
+          original_price: `₹${(paymentData.amount || 99).toFixed(2)}`,
+          discount: paymentData.discount_amount ? `-₹${paymentData.discount_amount.toFixed(2)}` : "₹0.00",
+          total: `₹${(paymentData.amount || 99).toFixed(2)}`,
         },
       ],
     };
@@ -527,8 +527,8 @@ export async function confirmPayment(paymentData) {
       invoice_id: invId,
       plan_name: paymentData.plan_name || "Pro",
       billing_cycle: paymentData.billing_cycle || "monthly",
-      amount_paid: paymentData.amount || 49,
-      currency: paymentData.currency || "USD",
+      amount_paid: paymentData.amount || 99,
+      currency: paymentData.currency || "INR",
       payment_method: paymentData.payment_method || "card",
       subscription_expires_at: expiresAt.toISOString(),
       receipt: fallbackReceipt,

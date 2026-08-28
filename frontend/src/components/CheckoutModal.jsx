@@ -91,8 +91,8 @@ export default function CheckoutModal({
   if (!isOpen) return null;
 
   // Price calculations
-  const baseMonthly = selectedPlan === "team" ? 99 : 49;
-  const baseYearly = selectedPlan === "team" ? 950 : 470;
+  const baseMonthly = selectedPlan === "team" ? 199 : 99;
+  const baseYearly = selectedPlan === "team" ? 1910 : 950;
   const basePrice = billingCycle === "yearly" ? baseYearly : baseMonthly;
 
   let discountVal = 0;
@@ -209,7 +209,7 @@ export default function CheckoutModal({
         plan_name: selectedPlan,
         billing_cycle: billingCycle,
         promo_code: promoApplied?.code || null,
-        currency: "USD",
+        currency: "INR",
       });
 
       // Animate progress
@@ -222,7 +222,7 @@ export default function CheckoutModal({
         plan_name: selectedPlan,
         billing_cycle: billingCycle,
         amount: finalPrice,
-        currency: "USD",
+        currency: "INR",
         payment_method: activeTab,
         promo_code: promoApplied?.code || null,
         discount_amount: discountVal,
@@ -318,17 +318,17 @@ export default function CheckoutModal({
               <div className="receipt-line-items">
                 <div className="receipt-item-row">
                   <span>Intervista AI {selectedPlan.toUpperCase()} Plan</span>
-                  <span>${basePrice.toFixed(2)}</span>
+                  <span>₹{basePrice.toFixed(2)}</span>
                 </div>
                 {discountVal > 0 && (
                   <div className="receipt-item-row discount">
                     <span>Discount ({promoApplied?.code})</span>
-                    <span>-${discountVal.toFixed(2)}</span>
+                    <span>-₹{discountVal.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="receipt-item-row total">
                   <span>Total Paid</span>
-                  <span>${finalPrice.toFixed(2)} USD</span>
+                  <span>₹{finalPrice.toFixed(2)} INR</span>
                 </div>
               </div>
             </div>
@@ -368,7 +368,7 @@ export default function CheckoutModal({
                   onClick={() => setSelectedPlan("pro")}
                 >
                   <span className="pill-name">PRO PLAN</span>
-                  <span className="pill-price">{billingCycle === "yearly" ? "$470/yr" : "$49/mo"}</span>
+                  <span className="pill-price">{billingCycle === "yearly" ? "₹950/yr" : "₹99/mo"}</span>
                 </button>
                 <button
                   type="button"
@@ -376,7 +376,7 @@ export default function CheckoutModal({
                   onClick={() => setSelectedPlan("team")}
                 >
                   <span className="pill-name">TEAM PLAN</span>
-                  <span className="pill-price">{billingCycle === "yearly" ? "$950/yr" : "$99/mo"}</span>
+                  <span className="pill-price">{billingCycle === "yearly" ? "₹1,910/yr" : "₹199/mo"}</span>
                 </button>
               </div>
 
@@ -544,10 +544,10 @@ export default function CheckoutModal({
                     >
                       {processing ? (
                         <span className="btn-loader-text">
-                          <span className="spinner"></span> Processing ${finalPrice.toFixed(2)}...
+                          <span className="spinner"></span> Processing ₹{finalPrice.toFixed(2)}...
                         </span>
                       ) : (
-                        `Pay $${finalPrice.toFixed(2)} & Upgrade to ${selectedPlan.toUpperCase()}`
+                        `Pay ₹${finalPrice.toFixed(2)} & Upgrade to ${selectedPlan.toUpperCase()}`
                       )}
                     </button>
                   </form>
@@ -624,7 +624,7 @@ export default function CheckoutModal({
                     onClick={handleProceedPayment}
                     disabled={processing}
                   >
-                    {processing ? "Verifying UPI Payment..." : `Verify & Pay $${finalPrice.toFixed(2)}`}
+                    {processing ? "Verifying UPI Payment..." : `Verify & Pay ₹${finalPrice.toFixed(2)}`}
                   </button>
                 </div>
               )}
@@ -654,7 +654,7 @@ export default function CheckoutModal({
                     onClick={handleProceedPayment}
                     disabled={processing}
                   >
-                    {processing ? "Connecting to Bank Gateway..." : `Proceed with ${POPULAR_BANKS.find(b => b.id === selectedBank)?.name} ($${finalPrice.toFixed(2)})`}
+                    {processing ? "Connecting to Bank Gateway..." : `Proceed with ${POPULAR_BANKS.find(b => b.id === selectedBank)?.name} (₹${finalPrice.toFixed(2)})`}
                   </button>
                 </div>
               )}
@@ -700,7 +700,7 @@ export default function CheckoutModal({
                     onClick={handleProceedPayment}
                     disabled={processing}
                   >
-                    {processing ? "Authorizing Wallet..." : `Pay with ${walletType.toUpperCase()} ($${finalPrice.toFixed(2)})`}
+                    {processing ? "Authorizing Wallet..." : `Pay with ${walletType.toUpperCase()} (₹${finalPrice.toFixed(2)})`}
                   </button>
                 </div>
               )}
@@ -772,7 +772,7 @@ export default function CheckoutModal({
                       INTERVISTA20 (20% OFF)
                     </button>
                     <button type="button" onClick={() => { setPromoCode("AIREADY"); }}>
-                      AIREADY ($15 OFF)
+                      AIREADY (₹15 OFF)
                     </button>
                   </div>
                 </div>
@@ -781,26 +781,26 @@ export default function CheckoutModal({
                 <div className="pricing-breakdown">
                   <div className="breakdown-row">
                     <span>Base Subscription</span>
-                    <span>${basePrice.toFixed(2)}</span>
+                    <span>₹{basePrice.toFixed(2)}</span>
                   </div>
 
                   {discountVal > 0 && (
                     <div className="breakdown-row discount">
                       <span>Promo Discount ({promoApplied?.code})</span>
-                      <span>-${discountVal.toFixed(2)}</span>
+                      <span>-₹{discountVal.toFixed(2)}</span>
                     </div>
                   )}
 
                   <div className="breakdown-row">
                     <span>Estimated Tax</span>
-                    <span className="tax-free">$0.00</span>
+                    <span className="tax-free">₹0.00</span>
                   </div>
 
                   <div className="breakdown-divider"></div>
 
                   <div className="breakdown-row total">
                     <span>Total Due Today</span>
-                    <span className="total-amount">${finalPrice.toFixed(2)} USD</span>
+                    <span className="total-amount">₹{finalPrice.toFixed(2)} INR</span>
                   </div>
                 </div>
 

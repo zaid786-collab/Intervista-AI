@@ -437,7 +437,7 @@ class CreatePaymentOrderRequest(BaseModel):
     plan_name: str  # "starter", "pro", "team"
     billing_cycle: str = "monthly"  # "monthly", "yearly"
     promo_code: Optional[str] = None
-    currency: Optional[str] = "USD"
+    currency: Optional[str] = "INR"
 
 
 class CreatePaymentOrderResponse(BaseModel):
@@ -458,7 +458,7 @@ class ConfirmPaymentRequest(BaseModel):
     plan_name: str
     billing_cycle: str = "monthly"
     amount: float
-    currency: str = "USD"
+    currency: str = "INR"
     payment_method: str  # "card", "upi", "netbanking", "paypal", "apple_pay"
     promo_code: Optional[str] = None
     discount_amount: Optional[float] = 0.0

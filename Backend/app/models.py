@@ -193,8 +193,8 @@ class PaymentTransaction(Base):
     user_name = Column(String(120), nullable=True)
     plan_name = Column(String(50), nullable=False)  # starter, pro, team
     billing_cycle = Column(String(20), default="monthly", nullable=False)  # monthly, yearly
-    amount = Column(Integer, nullable=False)  # Amount in cents / smallest currency unit or integer dollar
-    currency = Column(String(10), default="USD", nullable=False)
+    amount = Column(Integer, nullable=False)  # Amount in paise / smallest currency unit or integer rupee
+    currency = Column(String(10), default="INR", nullable=False)
     payment_method = Column(String(50), nullable=False)  # card, upi, netbanking, paypal, apple_pay
     payment_status = Column(String(50), default="succeeded", nullable=False)  # succeeded, pending, failed
     transaction_id = Column(String(100), unique=True, index=True, nullable=False)

@@ -34,7 +34,7 @@ const FAQS = [
   },
   {
     q: "Can I use promo codes on checkout?",
-    a: "Yes! Use coupon code INTERVISTA20 at checkout for an extra 20% off, or AIREADY for an instant $15 savings on all plans.",
+    a: "Yes! Use coupon code INTERVISTA20 at checkout for an extra 20% off, or AIREADY for an instant ₹15 savings on all plans.",
   },
 ];
 
@@ -120,7 +120,7 @@ export default function Pricing() {
           </div>
 
           <p className="price">
-            $0
+            ₹0
             <span>/month</span>
           </p>
 
@@ -151,8 +151,8 @@ export default function Pricing() {
           </div>
 
           <p className="price">
-            {billingCycle === "yearly" ? "$39" : "$49"}
-            <span>/month {billingCycle === "yearly" ? "(billed $470/yr)" : ""}</span>
+            {billingCycle === "yearly" ? "₹79" : "₹99"}
+            <span>/month {billingCycle === "yearly" ? "(billed ₹950/yr)" : ""}</span>
           </p>
 
           <ul className="plan-perks-list">
@@ -182,8 +182,8 @@ export default function Pricing() {
           </div>
 
           <p className="price">
-            {billingCycle === "yearly" ? "$79" : "$99"}
-            <span>/month {billingCycle === "yearly" ? "(billed $950/yr)" : ""}</span>
+            {billingCycle === "yearly" ? "₹159" : "₹199"}
+            <span>/month {billingCycle === "yearly" ? "(billed ₹1,910/yr)" : ""}</span>
           </p>
 
           <ul className="plan-perks-list">

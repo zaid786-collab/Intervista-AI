@@ -25,8 +25,8 @@ PLAN_CONFIG = {
     },
     "pro": {
         "name": "Pro",
-        "monthly_price": 49.0,
-        "yearly_price": 470.0,  # ~20% discount
+        "monthly_price": 99.0,
+        "yearly_price": 950.0,  # ~20% discount
         "features": [
             "Unlimited AI Interviews",
             "AI Performance Analysis",
@@ -39,8 +39,8 @@ PLAN_CONFIG = {
     },
     "team": {
         "name": "Team",
-        "monthly_price": 99.0,
-        "yearly_price": 950.0,  # ~20% discount
+        "monthly_price": 199.0,
+        "yearly_price": 1910.0,  # ~20% discount
         "features": [
             "Team Dashboard & Seat Management",
             "Recruiter & Manager Analytics",
@@ -53,7 +53,7 @@ PLAN_CONFIG = {
 
 COUPONS = {
     "INTERVISTA20": {"type": "percent", "value": 20, "description": "20% off on all plans"},
-    "AIREADY": {"type": "fixed", "value": 15, "description": "$15 instant discount"},
+    "AIREADY": {"type": "fixed", "value": 15, "description": "₹15 instant discount"},
     "STUDENT": {"type": "percent", "value": 30, "description": "30% student discount"},
     "LAUNCH50": {"type": "percent", "value": 50, "description": "50% launch special discount"},
 }
@@ -108,7 +108,7 @@ def get_plans():
         "yearly_discount_percent": 20,
         "active_promos": [
             {"code": "INTERVISTA20", "description": "20% off any premium plan"},
-            {"code": "AIREADY", "description": "$15 instant discount"},
+            {"code": "AIREADY", "description": "₹15 instant discount"},
             {"code": "STUDENT", "description": "30% off with student pass"},
         ],
     }
@@ -148,7 +148,7 @@ def validate_coupon(payload: schemas.CouponValidationRequest):
         discount_amount=discount_amount,
         original_price=base_price,
         final_price=final_price,
-        message=f"Coupon {code_clean} applied! You saved ${discount_amount:.2f}.",
+        message=f"Coupon {code_clean} applied! You saved ₹{discount_amount:.2f}.",
     )
 
 
@@ -169,7 +169,7 @@ def create_payment_order(
         discount_amount=pricing["discount_amount"],
         tax_amount=pricing["tax_amount"],
         final_amount=pricing["final_amount"],
-        currency=payload.currency or "USD",
+        currency=payload.currency or "INR",
         promo_code=pricing["promo_code"],
         features=pricing["features"],
     )
@@ -201,8 +201,8 @@ def confirm_payment(
         user_name=current_user.name,
         plan_name=pricing["plan_key"],
         billing_cycle=payload.billing_cycle,
-        amount=int(pricing["final_amount"] * 100),  # store in cents
-        currency=payload.currency or "USD",
+        amount=int(pricing["final_amount"] * 100),  # store in paise/smallest currency unit
+        currency=payload.currency or "INR",
         payment_method=payload.payment_method,
         payment_status="succeeded",
         transaction_id=transaction_id,
@@ -224,7 +224,7 @@ def confirm_payment(
     activity = Activity(
         user_id=current_user.id,
         title=f"Upgraded to {pricing['plan_name']} Plan",
-        company=f"${pricing['final_amount']:.2f} via {payload.payment_method.upper()}",
+        company=f"₹{pricing['final_amount']:.2f} via {payload.payment_method.upper()}",
         time="Just now",
         color="#8b5cf6",
     )
@@ -233,7 +233,7 @@ def confirm_payment(
     notification = Notification(
         user_id=current_user.id,
         title=f"Welcome to {pricing['plan_name']} Membership! ✦",
-        desc=f"Your payment of ${pricing['final_amount']:.2f} was successful. Unlimited AI interviews and features are now active.",
+        desc=f"Your payment of ₹{pricing['final_amount']:.2f} was successful. Unlimited AI interviews and features are now active.",
         color="#22c55e",
         time="Just now",
         is_read=False,
@@ -250,7 +250,7 @@ def confirm_payment(
         "customer_email": current_user.email,
         "plan": pricing["plan_name"],
         "billing_cycle": payload.billing_cycle.capitalize(),
-        "amount_paid": f"${pricing['final_amount']:.2f}",
+        "amount_paid": f"₹{pricing['final_amount']:.2f}",
         "payment_method": payload.payment_method.replace("_", " ").upper(),
         "card_last4": payload.card_last4,
         "card_brand": payload.card_brand,
@@ -260,9 +260,9 @@ def confirm_payment(
         "line_items": [
             {
                 "description": f"Intervista AI {pricing['plan_name']} Subscription ({payload.billing_cycle.capitalize()})",
-                "original_price": f"${pricing['base_price']:.2f}",
-                "discount": f"-${pricing['discount_amount']:.2f}" if pricing["discount_amount"] > 0 else "$0.00",
-                "total": f"${pricing['final_amount']:.2f}",
+                "original_price": f"₹{pricing['base_price']:.2f}",
+                "discount": f"-₹{pricing['discount_amount']:.2f}" if pricing["discount_amount"] > 0 else "₹0.00",
+                "total": f"₹{pricing['final_amount']:.2f}",
             }
         ],
     }
@@ -275,7 +275,7 @@ def confirm_payment(
         plan_name=pricing["plan_name"],
         billing_cycle=payload.billing_cycle,
         amount_paid=pricing["final_amount"],
-        currency=payload.currency or "USD",
+        currency=payload.currency or "INR",
         payment_method=payload.payment_method,
         subscription_expires_at=expires_at,
         receipt=receipt,
@@ -325,7 +325,7 @@ def get_invoice_details(
         "customer_email": transaction.user_email or current_user.email,
         "plan_name": transaction.plan_name.capitalize(),
         "billing_cycle": transaction.billing_cycle.capitalize(),
-        "amount_paid": f"${amount_val:.2f}",
+        "amount_paid": f"₹{amount_val:.2f}",
         "currency": transaction.currency,
         "payment_method": transaction.payment_method.replace("_", " ").upper(),
         "card_last4": transaction.card_last4,
@@ -338,9 +338,9 @@ def get_invoice_details(
         "line_items": [
             {
                 "item": f"Intervista AI {transaction.plan_name.capitalize()} Subscription ({transaction.billing_cycle.capitalize()})",
-                "price": f"${(amount_val + discount_val):.2f}",
-                "discount": f"-${discount_val:.2f}" if discount_val > 0 else "$0.00",
-                "total": f"${amount_val:.2f}",
+                "price": f"₹{(amount_val + discount_val):.2f}",
+                "discount": f"-₹{discount_val:.2f}" if discount_val > 0 else "₹0.00",
+                "total": f"₹{amount_val:.2f}",
             }
         ],
     }
