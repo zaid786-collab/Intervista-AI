@@ -195,7 +195,7 @@ class PaymentTransaction(Base):
     billing_cycle = Column(String(20), default="monthly", nullable=False)  # monthly, yearly
     amount = Column(Integer, nullable=False)  # Amount in paise / smallest currency unit or integer rupee
     currency = Column(String(10), default="INR", nullable=False)
-    payment_method = Column(String(50), nullable=False)  # card, upi, netbanking, paypal, apple_pay
+    payment_method = Column(String(50), default="card", nullable=False)  # card, upi, netbanking, paypal, apple_pay
     payment_status = Column(String(50), default="succeeded", nullable=False)  # succeeded, pending, failed
     transaction_id = Column(String(100), unique=True, index=True, nullable=False)
     invoice_id = Column(String(100), unique=True, index=True, nullable=False)
@@ -204,5 +204,19 @@ class PaymentTransaction(Base):
     card_last4 = Column(String(10), nullable=True)
     card_brand = Column(String(30), nullable=True)
     receipt_url = Column(String(500), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class Feedback(Base):
+    __tablename__ = "feedbacks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    name = Column(String(120), nullable=True)
+    email = Column(String(255), nullable=True)
+    feedback_type = Column(String(50), default="General Feedback", nullable=False)
+    rating = Column(Integer, nullable=True)
+    message = Column(Text, nullable=False)
+    page_context = Column(String(100), default="Home Page", nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 

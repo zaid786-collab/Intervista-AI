@@ -509,5 +509,23 @@ class ConfirmPaymentResponse(BaseModel):
     receipt: dict
 
 
+# ---------- Feedback Schemas ----------
+
+class FeedbackCreate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    feedback_type: Optional[str] = "General Feedback"
+    rating: Optional[int] = None
+    message: str
+    page_context: Optional[str] = "Home Page"
+
+
+class FeedbackResponse(BaseModel):
+    success: bool
+    message: str
+    feedback_id: Optional[int] = None
+    sent_to_email: bool = False
+
+
 TokenResponse.model_rebuild()
 

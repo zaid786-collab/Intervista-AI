@@ -555,3 +555,22 @@ export async function fetchInvoice(invoiceId) {
   }
 }
 
+// ---------- Instant Feedback API ----------
+
+export async function submitFeedback(feedbackData) {
+  try {
+    return await request("/api/feedback", {
+      method: "POST",
+      body: feedbackData,
+      auth: true,
+    });
+  } catch (err) {
+    // If request with auth failed or token was invalid/missing, retry anonymously
+    return await request("/api/feedback", {
+      method: "POST",
+      body: feedbackData,
+      auth: false,
+    });
+  }
+}
+

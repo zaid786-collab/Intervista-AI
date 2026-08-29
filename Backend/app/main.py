@@ -18,6 +18,7 @@ from app.routers import (
     interviews,
     leaderboard_jobs,
     payments,
+    feedback,
 )
 from app.seed import seed_db
 
@@ -91,6 +92,7 @@ app.include_router(companies.router)
 app.include_router(interviews.router)
 app.include_router(leaderboard_jobs.router)
 app.include_router(payments.router)
+app.include_router(feedback.router)
 
 
 @app.get("/")

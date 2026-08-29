@@ -2,12 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import DemoModal from "./DemoModal";
+import FeedbackModal from "./FeedbackModal";
 import "./Hero.css";
 
 function Hero() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   const handleStart = () => {
     if (isAuthenticated) {
@@ -126,10 +128,24 @@ function Hero() {
           </div>
 
 
-          <div className="feature-card">
-
-            <div className="feature-icon">
-              ◈
+          <div
+            className="feature-card feature-card-interactive"
+            onClick={() => setIsFeedbackModalOpen(true)}
+            role="button"
+            tabIndex={0}
+            aria-label="Open instant feedback form"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setIsFeedbackModalOpen(true);
+              }
+            }}
+          >
+            <div className="feature-card-header">
+              <div className="feature-icon">
+                ◈
+              </div>
+              <span className="feature-live-pill">✦ Send Feedback</span>
             </div>
 
             <h3>Instant Feedback</h3>
@@ -138,6 +154,11 @@ function Hero() {
               Understand your strengths, identify weak areas and
               receive actionable feedback after every interview.
             </p>
+
+            <div className="feature-card-action">
+              <span>Share feedback with team</span>
+              <span className="feature-action-arrow">→</span>
+            </div>
 
           </div>
 
@@ -461,6 +482,13 @@ function Hero() {
       <DemoModal
         isOpen={isDemoModalOpen}
         onClose={() => setIsDemoModalOpen(false)}
+      />
+
+      {/* Instant Feedback Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
+        pageContext="Home Page - Instant Feedback Feature"
       />
 
     </>
