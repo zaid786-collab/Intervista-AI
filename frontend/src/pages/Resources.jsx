@@ -1348,35 +1348,54 @@ function Resources() {
     toggleSolvedResource(problemName).catch(() => {});
   };
 
-  const selectedData = selectedTopic
-    ? activeTopics.find((t) => t.title === selectedTopic)
+  const openTopic = (index) => {
+    if (selectedTopic === index) {
+      setSelectedTopic(null);
+    } else {
+      setSelectedTopic(index);
+      setSearchQuery("");
+      setDifficultyFilter("All");
+
+      setTimeout(() => {
+        const target = document.getElementById("questions-section");
+        if (target) {
+          target.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 100);
+    }
+  };
+
+  const selectedTopicData = selectedTopic !== null
+    ? (activeTopics[selectedTopic] || dsaTopics[selectedTopic] || null)
     : null;
 
-  const filteredProblems = selectedData
-    ? (selectedData.problems || []).filter((problem) => {
-        if (difficultyFilter === "All") return true;
-        return problem.difficulty === difficultyFilter;
-      })
+  const currentQuestions = selectedTopicData
+    ? (
+        (dsaQuestions[selectedTopicData.title] && dsaQuestions[selectedTopicData.title].length > 0)
+          ? dsaQuestions[selectedTopicData.title]
+          : (selectedTopicData.problems || []).map((p) => ({
+              title: p.name || p.title,
+              difficulty: p.difficulty,
+              leetcode: p.leetcode || p.leetcode_url || `https://leetcode.com/problemset/?search=${encodeURIComponent(p.name || p.title)}`,
+            }))
+      )
     : [];
 
-  const openTopic = (index) => {
-    setSelectedTopic(index);
-    setSearchQuery("");
-    setDifficultyFilter("All");
+  const filteredQuestions = currentQuestions.filter((question) => {
+    const qTitle = question.title || question.name || "";
+    const matchesSearch =
+      !searchQuery ||
+      qTitle.toLowerCase().includes(searchQuery.toLowerCase().trim());
 
-    setTimeout(() => {
-      const target =
-        document.getElementById("questions-section") ||
-        document.getElementById("problem-section");
+    const matchesDifficulty =
+      difficultyFilter === "All" ||
+      (question.difficulty && question.difficulty.toLowerCase() === difficultyFilter.toLowerCase());
 
-      if (target) {
-        target.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
-    }, 120);
-  };
+    return matchesSearch && matchesDifficulty;
+  });
 
   // Aptitude logic
   const currentAptDomain =
@@ -1615,13 +1634,13 @@ function Resources() {
               ))}
             </div>
 
-            {selectedTopic !== null && (
+            {selectedTopic !== null && selectedTopicData && (
               <div className="questions-panel" id="questions-section">
                 <div className="questions-header">
                   <div>
                     <span className="resource-badge">PRACTICE SET</span>
                     <h2>
-                      {dsaTopics[selectedTopic].title}
+                      {selectedTopicData.title}
                       <span> Questions</span>
                     </h2>
                     <p>Solve curated questions and practice directly on LeetCode.</p>
@@ -1630,44 +1649,27 @@ function Resources() {
                     type="button"
                     className="close-questions"
                     onClick={() => setSelectedTopic(null)}
+                    title="Close questions panel"
                   >
                     ✕
                   </button>
                 </div>
 
                 {/* Search and Difficulty Filter Controls */}
-                <div style={{ display: "flex", gap: "12px", margin: "16px 0", flexWrap: "wrap" }}>
+                <div className="questions-toolbar">
                   <input
                     type="text"
                     placeholder="Search questions in this topic..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{
-                      flex: 1,
-                      minWidth: "200px",
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      color: "#fff",
-                      outline: "none"
-                    }}
                   />
-                  <div style={{ display: "flex", gap: "8px" }}>
+                  <div className="difficulty-filters">
                     {["All", "Easy", "Medium", "Hard"].map((level) => (
                       <button
                         key={level}
                         type="button"
+                        className={difficultyFilter === level ? "active-filter" : ""}
                         onClick={() => setDifficultyFilter(level)}
-                        style={{
-                          padding: "8px 16px",
-                          borderRadius: "8px",
-                          border: difficultyFilter === level ? "1px solid #3b82f6" : "1px solid rgba(255,255,255,0.12)",
-                          background: difficultyFilter === level ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)",
-                          color: difficultyFilter === level ? "#60a5fa" : "#94a3b8",
-                          cursor: "pointer",
-                          fontWeight: 500
-                        }}
                       >
                         {level}
                       </button>
@@ -1678,20 +1680,21 @@ function Resources() {
                 <div className="questions-list">
                   {filteredQuestions.length > 0 ? (
                     filteredQuestions.map((question, index) => {
-                      const isSolved = solvedQuestions.includes(question.title);
+                      const qTitle = question.title || question.name;
+                      const isSolved = solvedQuestions.includes(qTitle);
 
                       return (
                         <div
                           className={`question-item ${isSolved ? "question-solved" : ""}`}
-                          key={question.title}
+                          key={qTitle || index}
                         >
                           <div className="question-number">
                             {String(index + 1).padStart(2, "0")}
                           </div>
 
                           <div className="question-info">
-                            <h3>{question.title}</h3>
-                            <span className={`difficulty ${question.difficulty.toLowerCase()}`}>
+                            <h3>{qTitle}</h3>
+                            <span className={`difficulty ${(question.difficulty || "medium").toLowerCase()}`}>
                               {question.difficulty}
                             </span>
                           </div>
@@ -1699,7 +1702,7 @@ function Resources() {
                           <button
                             type="button"
                             className={`solve-toggle ${isSolved ? "solved" : ""}`}
-                            onClick={() => toggleSolved(question.title)}
+                            onClick={() => toggleSolved(qTitle)}
                           >
                             {isSolved ? "✓ Solved" : "Mark Solved"}
                           </button>
@@ -1717,7 +1720,7 @@ function Resources() {
                     })
                   ) : (
                     <div className="no-questions">
-                      <div>🔎</div>
+                      <div style={{ fontSize: "28px", marginBottom: "8px" }}>🔎</div>
                       <h3>No questions found</h3>
                       <p>Try another search term or difficulty level.</p>
                     </div>
@@ -1726,71 +1729,6 @@ function Resources() {
               </div>
             )}
           </section>
-
-          {/* Problems */}
-          {selectedData && (
-            <section className="resource-section" id="problem-section">
-              <div className="resource-section-heading">
-                <span>LEETCODE PROBLEMS</span>
-                <h2>
-                  {selectedData.title}
-                  <br />
-                  <span>Practice Set</span>
-                </h2>
-                <p>
-                  Solve these curated problems to strengthen your {selectedData.title.toLowerCase()} concepts.
-                </p>
-              </div>
-
-              <div className="difficulty-filter">
-                {["All", "Easy", "Medium", "Hard"].map((level) => (
-                  <button
-                    key={level}
-                    type="button"
-                    className={difficultyFilter === level ? "difficulty-btn active" : "difficulty-btn"}
-                    onClick={() => setDifficultyFilter(level)}
-                  >
-                    {level}
-                  </button>
-                ))}
-              </div>
-
-              <div className="problem-list">
-                {filteredProblems.length === 0 ? (
-                  <div className="no-problems">
-                    No {difficultyFilter} problems available for this topic yet.
-                  </div>
-                ) : (
-                  filteredProblems.map((problem, index) => (
-                    <div
-                      className="problem-card"
-                      key={`${selectedData.title}-${problem.name}`}
-                    >
-                      <div className="problem-number">
-                        {String(index + 1).padStart(2, "0")}
-                      </div>
-
-                      <div className="problem-info">
-                        <h3>{problem.name}</h3>
-                        <span className={`difficulty ${problem.difficulty.toLowerCase()}`}>
-                          {problem.difficulty}
-                        </span>
-                      </div>
-
-                      <a
-                        href={problem.leetcode}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="leetcode-btn"
-                      >
-                        Solve on LeetCode ↗
-                      </a>
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-          )}
         </>
       )}
 
