@@ -331,6 +331,33 @@ class QuestionFeedback(BaseModel):
     communication_clarity: Optional[int] = 85
 
 
+class EvaluateQuestionRequest(BaseModel):
+    question_id: int
+    question: str
+    answer: str
+    category: Optional[str] = None
+    round_number: Optional[int] = 1
+    company: Optional[str] = "Google"
+    role: Optional[str] = "Frontend Developer"
+    difficulty: Optional[str] = "Medium"
+    test_results: Optional[dict] = None
+
+
+class EvaluateQuestionResponse(BaseModel):
+    question_id: int
+    question: str
+    score: int
+    status: str  # "correct", "partial", "incorrect"
+    verdict: str  # e.g. "Accepted • 95/100"
+    feedback: str
+    suggested_answer_points: List[str]
+    identified_keywords: Optional[List[str]] = []
+    technical_accuracy: Optional[int] = 85
+    communication_clarity: Optional[int] = 85
+    problem_solving: Optional[int] = 85
+
+
+
 class SubmitInterviewResponse(BaseModel):
     interview_id: int
     score: int

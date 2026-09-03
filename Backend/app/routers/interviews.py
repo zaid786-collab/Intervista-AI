@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.dependencies import get_current_user_optional
-from app.services.llm_evaluator import evaluate_interview_submission
+from app.services.llm_evaluator import evaluate_interview_submission, evaluate_single_question
 from app.services.pdf_generator import generate_interview_pdf_report
 
 router = APIRouter(prefix="/api/interviews", tags=["Mock Interviews & AI Evaluation"])
@@ -537,6 +537,37 @@ def submit_mock_interview(
         communication_score=comm_score,
         problem_solving_score=prob_score,
         identified_keywords=identified_keywords,
+    )
+
+@router.post("/evaluate-question", response_model=schemas.EvaluateQuestionResponse)
+def evaluate_single_question_endpoint(
+    payload: schemas.EvaluateQuestionRequest,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+):
+    """Evaluates an individual interview question answer in real-time."""
+    result = evaluate_single_question(
+        question_id=payload.question_id,
+        question=payload.question,
+        answer=payload.answer,
+        category=payload.category,
+        round_number=payload.round_number,
+        company=payload.company,
+        role=payload.role,
+        difficulty=payload.difficulty,
+        test_results=payload.test_results,
+    )
+    return schemas.EvaluateQuestionResponse(
+        question_id=payload.question_id,
+        question=payload.question,
+        score=result["score"],
+        status=result["status"],
+        verdict=result["verdict"],
+        feedback=result["feedback"],
+        suggested_answer_points=result.get("suggested_answer_points", []),
+        identified_keywords=result.get("identified_keywords", []),
+        technical_accuracy=result.get("technical_accuracy", 80),
+        communication_clarity=result.get("communication_clarity", 80),
+        problem_solving=result.get("problem_solving", 80),
     )
 
 @router.get("/{interview_id}/pdf")

@@ -47,7 +47,7 @@ import {
 } from "react-icons/fa";
 import { useAuth } from "../../context/useAuth";
 import { generateInterviewPDF } from "../../utils/pdfGenerator";
-import { evaluateInterview } from "../../utils/evaluator";
+import { evaluateInterview, evaluateSingleQuestion, evaluateQuestionAPI } from "../../utils/evaluator";
 import { getToken, recordLocalInterviewSession, recordLocalScheduledInterview } from "../../api";
 import { STRUCTURED_DSA_BY_ROLE } from "../../utils/dsaQuestions";
 import { runTestCases } from "../../utils/codeRunner";
@@ -432,6 +432,8 @@ function MockInterview({ onInterviewCompleted }) {
   const [timeLeft, setTimeLeft] = useState(45 * 60); // 45 minutes
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
+  const [questionEvaluations, setQuestionEvaluations] = useState({}); // { [qId]: { score, status, verdict, feedback, ... } }
+  const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
 
   // Independent Media Stream States
   const [cameraStatus, setCameraStatus] = useState("idle"); // idle | requesting | granted | denied
@@ -1077,10 +1079,23 @@ function solution() {
         [q.id]: true,
       }));
 
+      // Evaluate question rubric and store in questionEvaluations
+      const evalItem = evaluateSingleQuestion({
+        question_id: q.id,
+        question: q.question,
+        answer: userCode,
+        test_results: results,
+      }, company, role, difficulty);
+
+      setQuestionEvaluations((prev) => ({
+        ...prev,
+        [q.id]: evalItem,
+      }));
+
       if (results.passedCount === results.totalCount) {
         setRunSuccessToast(`🎉 Solution Accepted! ${results.passedCount}/${results.totalCount} Test Cases Passed.`);
       } else {
-        setRunSuccessToast(`📝 Code Solution Submitted (${results.passedCount}/${results.totalCount} test cases passed).`);
+        setRunSuccessToast(`📝 Code Evaluated: ${evalItem.verdict} (${results.passedCount}/${results.totalCount} tests).`);
       }
       setTimeout(() => setRunSuccessToast(""), 4500);
     } catch (err) {
@@ -1088,6 +1103,74 @@ function solution() {
       setTimeout(() => setRunSuccessToast(""), 4000);
     } finally {
       setIsRunningTests(false);
+      setAiSpeechState("observing");
+    }
+  };
+
+  // 2b. SUBMIT SINGLE QUESTION (NON-DSA & UNIFIED EVALUATOR)
+  const handleSubmitSingleQuestion = async (q) => {
+    if (!q) return;
+    const currentAns = answers[q.id] || "";
+    if (!currentAns.trim()) {
+      setRunSuccessToast("Please type or record an answer before submitting.");
+      setTimeout(() => setRunSuccessToast(""), 3500);
+      return;
+    }
+
+    const currentRoundIdx = Math.min(Math.floor(currentQIndex / 5), 3);
+    const isDSA = currentRoundIdx === 1 || (q.test_cases && q.test_cases.length > 0);
+
+    if (isDSA) {
+      await handleSubmitCodeSolution(q);
+      return;
+    }
+
+    setIsSubmittingQuestion(true);
+    setAiSpeechState("analyzing");
+
+    try {
+      const payload = {
+        question_id: q.id,
+        question: q.question,
+        answer: currentAns,
+        category: q.category,
+        round_number: currentRoundIdx + 1,
+        company,
+        role,
+        difficulty,
+      };
+
+      const result = await evaluateQuestionAPI(payload);
+
+      setQuestionEvaluations((prev) => ({
+        ...prev,
+        [q.id]: result,
+      }));
+
+      if (result.status === "correct" || result.score >= 70) {
+        setRunSuccessToast(`✓ Evaluated: ${result.verdict || "Accepted"}`);
+      } else if (result.status === "partial" || result.score >= 40) {
+        setRunSuccessToast(`⚠️ Evaluated: ${result.verdict || "Partially Correct"}`);
+      } else {
+        setRunSuccessToast(`❌ Evaluated: ${result.verdict || "Needs Improvement"}`);
+      }
+      setTimeout(() => setRunSuccessToast(""), 4500);
+    } catch (err) {
+      console.error("Single question evaluation error:", err);
+      const fallback = evaluateSingleQuestion({
+        question_id: q.id,
+        question: q.question,
+        answer: currentAns,
+      }, company, role, difficulty);
+
+      setQuestionEvaluations((prev) => ({
+        ...prev,
+        [q.id]: fallback,
+      }));
+      setRunSuccessToast(`Evaluated: ${fallback.verdict}`);
+      setTimeout(() => setRunSuccessToast(""), 4000);
+    } finally {
+      setIsSubmittingQuestion(false);
       setAiSpeechState("observing");
     }
   };
@@ -1283,6 +1366,8 @@ function solution() {
       }
     });
     setAnswers(initialAns);
+    setQuestionEvaluations({});
+    setCurrentQIndex(0);
     setInterviewActive(true);
     setSessionStartTime(Date.now());
     setLoading(false);
@@ -2146,10 +2231,10 @@ function solution() {
                               { id: 4, title: "Behavioral & HR", icon: "👥", short: "HR & Culture", startIdx: 15, endIdx: 19 },
                             ].map((r, rIdx) => {
                               const isCurrentRound = currentRoundIdx === rIdx;
-                              const answeredInRound = sessionQuestions
+                              const evaluatedInRound = sessionQuestions
                                 .slice(r.startIdx, r.endIdx + 1)
-                                .filter((q) => !!answers[q.id]?.trim()).length;
-                              const isRoundDone = answeredInRound === 5;
+                                .filter((q) => !!questionEvaluations[q.id]).length;
+                              const isRoundDone = evaluatedInRound === 5;
                               return (
                                 <div
                                   key={r.id}
@@ -2163,7 +2248,7 @@ function solution() {
                                   <div className="round-pill-info">
                                     <span className="round-pill-title">Round {r.id}: {r.short}</span>
                                     <small className="round-pill-progress">
-                                      {answeredInRound}/5 Answered {isRoundDone ? "✓" : ""}
+                                      {evaluatedInRound}/5 Evaluated {isRoundDone ? "✓" : ""}
                                     </small>
                                   </div>
                                 </div>
@@ -2174,8 +2259,27 @@ function solution() {
                           {/* 20-QUESTION QUICK NAVIGATION MATRIX */}
                           <div className="questions-matrix-row">
                             {sessionQuestions.map((q, idx) => {
-                              const isAnswered = !!answers[q.id]?.trim();
                               const roundNum = Math.floor(idx / 5) + 1;
+                              const evaluation = questionEvaluations[q.id];
+                              const isEvaluated = !!evaluation;
+                              const isPass = isEvaluated && (evaluation.status === "correct" || evaluation.score >= 70);
+                              const isPartial = isEvaluated && (evaluation.status === "partial" || (evaluation.score >= 40 && evaluation.score < 70));
+                              const isFail = isEvaluated && !isPass && !isPartial;
+                              
+                              const userAns = (answers[q.id] || "").trim();
+                              const defaultTemplate = (q.starter_templates && q.starter_templates.javascript) ? q.starter_templates.javascript.trim() : "";
+                              const isDrafting = !isEvaluated && userAns.length > 0 && userAns !== defaultTemplate;
+
+                              const statusClass = isPass
+                                ? "evaluated-pass"
+                                : isPartial
+                                ? "evaluated-partial"
+                                : isFail
+                                ? "evaluated-fail"
+                                : isDrafting
+                                ? "drafting"
+                                : "";
+
                               return (
                                 <button
                                   key={q.id}
@@ -2184,10 +2288,13 @@ function solution() {
                                     setCurrentQIndex(idx);
                                     setShowHint(false);
                                   }}
-                                  className={`question-matrix-btn round-${roundNum} ${currentQIndex === idx ? "active" : ""} ${isAnswered ? "answered" : ""}`}
-                                  title={`Round ${roundNum}: Q${idx + 1} (${q.category})`}
+                                  className={`question-matrix-btn round-${roundNum} ${currentQIndex === idx ? "active" : ""} ${statusClass}`}
+                                  title={`Round ${roundNum}: Q${idx + 1} (${q.category}) • ${isEvaluated ? `Evaluated: ${evaluation.score}%` : isDrafting ? "Drafting answer" : "Unanswered"}`}
                                 >
-                                  {isAnswered && <span className="tab-answered-dot">✓</span>}
+                                  {isPass && <span className="tab-evaluated-dot pass">✓</span>}
+                                  {isPartial && <span className="tab-evaluated-dot partial">~</span>}
+                                  {isFail && <span className="tab-evaluated-dot fail">✗</span>}
+                                  {isDrafting && <span className="tab-draft-dot" />}
                                   <span className="q-num">{idx + 1}</span>
                                 </button>
                               );
@@ -2224,14 +2331,47 @@ function solution() {
                                           {curQ.difficulty}
                                         </span>
                                       )}
-                                      {isSubmitted && (
-                                        <span className="dsa-solved-pill">
-                                          <FaCheck /> Solved & Verified
+                                      {questionEvaluations[curQ?.id] && (
+                                        <span className={`dsa-solved-pill ${questionEvaluations[curQ.id].status || "evaluated"}`}>
+                                          {questionEvaluations[curQ.id].score >= 70 ? "✓ Evaluated" : questionEvaluations[curQ.id].score >= 40 ? "⚠️ Partial" : "✗ Needs Work"} ({questionEvaluations[curQ.id].score}/100)
                                         </span>
                                       )}
                                     </div>
 
                                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                      {/* Quick Top Navigation Controls */}
+                                      <div className="q-nav-top-controls">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setCurrentQIndex((prev) => Math.max(prev - 1, 0));
+                                            setShowHint(false);
+                                            setActiveTestCaseTab(0);
+                                          }}
+                                          disabled={currentQIndex === 0}
+                                          className="q-top-nav-btn"
+                                          title="Previous Question"
+                                        >
+                                          ← Prev
+                                        </button>
+                                        <span className="q-top-nav-counter">
+                                          {currentQIndex + 1} / {sessionQuestions.length}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setCurrentQIndex((prev) => Math.min(prev + 1, sessionQuestions.length - 1));
+                                            setShowHint(false);
+                                            setActiveTestCaseTab(0);
+                                          }}
+                                          disabled={currentQIndex >= sessionQuestions.length - 1}
+                                          className="q-top-nav-btn"
+                                          title="Next Question"
+                                        >
+                                          Next →
+                                        </button>
+                                      </div>
+
                                       {curQ?.hint && (
                                         <button
                                           type="button"
@@ -2499,16 +2639,28 @@ function solution() {
                                           </button>
                                         </div>
                                       ) : (
-                                        /* VOICE DICTATION (Non-DSA rounds) */
-                                        <button
-                                          type="button"
-                                          onClick={toggleVoiceDictation}
-                                          className={`voice-dictation-btn ${isDictating ? "active pulse" : ""} ${currentRoundIdx === 3 ? "hr-primary-voice" : ""}`}
-                                          title="Record your voice response with real-time speech transcription"
-                                        >
-                                          <FaMicrophone className={isDictating ? "pulse-dot" : ""} />
-                                          {isDictating ? "🎙️ Recording..." : currentRoundIdx === 3 ? "🎙️ Answer with Voice" : "🎙️ Dictate"}
-                                        </button>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSubmitSingleQuestion(curQ)}
+                                            disabled={isSubmittingQuestion}
+                                            className="question-submit-answer-btn"
+                                            title="Submit your answer to this question for AI evaluation"
+                                          >
+                                            {isSubmittingQuestion ? <FaSpinner className="fa-spin" /> : <FaCheckCircle />}
+                                            {isSubmittingQuestion ? "Evaluating..." : questionEvaluations[curQ?.id] ? "Re-submit & Evaluate" : "Submit Answer"}
+                                          </button>
+                                          {/* VOICE DICTATION (Non-DSA rounds) */}
+                                          <button
+                                            type="button"
+                                            onClick={toggleVoiceDictation}
+                                            className={`voice-dictation-btn ${isDictating ? "active pulse" : ""} ${currentRoundIdx === 3 ? "hr-primary-voice" : ""}`}
+                                            title="Record your voice response with real-time speech transcription"
+                                          >
+                                            <FaMicrophone className={isDictating ? "pulse-dot" : ""} />
+                                            {isDictating ? "🎙️ Recording..." : currentRoundIdx === 3 ? "🎙️ Answer with Voice" : "🎙️ Dictate"}
+                                          </button>
+                                        </div>
                                       )}
                                     </div>
                                   </div>
@@ -2838,6 +2990,52 @@ function solution() {
                                     </div>
                                   )}
 
+                                  {/* INDIVIDUAL QUESTION EVALUATION RESULT CARD */}
+                                  {questionEvaluations[curQ?.id] && (() => {
+                                    const evalItem = questionEvaluations[curQ.id];
+                                    const isPass = evalItem.status === "correct" || evalItem.score >= 70;
+                                    const isPartial = evalItem.status === "partial" || (evalItem.score >= 40 && evalItem.score < 70);
+                                    const cardClass = isPass ? "pass" : isPartial ? "partial" : "fail";
+
+                                    return (
+                                      <div className={`question-eval-result-card ${cardClass} animate-fade-in`}>
+                                        <div className="eval-result-header">
+                                          <div className="eval-status-pill">
+                                            {isPass ? <FaCheckCircle /> : isPartial ? <FaLightbulb /> : <FaTimes />}
+                                            <span>{evalItem.verdict || (isPass ? "Accepted" : isPartial ? "Partially Correct" : "Needs Improvement")}</span>
+                                          </div>
+                                          <div className="eval-score-badge">
+                                            Question Score: <strong>{evalItem.score}/100</strong>
+                                          </div>
+                                        </div>
+
+                                        <div className="eval-feedback-body">
+                                          <p className="eval-commentary">{evalItem.feedback}</p>
+
+                                          {evalItem.identified_keywords && evalItem.identified_keywords.length > 0 && (
+                                            <div className="eval-kw-chips">
+                                              <span className="eval-chip-label">Concepts Detected:</span>
+                                              {evalItem.identified_keywords.map((kw, kIdx) => (
+                                                <span key={kIdx} className="eval-chip">✓ {kw}</span>
+                                              ))}
+                                            </div>
+                                          )}
+
+                                          {evalItem.suggested_answer_points && evalItem.suggested_answer_points.length > 0 && (
+                                            <div className="eval-model-points">
+                                              <span className="eval-points-label">💡 Key Solution Points to Include:</span>
+                                              <ul>
+                                                {evalItem.suggested_answer_points.map((pt, pIdx) => (
+                                                  <li key={pIdx}>{pt}</li>
+                                                ))}
+                                              </ul>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+
                                   {/* Editor Stats Footer */}
                                   <div className="editor-stats-footer">
                                     <span>Words: <strong>{wordCount}</strong> | Chars: <strong>{charCount}</strong></span>
@@ -2867,9 +3065,26 @@ function solution() {
                               }}
                               disabled={currentQIndex === 0}
                               className="cockpit-prev-btn"
+                              title={currentQIndex === 0 ? "You are on the first question" : `Go back to Question ${currentQIndex}`}
                             >
                               ← Previous Question
                             </button>
+
+                            <div className="cockpit-footer-middle">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const curQ = sessionQuestions[currentQIndex];
+                                  handleSubmitSingleQuestion(curQ);
+                                }}
+                                disabled={isSubmittingQuestion}
+                                className="cockpit-submit-q-btn"
+                                title="Evaluate current question answer"
+                              >
+                                {isSubmittingQuestion ? <FaSpinner className="fa-spin" /> : <FaCheckCircle />}
+                                {isSubmittingQuestion ? "Evaluating Question..." : questionEvaluations[sessionQuestions[currentQIndex]?.id] ? "✓ Re-evaluate This Question" : "Submit This Question"}
+                              </button>
+                            </div>
 
                             {currentQIndex < sessionQuestions.length - 1 ? (
                               <button
