@@ -432,8 +432,7 @@ function MockInterview({ onInterviewCompleted }) {
   const [timeLeft, setTimeLeft] = useState(45 * 60); // 45 minutes
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
-  const [questionEvaluations, setQuestionEvaluations] = useState({}); // { [qId]: { score, status, verdict, feedback, ... } }
-  const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
+  const [submittedQuestions, setSubmittedQuestions] = useState({}); // Tracks submitted questions during the test; full evaluation takes place at the end
 
   // Independent Media Stream States
   const [cameraStatus, setCameraStatus] = useState("idle"); // idle | requesting | granted | denied
@@ -1050,6 +1049,7 @@ function solution() {
   };
 
   // 2. SUBMIT CODE SOLUTION HANDLER
+  // 2. SUBMIT CODE SOLUTION HANDLER
   const handleSubmitCodeSolution = async (q) => {
     if (!q) return;
     const userCode = answers[q.id] || "";
@@ -1079,23 +1079,15 @@ function solution() {
         [q.id]: true,
       }));
 
-      // Evaluate question rubric and store in questionEvaluations
-      const evalItem = evaluateSingleQuestion({
-        question_id: q.id,
-        question: q.question,
-        answer: userCode,
-        test_results: results,
-      }, company, role, difficulty);
-
-      setQuestionEvaluations((prev) => ({
+      setSubmittedQuestions((prev) => ({
         ...prev,
-        [q.id]: evalItem,
+        [q.id]: true,
       }));
 
       if (results.passedCount === results.totalCount) {
-        setRunSuccessToast(`🎉 Solution Accepted! ${results.passedCount}/${results.totalCount} Test Cases Passed.`);
+        setRunSuccessToast(`🎉 Code Solution Submitted! (${results.passedCount}/${results.totalCount} Test Cases Passed).`);
       } else {
-        setRunSuccessToast(`📝 Code Evaluated: ${evalItem.verdict} (${results.passedCount}/${results.totalCount} tests).`);
+        setRunSuccessToast(`📝 Code Solution Submitted (${results.passedCount}/${results.totalCount} test cases passed).`);
       }
       setTimeout(() => setRunSuccessToast(""), 4500);
     } catch (err) {
@@ -1107,72 +1099,23 @@ function solution() {
     }
   };
 
-  // 2b. SUBMIT SINGLE QUESTION (NON-DSA & UNIFIED EVALUATOR)
-  const handleSubmitSingleQuestion = async (q) => {
+  // 2b. SUBMIT SINGLE QUESTION (SAVED & RECORDED FOR FINAL EVALUATION)
+  const handleSubmitSingleQuestion = (q) => {
     if (!q) return;
-    const currentAns = answers[q.id] || "";
-    if (!currentAns.trim()) {
+    const currentAns = (answers[q.id] || "").trim();
+    if (!currentAns) {
       setRunSuccessToast("Please type or record an answer before submitting.");
       setTimeout(() => setRunSuccessToast(""), 3500);
       return;
     }
 
-    const currentRoundIdx = Math.min(Math.floor(currentQIndex / 5), 3);
-    const isDSA = currentRoundIdx === 1 || (q.test_cases && q.test_cases.length > 0);
+    setSubmittedQuestions((prev) => ({
+      ...prev,
+      [q.id]: true,
+    }));
 
-    if (isDSA) {
-      await handleSubmitCodeSolution(q);
-      return;
-    }
-
-    setIsSubmittingQuestion(true);
-    setAiSpeechState("analyzing");
-
-    try {
-      const payload = {
-        question_id: q.id,
-        question: q.question,
-        answer: currentAns,
-        category: q.category,
-        round_number: currentRoundIdx + 1,
-        company,
-        role,
-        difficulty,
-      };
-
-      const result = await evaluateQuestionAPI(payload);
-
-      setQuestionEvaluations((prev) => ({
-        ...prev,
-        [q.id]: result,
-      }));
-
-      if (result.status === "correct" || result.score >= 70) {
-        setRunSuccessToast(`✓ Evaluated: ${result.verdict || "Accepted"}`);
-      } else if (result.status === "partial" || result.score >= 40) {
-        setRunSuccessToast(`⚠️ Evaluated: ${result.verdict || "Partially Correct"}`);
-      } else {
-        setRunSuccessToast(`❌ Evaluated: ${result.verdict || "Needs Improvement"}`);
-      }
-      setTimeout(() => setRunSuccessToast(""), 4500);
-    } catch (err) {
-      console.error("Single question evaluation error:", err);
-      const fallback = evaluateSingleQuestion({
-        question_id: q.id,
-        question: q.question,
-        answer: currentAns,
-      }, company, role, difficulty);
-
-      setQuestionEvaluations((prev) => ({
-        ...prev,
-        [q.id]: fallback,
-      }));
-      setRunSuccessToast(`Evaluated: ${fallback.verdict}`);
-      setTimeout(() => setRunSuccessToast(""), 4000);
-    } finally {
-      setIsSubmittingQuestion(false);
-      setAiSpeechState("observing");
-    }
+    setRunSuccessToast(`✓ Question ${currentQIndex + 1} answer submitted & saved.`);
+    setTimeout(() => setRunSuccessToast(""), 3500);
   };
 
   // 3. RUN CUSTOM TEST CASE HANDLER
