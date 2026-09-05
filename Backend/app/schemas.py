@@ -92,10 +92,10 @@ class ProgressUpdate(BaseModel):
 # ---------- Dashboard ----------
 
 class MetricOut(BaseModel):
-    total_interviews: int = 24
-    avg_score: str = "78%"
-    best_score: str = "92%"
-    practice_time: str = "18 hrs"
+    total_interviews: int = 0
+    avg_score: str = "0%"
+    best_score: str = "0%"
+    practice_time: str = "0 mins"
 
 
 class PerformancePoint(BaseModel):
@@ -352,9 +352,9 @@ class EvaluateQuestionResponse(BaseModel):
     feedback: str
     suggested_answer_points: List[str]
     identified_keywords: Optional[List[str]] = []
-    technical_accuracy: Optional[int] = 85
-    communication_clarity: Optional[int] = 85
-    problem_solving: Optional[int] = 85
+    technical_accuracy: Optional[int] = 0
+    communication_clarity: Optional[int] = 0
+    problem_solving: Optional[int] = 0
 
 
 
@@ -367,9 +367,9 @@ class SubmitInterviewResponse(BaseModel):
     improvements: List[str]
     detailed_feedback: List[QuestionFeedback]
     overall_summary: str
-    technical_score: Optional[int] = 85
-    communication_score: Optional[int] = 85
-    problem_solving_score: Optional[int] = 85
+    technical_score: Optional[int] = 0
+    communication_score: Optional[int] = 0
+    problem_solving_score: Optional[int] = 0
     identified_keywords: Optional[List[str]] = []
 
 

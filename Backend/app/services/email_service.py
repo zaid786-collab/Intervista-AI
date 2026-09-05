@@ -2,6 +2,9 @@ import logging
 import os
 import smtplib
 from email.message import EmailMessage
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -307,3 +310,194 @@ def send_feedback_email(
         print(f"[FALLBACK FEEDBACK EMAIL] To: {destination_email} | Message: {message_text}")
         print(f"==========================================\n")
         return False
+
+
+def get_configured_sender() -> str:
+    """Returns the formatted sender address from environment variables."""
+    sender = os.getenv("EMAIL_FROM") or os.getenv("SMTP_FROM")
+    if sender:
+        return sender
+    username = os.getenv("SMTP_USERNAME")
+    from_name = os.getenv("EMAIL_FROM_NAME") or "Intervista AI"
+    if username:
+        return f"{from_name} <{username}>"
+    return f"{from_name} <no-reply@intervista.ai>"
+
+
+def is_email_api_configured() -> bool:
+    """Checks if an HTTP email API key (such as Resend) is configured."""
+    api_key = os.getenv("EMAIL_PROVIDER_API_KEY") or os.getenv("RESEND_API_KEY")
+    return bool(api_key and api_key.strip())
+
+
+def send_login_welcome_email(
+    recipient: str,
+    user_name: str = "",
+    app_url: str = None,
+) -> tuple[bool, str, str]:
+    """
+    Sends a branded 'Welcome Back to Intervista AI 👋' login notification email.
+    Returns: (success: bool, status: str, error_detail: str)
+    status can be: 'sent', 'dev_logged', or 'failed'
+    """
+    display_name = (user_name or "").strip() or recipient.split("@")[0]
+    base_url = (app_url or os.getenv("APP_URL") or "http://localhost:5173").rstrip("/")
+    dashboard_url = f"{base_url}/dashboard"
+
+    subject = "Welcome Back to Intervista AI 👋"
+
+    text_content = (
+        f"Hello {display_name},\n\n"
+        f"Welcome back to Intervista AI!\n\n"
+        f"Your account has been successfully signed in. You're ready to continue preparing for your next interview.\n\n"
+        f"Practice realistic interviews, improve your answers, analyze your performance, and build confidence with AI-powered interview preparation.\n\n"
+        f"Start Practicing: {dashboard_url}\n\n"
+        f"Good luck with your preparation,\n"
+        f"The Intervista AI Team\n"
+        f"{base_url}\n\n"
+        f"---\n"
+        f"Security Notice: If you did not sign in to your Intervista AI account recently, please secure your account immediately.\n"
+    )
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 24px 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #050814; color: #f8fafc;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="center">
+        <div style="max-width: 580px; width: 100%; background: #0b1120; border: 1px solid rgba(56, 189, 248, 0.22); border-radius: 16px; padding: 36px 28px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); text-align: left; box-sizing: border-box;">
+          
+          <!-- Logo & Header -->
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 26px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 18px;">
+            <div style="background: linear-gradient(135deg, #2563eb, #38bdf8); color: #ffffff; width: 38px; height: 38px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; line-height: 38px; text-align: center;">✦</div>
+            <div>
+              <span style="font-size: 18px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px;">Intervista <span style="color: #38bdf8;">AI</span></span>
+              <span style="display: block; font-size: 11px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase;">Agentic Interview Intelligence</span>
+            </div>
+          </div>
+
+          <!-- Greeting & Main Message -->
+          <h1 style="font-size: 22px; color: #ffffff; margin: 0 0 16px 0; font-weight: 700;">Welcome Back, {display_name}! 👋</h1>
+          <p style="font-size: 15px; color: #cbd5e1; line-height: 1.6; margin: 0 0 16px 0;">
+            Your account has been <strong>successfully signed in</strong>. You're ready to continue preparing for your next high-stakes interview.
+          </p>
+          <p style="font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 24px 0;">
+            Practice realistic AI mock interviews, refine your responses in real time, analyze in-depth performance rubrics, and build unstoppable interview confidence.
+          </p>
+
+          <!-- Status Card -->
+          <div style="background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(56, 189, 248, 0.18); border-radius: 12px; padding: 16px 20px; margin-bottom: 28px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="color: #10b981; font-size: 16px; font-weight: bold;">✓</span>
+              <span style="color: #f1f5f9; font-size: 14px; font-weight: 600;">Account Authentication Confirmed</span>
+            </div>
+            <div style="font-size: 12.5px; color: #94a3b8; margin-top: 6px;">
+              Signed in account: <strong style="color: #cbd5e1;">{recipient}</strong>
+            </div>
+          </div>
+
+          <!-- CTA Button -->
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="{dashboard_url}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #2563eb, #00d4ff); color: #ffffff; text-decoration: none; padding: 14px 34px; border-radius: 10px; font-weight: 600; font-size: 15px; box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);">
+              Start Practicing →
+            </a>
+          </div>
+
+          <!-- Sign-off -->
+          <p style="font-size: 14px; color: #cbd5e1; line-height: 1.5; margin: 28px 0 6px 0;">
+            Good luck with your preparation,<br>
+            <strong style="color: #ffffff;">The Intervista AI Team</strong>
+          </p>
+
+          <!-- Footer -->
+          <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11.5px; color: #64748b; line-height: 1.6;">
+            <div>Intervista AI • Advanced AI-Powered Interview Preparation Platform</div>
+            <div style="margin-top: 6px;">
+              <a href="{base_url}" style="color: #38bdf8; text-decoration: none;">Visit Website</a> • 
+              <a href="{dashboard_url}" style="color: #38bdf8; text-decoration: none;">Candidate Dashboard</a>
+            </div>
+            <div style="margin-top: 10px; color: #475569;">
+              Security Notice: If you did not sign in to your Intervista AI account recently, please secure your account immediately.
+            </div>
+          </div>
+
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
+
+    # 1. Check API provider (Resend / Transactional API)
+    if is_email_api_configured():
+        api_key = (os.getenv("EMAIL_PROVIDER_API_KEY") or os.getenv("RESEND_API_KEY") or "").strip()
+        sender = get_configured_sender()
+        try:
+            import requests
+            res = requests.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": sender,
+                    "to": [recipient],
+                    "subject": subject,
+                    "html": html_content,
+                    "text": text_content,
+                },
+                timeout=10,
+            )
+            if res.status_code in (200, 201):
+                logger.info(f"[EMAIL] Login welcome email sent successfully to {recipient} via API")
+                return True, "sent", ""
+            else:
+                err_msg = f"API error HTTP {res.status_code}: {res.text[:200]}"
+                logger.warning(f"[EMAIL] API delivery failed for {recipient}: {err_msg}. Attempting SMTP fallback...")
+        except Exception as api_err:
+            logger.warning(f"[EMAIL] API call exception for {recipient}: {api_err}. Attempting SMTP fallback...")
+
+    # 2. Check SMTP configuration
+    if is_smtp_configured():
+        host = os.getenv("SMTP_HOST")
+        username = os.getenv("SMTP_USERNAME")
+        password = (os.getenv("SMTP_PASSWORD") or "").replace(" ", "")
+        sender = get_configured_sender()
+        port = int(os.getenv("SMTP_PORT", "587"))
+
+        message = EmailMessage()
+        message["Subject"] = subject
+        message["From"] = sender
+        message["To"] = recipient
+        message.set_content(text_content)
+        message.add_alternative(html_content, subtype="html")
+
+        try:
+            with smtplib.SMTP(host, port, timeout=10) as smtp:
+                smtp.starttls()
+                smtp.login(username, password)
+                smtp.send_message(message)
+            logger.info(f"[EMAIL] Login welcome email sent successfully to {recipient}")
+            return True, "sent", ""
+        except Exception as e:
+            logger.error(f"[EMAIL] Login welcome email failed for user {recipient}: {e}")
+            return False, "failed", str(e)
+
+    # 3. Dev mode fallback when no email credentials exist
+    print(f"\n==========================================")
+    print(f"[EMAIL] Login welcome email sent successfully (Dev Mode)")
+    print(f"To: {recipient}")
+    print(f"Subject: Welcome Back to Intervista AI")
+    print(f"Candidate: {display_name}")
+    print(f"Dashboard Link: {dashboard_url}")
+    print(f"==========================================\n")
+    logger.info(f"[EMAIL] Login welcome email sent successfully to {recipient} (Dev Mode)")
+    return True, "dev_logged", ""
+

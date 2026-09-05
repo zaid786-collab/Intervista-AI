@@ -120,7 +120,7 @@ function findRubricForQuestion(questionText) {
   if (lower.includes("pagination") || lower.includes("rate limit") || lower.includes("pool")) return QUESTION_RUBRICS["pagination"];
   if (lower.includes("rag") || lower.includes("hybrid search") || lower.includes("vector")) return QUESTION_RUBRICS["rag"];
   if (lower.includes("vllm") || lower.includes("quantization") || lower.includes("inference") || lower.includes("kv cache")) return QUESTION_RUBRICS["vllm"];
-  if (lower.includes("500 million") || lower.includes("geo-dns") || lower.includes("multi-region") || lower.includes("high availability")) return QUESTION_RUBRICS["sys_scale"];
+  if (lower.includes("500 million") || lower.includes("geo-dns") || lower.includes("multi-region") || lower.includes("high availability") || lower.includes("high-availability") || lower.includes("distributed system")) return QUESTION_RUBRICS["sys_scale"];
   if (lower.includes("sharding") || lower.includes("hotspot") || lower.includes("consistent hashing")) return QUESTION_RUBRICS["sys_sharding"];
   if (lower.includes("cascading") || lower.includes("circuit breaker") || lower.includes("microservices mesh")) return QUESTION_RUBRICS["sys_resilience"];
   if (lower.includes("zero-trust") || lower.includes("zero trust") || lower.includes("mtls") || lower.includes("spiffe")) return QUESTION_RUBRICS["sys_security"];
@@ -147,6 +147,51 @@ function isNonAnswer(text) {
   if (/(asdf|qwer|zxcv|hjkl|12345|67890)/i.test(lower) && trimmed.length < 25) return true;
   const words = trimmed.split(/\s+/).filter(Boolean);
   if (words.length <= 2 && !["virtual", "cache", "node", "8", "110", "runs", "dom", "o(n)"].some((kw) => lower.includes(kw))) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Checks if the answer is completely off-topic or irrelevant to the question asked.
+ * Catches cases like answering 'I like playing football' to a technical question.
+ */
+function isIrrelevantToQuestion(questionText, answerText) {
+  const lowerQ = (questionText || "").toLowerCase();
+  const lowerA = (answerText || "").toLowerCase();
+
+  const broadTechnicalTerms = [
+    "data structure", "algorithm", "complexity", "runtime", "memory", "cache",
+    "database", "index", "thread", "async", "concurrency", "network", "http",
+    "api", "server", "client", "frontend", "backend", "microservice", "cloud",
+    "docker", "kubernetes", "scale", "latency", "throughput", "security", "auth",
+    "token", "session", "encryption", "test", "debug", "deploy", "git", "code",
+    "function", "class", "object", "component", "render", "state", "hook", "props",
+    "dom", "css", "html", "sql", "nosql", "query", "table", "schema", "rest",
+    "graphql", "websocket", "grpc", "queue", "event", "pubsub", "kafka", "redis",
+    "load balance", "proxy", "gateway", "ci/cd", "pipeline", "cluster", "distributed",
+    "partition", "shard", "replication", "failover", "dns", "tcp", "udp", "ssl",
+    "tls", "cors", "cookie", "jwt", "oauth",
+    // Behavioral keywords
+    "star", "situation", "task", "action", "result", "leadership", "mentor",
+    "conflict", "resolution", "team", "project", "deadline", "stakeholder",
+    "communication", "ownership", "initiative", "collaborat", "feedback"
+  ];
+
+  const stopWords = new Set([
+    "what", "when", "where", "which", "that", "this", "with", "from", "your", "have",
+    "been", "does", "will", "would", "could", "should", "about", "their", "there",
+    "than", "then", "into", "also", "each", "other", "some", "more", "most",
+    "very", "just", "like", "make", "many", "only", "over", "such", "take",
+    "they", "these", "much", "well", "here"
+  ]);
+
+  const qWords = (lowerQ.match(/[a-z]{4,}/g) || []).filter((w) => !stopWords.has(w));
+  const hasAnyTechnical = broadTechnicalTerms.some((term) => lowerA.includes(term));
+  const aWords = new Set(lowerA.match(/[a-z]{4,}/g) || []);
+  const hasQuestionOverlap = qWords.some((w) => aWords.has(w));
+
+  if (!hasAnyTechnical && !hasQuestionOverlap) {
     return true;
   }
   return false;
@@ -489,6 +534,28 @@ export function evaluateSingleQuestion(questionObj, company = "Google", role = "
 
   // 4. Keyword & Concept Detection (Rounds 3 & 4 or general technical)
   const rubric = findRubricForQuestion(qText);
+
+  // 4a. Explicit Relevance Check — catch completely off-topic answers
+  if (isIrrelevantToQuestion(qText, ansText)) {
+    return {
+      question_id: qId,
+      question: qText,
+      score: 5,
+      status: "incorrect",
+      verdict: "Off-Topic • 5/100",
+      technical_accuracy: 0,
+      communication_clarity: 10,
+      problem_solving: 5,
+      feedback: "Answer is completely off-topic and unrelated to the question asked. No relevant technical concepts detected.",
+      identified_keywords: [],
+      suggested_answer_points: rubric ? rubric.coreConcepts : [
+        "Address the core problem requirements and constraints",
+        "Explain step-by-step algorithms and architecture mechanisms",
+        "Detail asymptotic Big-O runtime and failure modes",
+      ],
+    };
+  }
+
   const allKeywords = rubric ? rubric.keywords : [
     "o(1)", "o(n)", "complexity", "trade-off", "performance", "architecture", "data structure", "algorithm", "pointer", "stack", "queue", "hash", "tree", "dp", "dynamic programming", "sliding window"
   ];
@@ -522,7 +589,7 @@ export function evaluateSingleQuestion(questionObj, company = "Google", role = "
   }
 
   if (wordCount < 12) {
-    tech = Math.max(techScore - 25, 10);
+    techScore = Math.max(techScore - 25, 10);
     commScore = Math.max(commScore - 20, 15);
     probScore = Math.max(probScore - 20, 10);
   }

@@ -4,9 +4,8 @@ import { AuthProvider } from "./context/AuthProvider";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
-
 import Home from "./pages/Home";
-import Pricing from "./pages/Pricing";
+// import Pricing from "./pages/Pricing";
 import FAQ from "./pages/FAQ";
 import AuthPage from "./pages/AuthPage";
 import Resources from "./pages/Resources";
@@ -14,7 +13,6 @@ import Companies from "./pages/Companies";
 import Profile from "./pages/Profile";
 import AdminPortal from "./pages/AdminPortal";
 import Dashboard from "./components/dashboard/Dashboard";
-
 import "./App.css";
 
 function ScrollToTop() {
@@ -42,7 +40,7 @@ function AppLayout() {
         <Route path="/" element={<Home />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/companies" element={<Companies />} />
-        <Route path="/pricing" element={<Pricing />} />
+        {/* <Route path="/pricing" element={<Pricing />} /> */}
         <Route path="/faq" element={<FAQ />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

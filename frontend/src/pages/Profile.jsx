@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { fetchDashboardData, getLocalDashboardData } from "../api";
@@ -25,7 +25,7 @@ function Profile() {
     practice_time: "0 mins",
   });
 
-  useEffect(() => {
+  const refreshStats = useCallback(() => {
     fetchDashboardData()
       .then((data) => {
         if (data && data.metrics) {
@@ -37,6 +37,21 @@ function Profile() {
         if (local && local.metrics) setDashboardStats(local.metrics);
       });
   }, []);
+
+  useEffect(() => {
+    refreshStats();
+
+    const handleRefresh = () => refreshStats();
+    window.addEventListener("intervista_profile_refresh", handleRefresh);
+    window.addEventListener("storage", handleRefresh);
+    window.addEventListener("focus", handleRefresh);
+
+    return () => {
+      window.removeEventListener("intervista_profile_refresh", handleRefresh);
+      window.removeEventListener("storage", handleRefresh);
+      window.removeEventListener("focus", handleRefresh);
+    };
+  }, [refreshStats]);
 
   return (
     <main className="profile-page">
@@ -82,13 +97,13 @@ function Profile() {
             <button className="edit-profile-btn" onClick={() => navigate("/dashboard")}>
               ⚙ Dashboard
             </button>
-            <button
+            {/* <button
               className="edit-profile-btn"
               style={{ background: "linear-gradient(135deg, #8b5cf6, #00d4ff)", border: "none", color: "#fff" }}
               onClick={() => navigate("/pricing")}
             >
               {isProOrTeam ? "Manage Plan" : "⚡ Upgrade Plan"}
-            </button>
+            </button> */}
           </div>
 
         </section>

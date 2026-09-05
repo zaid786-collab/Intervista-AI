@@ -154,6 +154,15 @@ function Dashboard() {
       });
   }, []);
 
+  const handleInterviewCompleted = useCallback(() => {
+    loadDashboard();
+    try {
+      window.dispatchEvent(new Event("intervista_profile_refresh"));
+    } catch {
+      // ignore
+    }
+  }, [loadDashboard]);
+
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
@@ -427,7 +436,7 @@ function Dashboard() {
           {activeSection === "interviews" && (
             <>
               <div className="full-width" id="mock-interview">
-                <MockInterview onInterviewCompleted={loadDashboard} />
+                <MockInterview onInterviewCompleted={handleInterviewCompleted} />
               </div>
               <div className="dashboard-row" style={{ marginTop: "25px" }}>
                 <InterviewHeatmap

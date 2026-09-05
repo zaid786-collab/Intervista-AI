@@ -220,3 +220,16 @@ class Feedback(Base):
     page_context = Column(String(100), default="Home Page", nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
+
+class LoginEvent(Base):
+    __tablename__ = "login_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=False)
+    event_id = Column(String(64), unique=True, index=True, nullable=False)
+    email_status = Column(String(50), default="queued", nullable=False)  # queued, sent, failed, duplicate_suppressed, dev_logged
+    email_sent_at = Column(DateTime(timezone=True), nullable=True)
+    error_message = Column(String(500), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
