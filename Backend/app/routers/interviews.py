@@ -1,6 +1,7 @@
 import json
+import time
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -10,8 +11,12 @@ from app import models, schemas
 from app.dependencies import get_current_user_optional
 from app.services.llm_evaluator import evaluate_interview_submission, evaluate_single_question
 from app.services.pdf_generator import generate_interview_pdf_report
+from app.services.question_generator import generate_interview_session
 
 router = APIRouter(prefix="/api/interviews", tags=["Mock Interviews & AI Evaluation"])
+
+# In-memory session tracking registry for authoritative proctoring
+ACTIVE_PROCTORING_SESSIONS: Dict[str, dict] = {}
 
 # =====================================================================
 # 20-QUESTION 4-ROUND INTERVIEW ENGINE QUESTION BANKS
@@ -324,75 +329,153 @@ def start_mock_interview(
     payload: schemas.StartInterviewRequest,
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
-    role_key = payload.role if payload.role in ROLE_DSA_QUESTIONS else "Frontend Developer"
-    
-    # 1. Round 1: Aptitude & Logical Reasoning (5 Questions)
-    round1_questions = [
-        schemas.InterviewQuestion(
-            id=q["id"],
-            round_number=q["round_number"],
-            round_title=q["round_title"],
-            category=q["category"],
-            question=q["question"],
-            hint=q.get("hint"),
+    interview_type = payload.interview_type or "Technical Interview"
+    domain = payload.domain or "General Software Engineering"
+    question_count = payload.question_count or 10
+
+    # If Comprehensive / All Rounds is explicitly requested, assemble 4 rounds with domain specialization
+    if "comprehensive" in interview_type.lower() or "all rounds" in interview_type.lower():
+        role_key = payload.role if payload.role in ROLE_DSA_QUESTIONS else "Frontend Developer"
+        
+        # 1. Round 1: Aptitude & Logical Reasoning (5 Questions)
+        round1_questions = [
+            schemas.InterviewQuestion(
+                id=q["id"],
+                round_number=q["round_number"],
+                round_title=q["round_title"],
+                category=q["category"],
+                question=q["question"],
+                hint=q.get("hint"),
+                domain="Aptitude & Logic",
+                expected_key_points=["Quantitative deduction", "Mathematical accuracy"],
+            )
+            for q in APTITUDE_ROUND_QUESTIONS
+        ]
+
+        # 2. Round 2: Domain-Specific Coding & Algorithms (5 Questions)
+        dsa_raw = generate_interview_session(
+            company=payload.company,
+            role=payload.role,
+            difficulty=payload.difficulty,
+            interview_type="Coding & DSA",
+            domain=domain,
+            question_count=5,
         )
-        for q in APTITUDE_ROUND_QUESTIONS
-    ]
-    
-    # 2. Round 2: Data Structures & Algorithms (5 Questions)
-    dsa_raw = ROLE_DSA_QUESTIONS.get(role_key, ROLE_DSA_QUESTIONS["Frontend Developer"])
-    round2_questions = [
-        schemas.InterviewQuestion(
-            id=q["id"],
-            round_number=q["round_number"],
-            round_title=q["round_title"],
-            category=q["category"],
-            question=q["question"],
-            hint=q.get("hint"),
-            title=q.get("title"),
-            description=q.get("description"),
-            difficulty=q.get("difficulty", "Medium"),
-            examples=q.get("examples", []),
-            constraints=q.get("constraints", []),
-            test_cases=q.get("test_cases", []),
-            starter_templates=q.get("starter_templates"),
-            function_name=q.get("function_name"),
+        round2_questions = [
+            schemas.InterviewQuestion(
+                id=i + 6,
+                round_number=2,
+                round_title=f"{domain} DSA & Coding",
+                category=q.get("category", f"{domain} DSA"),
+                question=q["question"],
+                hint=q.get("hint"),
+                title=q.get("title", f"{domain} Coding Problem {i+1}"),
+                description=q.get("description", q["question"]),
+                difficulty=q.get("difficulty", payload.difficulty),
+                examples=q.get("examples", []),
+                constraints=q.get("constraints", []),
+                test_cases=q.get("test_cases", []),
+                starter_templates=q.get("starter_templates"),
+                function_name=q.get("function_name"),
+                expected_key_points=q.get("expected_key_points", []),
+                domain=domain,
+                language=q.get("language", domain.lower()),
+            )
+            for i, q in enumerate(dsa_raw)
+        ]
+
+        # 3. Round 3: Domain & Company System Architecture (5 Questions)
+        sys_raw = generate_interview_session(
+            company=payload.company,
+            role=payload.role,
+            difficulty=payload.difficulty,
+            interview_type="Technical Interview",
+            domain=domain,
+            question_count=5,
         )
-        for q in dsa_raw
-    ]
-    
-    # 3. Round 3: Company-Specific Architecture & System Design (5 Questions)
-    company_raw = get_company_specific_questions(payload.company, payload.role)
-    round3_questions = [
-        schemas.InterviewQuestion(
-            id=q["id"],
-            round_number=q["round_number"],
-            round_title=q["round_title"],
-            category=q["category"],
-            question=q["question"],
-            hint=q.get("hint"),
+        round3_questions = [
+            schemas.InterviewQuestion(
+                id=i + 11,
+                round_number=3,
+                round_title=f"{domain} Architecture & Core",
+                category=q.get("category", f"{domain} Architecture"),
+                question=q["question"],
+                hint=q.get("hint"),
+                expected_key_points=q.get("expected_key_points", []),
+                domain=domain,
+                difficulty=payload.difficulty,
+            )
+            for i, q in enumerate(sys_raw)
+        ]
+
+        # 4. Round 4: Behavioral & HR Leadership Round (5 Questions)
+        hr_raw = get_hr_behavioral_questions(payload.company)
+        round4_questions = [
+            schemas.InterviewQuestion(
+                id=i + 16,
+                round_number=4,
+                round_title="Behavioral & HR Leadership Round",
+                category=q["category"],
+                question=q["question"],
+                hint=q.get("hint"),
+                expected_key_points=["STAR method structure", "Clear situation and impact", "Ownership and communication"],
+                difficulty="Medium",
+                domain="Behavioral & HR",
+            )
+            for i, q in enumerate(hr_raw)
+        ]
+        all_questions = round1_questions + round2_questions + round3_questions + round4_questions
+    else:
+        # PURE DOMAIN-CONSTRAINED INTERVIEW (e.g. C++ Technical Interview, Python Coding, etc.)
+        # EVERY SINGLE QUESTION strictly matches domain, interview_type, and difficulty.
+        raw_questions = generate_interview_session(
+            company=payload.company,
+            role=payload.role,
+            difficulty=payload.difficulty,
+            interview_type=interview_type,
+            domain=domain,
+            question_count=question_count,
         )
-        for q in company_raw
-    ]
-    
-    # 4. Round 4: Behavioral & HR Leadership Round (5 Questions)
-    hr_raw = get_hr_behavioral_questions(payload.company)
-    round4_questions = [
-        schemas.InterviewQuestion(
-            id=q["id"],
-            round_number=q["round_number"],
-            round_title=q["round_title"],
-            category=q["category"],
-            question=q["question"],
-            hint=q.get("hint"),
-        )
-        for q in hr_raw
-    ]
-    
-    # Combine all 4 rounds into a master 20-question interview session
-    all_20_questions = round1_questions + round2_questions + round3_questions + round4_questions
+
+        all_questions = [
+            schemas.InterviewQuestion(
+                id=idx + 1,
+                round_number=(idx // 5) + 1,
+                round_title=f"{domain} {interview_type} (Part {(idx // 5) + 1})",
+                category=q.get("category", f"{domain} - Core Concept"),
+                question=q["question"],
+                hint=q.get("hint"),
+                domain=domain,
+                language=q.get("language", domain.lower()),
+                expected_key_points=q.get("expected_key_points", []),
+                title=q.get("title"),
+                description=q.get("description"),
+                difficulty=q.get("difficulty", payload.difficulty),
+                examples=q.get("examples", []),
+                constraints=q.get("constraints", []),
+                test_cases=q.get("test_cases", []),
+                starter_templates=q.get("starter_templates"),
+                function_name=q.get("function_name"),
+            )
+            for idx, q in enumerate(raw_questions)
+        ]
 
     session_id = f"intv_{payload.company.lower()}_{int(datetime.now().timestamp())}"
+
+    # Initialize authoritative proctoring state for this session
+    ACTIVE_PROCTORING_SESSIONS[session_id] = {
+        "session_id": session_id,
+        "company": payload.company,
+        "role": payload.role,
+        "difficulty": payload.difficulty,
+        "warning_count": 0,
+        "max_warnings": 5,
+        "status": "ACTIVE",
+        "violations": [],
+        "last_violation_time": 0.0,
+        "termination_reason": None,
+        "interview_id": None,
+    }
 
     return schemas.StartInterviewResponse(
         session_id=session_id,
@@ -400,7 +483,201 @@ def start_mock_interview(
         role=payload.role,
         difficulty=payload.difficulty,
         duration_minutes=payload.duration_minutes or 60,
-        questions=all_20_questions,
+        interview_type=interview_type,
+        domain=domain,
+        questions=all_questions,
+    )
+
+@router.post("/violation", response_model=schemas.RecordViolationResponse)
+def record_proctoring_violation(
+    payload: schemas.RecordViolationRequest,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+):
+    """
+    Authoritative backend proctoring violation registrar:
+    - Validates interview session
+    - Deduplicates cascading browser events within 2.0s
+    - Increments authoritative warning count (1-5)
+    - Emits structured proctoring logs
+    - On 5th violation: terminates session and permanently persists state to DB
+    """
+    session_id = payload.session_id
+    now_ts = time.time()
+    now_iso = payload.timestamp or datetime.now().isoformat()
+
+    session = ACTIVE_PROCTORING_SESSIONS.get(session_id)
+    if not session:
+        session = {
+            "session_id": session_id,
+            "company": payload.company or "Tech Company",
+            "role": payload.role or "Software Engineer",
+            "difficulty": payload.difficulty or "Medium",
+            "warning_count": 0,
+            "max_warnings": 5,
+            "status": "ACTIVE",
+            "violations": [],
+            "last_violation_time": 0.0,
+            "termination_reason": None,
+            "interview_id": None,
+        }
+        ACTIVE_PROCTORING_SESSIONS[session_id] = session
+
+    # 1. If already terminated, return immediately with authoritative terminated state
+    if session["status"] == "TERMINATED_FOR_CHEATING":
+        return schemas.RecordViolationResponse(
+            session_id=session_id,
+            warning_count=session["warning_count"],
+            max_warnings=session["max_warnings"],
+            status="TERMINATED_FOR_CHEATING",
+            terminated=True,
+            message="Interview has already been terminated due to maximum proctoring violations.",
+            violations=[schemas.ViolationDetail(**v) for v in session["violations"]],
+            termination_reason=session["termination_reason"],
+            interview_id=session["interview_id"],
+        )
+
+    # 2. Server-side deduplication: ignore rapid duplicate triggers within 2.0s
+    if (now_ts - session["last_violation_time"]) < 2.0:
+        print(f"[PROCTORING] Deduplicated rapid event: {payload.violation_type} on {session_id}")
+        return schemas.RecordViolationResponse(
+            session_id=session_id,
+            warning_count=session["warning_count"],
+            max_warnings=session["max_warnings"],
+            status=session["status"],
+            terminated=session["status"] == "TERMINATED_FOR_CHEATING",
+            message=f"Event deduplicated ({payload.violation_type}). Current warning count: {session['warning_count']}/{session['max_warnings']}",
+            violations=[schemas.ViolationDetail(**v) for v in session["violations"]],
+            termination_reason=session["termination_reason"],
+            interview_id=session["interview_id"],
+        )
+
+    # 3. Increment authoritative warning count
+    session["warning_count"] += 1
+    current_warning = session["warning_count"]
+    session["last_violation_time"] = now_ts
+
+    violation_detail = {
+        "type": payload.violation_type,
+        "timestamp": now_iso,
+        "warning_number": current_warning,
+        "message": payload.message,
+        "severity": payload.severity or "HIGH",
+    }
+    session["violations"].append(violation_detail)
+
+    # Required structured backend logs:
+    print(f"[PROCTORING] Violation detected")
+    print(f"[PROCTORING] Type: {payload.violation_type}")
+    print(f"[PROCTORING] Warning: {current_warning}/{session['max_warnings']}")
+    print(f"[PROCTORING] Interview: {session_id}")
+
+    # 4. Check if 5th warning was reached -> TERMINATE
+    is_terminated = current_warning >= session["max_warnings"]
+
+    if is_terminated:
+        session["status"] = "TERMINATED_FOR_CHEATING"
+        session["termination_reason"] = (
+            f"Maximum proctoring warnings reached ({current_warning}/{session['max_warnings']}). "
+            "Interview was immediately terminated for suspicious behavior."
+        )
+        print(f"[PROCTORING] Interview terminated")
+
+        # Persist terminated interview record to database
+        user_id = current_user.id if current_user else None
+        interview_record = models.Interview(
+            user_id=user_id,
+            role=session["role"],
+            company=session["company"],
+            score="0%",
+            score_num=0,
+            technical_score=0,
+            communication_score=0,
+            problem_solving_score=0,
+            grade="Terminated (Proctoring Violation)",
+            duration_minutes=payload.duration_minutes or 45,
+            status="TERMINATED_FOR_CHEATING",
+            date=datetime.now().strftime("%d %b %Y"),
+            time=datetime.now().strftime("%I:%M %p"),
+            mode="Virtual",
+            feedback="Interview session was permanently terminated due to exceeding 5 proctoring violations.",
+            warning_count=current_warning,
+            termination_reason=session["termination_reason"],
+            proctoring_data=json.dumps({
+                "warning_count": current_warning,
+                "max_warnings": session["max_warnings"],
+                "status": "TERMINATED_FOR_CHEATING",
+                "termination_reason": session["termination_reason"],
+                "violations": session["violations"],
+            }),
+        )
+        db.add(interview_record)
+        db.flush()
+        session["interview_id"] = interview_record.id
+
+        # Record activity and notification
+        db.add(models.Activity(
+            user_id=user_id,
+            title=f"Mock Interview Terminated: {session['company']}",
+            company=f"Terminated for Cheating • {session['role']}",
+            time="Just now",
+            color="#ef4444",
+        ))
+        db.add(models.Notification(
+            user_id=user_id,
+            title=f"{session['company']} Interview Terminated",
+            desc=f"Interview was terminated because 5 proctoring warnings were reached.",
+            color="#ef4444",
+            time="Just now",
+            is_read=False,
+        ))
+        db.commit()
+
+        return schemas.RecordViolationResponse(
+            session_id=session_id,
+            warning_count=current_warning,
+            max_warnings=session["max_warnings"],
+            status="TERMINATED_FOR_CHEATING",
+            terminated=True,
+            message="Interview terminated because maximum cheating warnings were reached.",
+            violations=[schemas.ViolationDetail(**v) for v in session["violations"]],
+            termination_reason=session["termination_reason"],
+            interview_id=session["interview_id"],
+        )
+
+    return schemas.RecordViolationResponse(
+        session_id=session_id,
+        warning_count=current_warning,
+        max_warnings=session["max_warnings"],
+        status="ACTIVE",
+        terminated=False,
+        message=f"Warning {current_warning} of {session['max_warnings']}: {payload.message}",
+        violations=[schemas.ViolationDetail(**v) for v in session["violations"]],
+        termination_reason=None,
+        interview_id=None,
+    )
+
+@router.get("/session/{session_id}/proctoring", response_model=schemas.ProctoringStatusResponse)
+def get_session_proctoring_status(session_id: str):
+    """Returns current authoritative proctoring status of an interview session."""
+    session = ACTIVE_PROCTORING_SESSIONS.get(session_id)
+    if not session:
+        return schemas.ProctoringStatusResponse(
+            session_id=session_id,
+            warning_count=0,
+            max_warnings=5,
+            status="ACTIVE",
+            terminated=False,
+            violations=[],
+        )
+    return schemas.ProctoringStatusResponse(
+        session_id=session_id,
+        warning_count=session["warning_count"],
+        max_warnings=session["max_warnings"],
+        status=session["status"],
+        terminated=session["status"] == "TERMINATED_FOR_CHEATING",
+        violations=[schemas.ViolationDetail(**v) for v in session["violations"]],
+        termination_reason=session.get("termination_reason"),
     )
 
 @router.post("/submit", response_model=schemas.SubmitInterviewResponse)
@@ -409,6 +686,15 @@ def submit_mock_interview(
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
+    # 0. Reject submission if the interview session was terminated for cheating
+    if payload.session_id:
+        active_sess = ACTIVE_PROCTORING_SESSIONS.get(payload.session_id)
+        if active_sess and active_sess.get("status") == "TERMINATED_FOR_CHEATING":
+            raise HTTPException(
+                status_code=403,
+                detail="Interview was terminated for proctoring violations. Answer submission is strictly prohibited.",
+            )
+
     # 1. Run LLM & Rubric Evaluation
     answers_dicts = [
         {
@@ -452,6 +738,22 @@ def submit_mock_interview(
 
     user_id = current_user.id if current_user else None
 
+    # Proctoring summary extraction
+    warning_count = payload.warning_count or 0
+    violations_history = []
+    if payload.session_id and payload.session_id in ACTIVE_PROCTORING_SESSIONS:
+        sess = ACTIVE_PROCTORING_SESSIONS[payload.session_id]
+        warning_count = sess["warning_count"]
+        violations_history = sess["violations"]
+        sess["status"] = "COMPLETED"
+
+    proctoring_summary = {
+        "warning_count": warning_count,
+        "max_warnings": 5,
+        "status": "Completed",
+        "violations": violations_history,
+    }
+
     # 2. Persist Full Evaluation in Database
     interview = models.Interview(
         user_id=user_id,
@@ -469,11 +771,14 @@ def submit_mock_interview(
         time=datetime.now().strftime("%I:%M %p"),
         mode="Virtual",
         feedback=overall_summary,
+        warning_count=warning_count,
+        proctoring_data=json.dumps(proctoring_summary),
         report_data=json.dumps({
             "strengths": strengths,
             "improvements": improvements,
             "detailed_feedback": [df.dict() for df in detailed_feedback],
             "identified_keywords": identified_keywords,
+            "proctoring_summary": proctoring_summary,
         }),
     )
     db.add(interview)
@@ -537,6 +842,8 @@ def submit_mock_interview(
         communication_score=comm_score,
         problem_solving_score=prob_score,
         identified_keywords=identified_keywords,
+        warning_count=warning_count,
+        proctoring_summary=proctoring_summary,
     )
 
 @router.post("/evaluate-question", response_model=schemas.EvaluateQuestionResponse)
@@ -554,6 +861,9 @@ def evaluate_single_question_endpoint(
         company=payload.company,
         role=payload.role,
         difficulty=payload.difficulty,
+        interview_type=payload.interview_type,
+        domain=payload.domain,
+        expected_key_points=payload.expected_key_points,
         test_results=payload.test_results,
     )
     return schemas.EvaluateQuestionResponse(

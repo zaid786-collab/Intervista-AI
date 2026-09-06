@@ -87,10 +87,53 @@ QUESTION_RUBRICS = {
         "keywords": ["situation", "task", "action", "result", "star", "conflict", "disagreement", "alignment", "disagree and commit", "data-driven", "benchmark", "stakeholder", "outcome", "metric", "retrospective"],
         "coreConcepts": ["STAR structured narrative", "Objective data and proof-of-concept resolution", "Active listening & Disagree and Commit", "Quantifiable positive outcome"],
     },
+    # C++
+    "cpp_core": {
+        "topic": "C++ Memory, Modern Semantics & OOP",
+        "keywords": ["raii", "pointer", "reference", "destructor", "vtable", "vptr", "move semantics", "rvalue", "lvalue", "std::move", "unique_ptr", "shared_ptr", "weak_ptr", "const", "virtual", "template", "sfinae", "concepts", "stl", "stack", "heap", "new", "delete", "atomic", "mutex", "false sharing", "cache line", "memory order"],
+        "coreConcepts": ["RAII deterministic destruction", "Move semantics & rvalue references", "Smart pointer ownership models", "Vtable polymorphism & virtual destructors"],
+    },
+    # Python
+    "python_core": {
+        "topic": "Python Internals, GIL & Memory",
+        "keywords": ["gil", "global interpreter lock", "mutable", "immutable", "generator", "yield", "decorator", "comprehension", "asyncio", "coroutine", "event loop", "dunder", "__init__", "reference count", "garbage collect", "generational", "descriptor", "__get__", "__set__"],
+        "coreConcepts": ["GIL bytecode serialization & CPU vs IO concurrency", "Reference counting & cyclic GC", "Decorators & closures", "Generators lazy evaluation"],
+    },
+    # Java
+    "java_core": {
+        "topic": "Java JVM, Concurrency & Collections",
+        "keywords": ["jvm", "heap", "stack", "metaspace", "garbage collection", "g1 gc", "synchronized", "volatile", "atomic", "cas", "concurrenthashmap", "generics", "stream", "classloader", "thread"],
+        "coreConcepts": ["JVM Memory generations (Young/Old/Metaspace)", "Volatile visibility vs synchronized atomicity", "ConcurrentHashMap CAS node locking"],
+    },
 }
 
-def find_rubric_for_question(question_text: str):
+def find_rubric_for_question(
+    question_text: str,
+    domain: Optional[str] = None,
+    expected_key_points: Optional[List[str]] = None,
+):
+    # If explicit expected key points are passed, synthesize dynamic rubric
+    if expected_key_points and len(expected_key_points) > 0:
+        extracted_kws = []
+        for pt in expected_key_points:
+            extracted_kws.extend([w.lower() for w in re.findall(r'[a-zA-Z0-9_\+\-]{3,}', pt)])
+        if domain:
+            extracted_kws.append(domain.lower())
+        return {
+            "topic": f"{domain or 'Technical'} Concept",
+            "keywords": list(set(extracted_kws)),
+            "coreConcepts": expected_key_points,
+        }
+
     lower = question_text.lower()
+    lower_dom = (domain or "").lower()
+
+    if "c++" in lower_dom or "c++" in lower or "pointer" in lower or "raii" in lower or "vtable" in lower or "rvalue" in lower:
+        return QUESTION_RUBRICS["cpp_core"]
+    if "python" in lower_dom or "python" in lower or "gil" in lower or "decorator" in lower or "asyncio" in lower:
+        return QUESTION_RUBRICS["python_core"]
+    if "java" in lower_dom or "java" in lower or "jvm" in lower or "concurrenthashmap" in lower:
+        return QUESTION_RUBRICS["java_core"]
     if "fiber" in lower or "reconciliation" in lower or "virtual dom" in lower:
         return QUESTION_RUBRICS["fiber"]
     if "vitals" in lower or "lcp" in lower or "inp" in lower or "cls" in lower:
@@ -461,6 +504,9 @@ def evaluate_single_question(
     company: Optional[str] = "Google",
     role: Optional[str] = "Software Engineer",
     difficulty: Optional[str] = "Medium",
+    interview_type: Optional[str] = "Technical Interview",
+    domain: Optional[str] = "General Software Engineering",
+    expected_key_points: Optional[List[str]] = None,
     test_results: Optional[dict] = None,
 ) -> Dict[str, Any]:
     """Evaluates a single question answer with instant feedback."""
@@ -538,7 +584,7 @@ def evaluate_single_question(
         }
 
     # 4. Semantic Rubric Evaluation (Rounds 3 & 4 or General)
-    rubric = find_rubric_for_question(question)
+    rubric = find_rubric_for_question(question, domain=domain, expected_key_points=expected_key_points)
     lower_ans = trimmed_ans.lower()
     words = trimmed_ans.split()
     word_count = len(words)

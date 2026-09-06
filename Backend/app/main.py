@@ -37,6 +37,9 @@ def ensure_db_columns():
             ("problem_solving_score", "INTEGER"),
             ("grade", "VARCHAR(50)"),
             ("report_data", "TEXT"),
+            ("warning_count", "INTEGER DEFAULT 0"),
+            ("termination_reason", "VARCHAR(255)"),
+            ("proctoring_data", "TEXT"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE interviews ADD COLUMN {col} {col_type}"))

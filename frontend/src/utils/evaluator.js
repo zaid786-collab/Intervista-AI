@@ -102,13 +102,50 @@ const QUESTION_RUBRICS = {
     keywords: ["situation", "task", "action", "result", "star", "conflict", "disagreement", "alignment", "disagree and commit", "data-driven", "benchmark", "stakeholder", "outcome", "metric", "retrospective"],
     coreConcepts: ["STAR structured narrative", "Objective data and proof-of-concept resolution", "Active listening & Disagree and Commit", "Quantifiable positive outcome"],
   },
+  // C++
+  "cpp_core": {
+    topic: "C++ Memory, Modern Semantics & OOP",
+    keywords: ["raii", "pointer", "reference", "destructor", "vtable", "vptr", "move semantics", "rvalue", "lvalue", "std::move", "unique_ptr", "shared_ptr", "weak_ptr", "const", "virtual", "template", "sfinae", "concepts", "stl", "stack", "heap", "new", "delete", "atomic", "mutex"],
+    coreConcepts: ["RAII deterministic destruction", "Move semantics & rvalue references", "Smart pointer ownership models", "Vtable polymorphism & virtual destructors"],
+  },
+  // Python
+  "python_core": {
+    topic: "Python Internals, GIL & Memory",
+    keywords: ["gil", "global interpreter lock", "mutable", "immutable", "generator", "yield", "decorator", "comprehension", "asyncio", "coroutine", "event loop", "dunder", "__init__", "reference count", "garbage collect"],
+    coreConcepts: ["GIL bytecode serialization & concurrency", "Reference counting & cyclic GC", "Decorators & closures", "Generators lazy evaluation"],
+  },
+  // Java
+  "java_core": {
+    topic: "Java JVM, Concurrency & Collections",
+    keywords: ["jvm", "heap", "stack", "metaspace", "garbage collection", "g1 gc", "synchronized", "volatile", "atomic", "cas", "concurrenthashmap", "generics", "stream", "classloader", "thread"],
+    coreConcepts: ["JVM Memory generations", "Volatile visibility vs synchronized atomicity", "ConcurrentHashMap CAS node locking"],
+  },
 };
 
 /**
- * Identify matching rubric based on question text.
+ * Identify matching rubric based on question text or dynamic key points.
  */
-function findRubricForQuestion(questionText) {
+function findRubricForQuestion(questionText, domain = null, expectedKeyPoints = null) {
+  if (expectedKeyPoints && Array.isArray(expectedKeyPoints) && expectedKeyPoints.length > 0) {
+    const extractedKws = [];
+    expectedKeyPoints.forEach(pt => {
+      const matches = (pt.toLowerCase().match(/[a-z0-9_\+\-]{3,}/g) || []);
+      extractedKws.push(...matches);
+    });
+    if (domain) extractedKws.push(domain.toLowerCase());
+    return {
+      topic: `${domain || 'Technical'} Core Concept`,
+      keywords: Array.from(new Set(extractedKws)),
+      coreConcepts: expectedKeyPoints,
+    };
+  }
+
   const lower = (questionText || "").toLowerCase();
+  const lowerDom = (domain || "").toLowerCase();
+
+  if (lowerDom.includes("c++") || lower.includes("c++") || lower.includes("raii") || lower.includes("vtable") || lower.includes("rvalue")) return QUESTION_RUBRICS["cpp_core"];
+  if (lowerDom.includes("python") || lower.includes("python") || lower.includes("gil") || lower.includes("decorator")) return QUESTION_RUBRICS["python_core"];
+  if (lowerDom.includes("java") || lower.includes("java") || lower.includes("jvm") || lower.includes("concurrenthashmap")) return QUESTION_RUBRICS["java_core"];
   if (lower.includes("fiber") || lower.includes("reconciliation") || lower.includes("virtual dom")) return QUESTION_RUBRICS["fiber"];
   if (lower.includes("vitals") || lower.includes("lcp") || lower.includes("inp") || lower.includes("cls")) return QUESTION_RUBRICS["vitals"];
   if (lower.includes("closure") || lower.includes("event loop") || lower.includes("microtask")) return QUESTION_RUBRICS["closure"];
@@ -533,7 +570,7 @@ export function evaluateSingleQuestion(questionObj, company = "Google", role = "
   }
 
   // 4. Keyword & Concept Detection (Rounds 3 & 4 or general technical)
-  const rubric = findRubricForQuestion(qText);
+  const rubric = findRubricForQuestion(qText, questionObj.domain || role, questionObj.expected_key_points || questionObj.expectedKeyPoints);
 
   // 4a. Explicit Relevance Check — catch completely off-topic answers
   if (isIrrelevantToQuestion(qText, ansText)) {
@@ -733,8 +770,8 @@ export async function evaluateWithGeminiAPI(company, role, difficulty, answers, 
 /**
  * Offline / Default Question-Specific NLP Evaluation.
  */
-export function evaluateWithLocalRubric(company, role, difficulty, answers) {
-  const detailed = answers.map((a) => evaluateSingleQuestion(a, company, role, difficulty));
+export function evaluateWithLocalRubric(company, role, difficulty, answers, interviewType = "Technical Interview", domain = "General") {
+  const detailed = answers.map((a) => evaluateSingleQuestion(a, company, role, difficulty, a.domain || domain));
 
   const totalScore = detailed.reduce((acc, curr) => acc + curr.score, 0);
   const avgScore = Math.round(totalScore / Math.max(detailed.length, 1));
@@ -783,45 +820,31 @@ export function evaluateWithLocalRubric(company, role, difficulty, answers) {
     improvements.push("Provide concrete code snippets or step-by-step algorithms rather than high-level definitions.");
   }
 
-  // Calculate round-by-round sub-scores (4 rounds of 5 questions each)
-  const round1Items = detailed.slice(0, 5);
-  const round2Items = detailed.slice(5, 10);
-  const round3Items = detailed.slice(10, 15);
-  const round4Items = detailed.slice(15, 20);
+  // Calculate round-by-round sub-scores dynamically based on question metadata or groups
+  const roundsGroup = {};
+  detailed.forEach((item, idx) => {
+    const origAns = answers[idx] || {};
+    const rNum = origAns.round_number || item.round_number || (Math.floor(idx / 5) + 1);
+    const rTitle = origAns.round_title || item.round_title || `Round ${rNum}`;
+    if (!roundsGroup[rNum]) {
+      roundsGroup[rNum] = { round_number: rNum, title: rTitle, items: [] };
+    }
+    roundsGroup[rNum].items.push(item);
+  });
 
-  const calcRoundAvg = (items) => {
-    if (!items.length) return 0;
-    return Math.round(items.reduce((acc, c) => acc + c.score, 0) / items.length);
-  };
+  const roundsBreakdown = Object.values(roundsGroup).map((grp) => {
+    const avg = grp.items.length
+      ? Math.round(grp.items.reduce((acc, c) => acc + c.score, 0) / grp.items.length)
+      : 0;
+    return {
+      round_number: grp.round_number,
+      title: grp.title,
+      score: avg,
+      questions_count: grp.items.length,
+    };
+  });
 
-  const roundsBreakdown = [
-    {
-      round_number: 1,
-      title: "Aptitude & Logical Reasoning",
-      score: calcRoundAvg(round1Items),
-      questions_count: round1Items.length,
-    },
-    {
-      round_number: 2,
-      title: "Data Structures & Algorithms (DSA)",
-      score: calcRoundAvg(round2Items),
-      questions_count: round2Items.length,
-    },
-    {
-      round_number: 3,
-      title: "Company Architecture & System Design",
-      score: calcRoundAvg(round3Items),
-      questions_count: round3Items.length,
-    },
-    {
-      round_number: 4,
-      title: "Behavioral & HR Leadership Round",
-      score: calcRoundAvg(round4Items),
-      questions_count: round4Items.length,
-    },
-  ];
-
-  const overallSummary = `Candidate completed all 4 rounds (20 questions) with an overall score of ${avgScore}% (${grade}) for ${company}'s ${role} interview. Technical Depth: ${avgTech}%, Communication: ${avgComm}%, Problem Solving: ${avgProb}%.`;
+  const overallSummary = `Candidate completed ${detailed.length} questions with an overall score of ${avgScore}% (${grade}) for ${company}'s ${role} interview (${domain} • ${interviewType}). Technical Depth: ${avgTech}%, Communication: ${avgComm}%, Problem Solving: ${avgProb}%.`;
 
   return {
     interview_id: Date.now(),
@@ -844,12 +867,12 @@ export function evaluateWithLocalRubric(company, role, difficulty, answers) {
 /**
  * Main evaluation entry point.
  */
-export async function evaluateInterview(company, role, difficulty, answers, customApiKey = null) {
+export async function evaluateInterview(company, role, difficulty, answers, customApiKey = null, interviewType = "Technical Interview", domain = "General") {
   const envKey = (typeof process !== "undefined" && process.env?.VITE_GEMINI_API_KEY) || "";
   const effectiveKey = customApiKey || envKey;
 
   if (effectiveKey && effectiveKey.length > 10) {
-    const aiResult = await evaluateWithGeminiAPI(company, role, difficulty, answers, effectiveKey);
+    const aiResult = await evaluateWithGeminiAPI(company, role, difficulty, answers, effectiveKey, interviewType, domain);
     if (aiResult && typeof aiResult.overall_score === "number") {
       return {
         interview_id: Date.now(),
@@ -869,5 +892,6 @@ export async function evaluateInterview(company, role, difficulty, answers, cust
     }
   }
 
-  return evaluateWithLocalRubric(company, role, difficulty, answers);
+  return evaluateWithLocalRubric(company, role, difficulty, answers, interviewType, domain);
 }
+

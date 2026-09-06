@@ -119,6 +119,8 @@ class InterviewOut(BaseModel):
     mode: Optional[str] = None
     feedback: Optional[str] = None
     duration_minutes: Optional[int] = 45
+    warning_count: Optional[int] = 0
+    termination_reason: Optional[str] = None
 
 
 AdminUserDetails.model_rebuild()
@@ -232,6 +234,9 @@ class StartInterviewRequest(BaseModel):
     role: str = "Software Engineer"
     difficulty: str = "Medium"
     duration_minutes: int = 45
+    interview_type: Optional[str] = "Technical Interview"
+    domain: Optional[str] = "General Software Engineering"
+    question_count: Optional[int] = 10
 
 
 class TestCaseSchema(BaseModel):
@@ -256,6 +261,8 @@ class InterviewQuestion(BaseModel):
     hint: Optional[str] = None
     round_number: Optional[int] = 1
     round_title: Optional[str] = None
+    domain: Optional[str] = None
+    language: Optional[str] = None
     expected_key_points: Optional[List[str]] = []
     title: Optional[str] = None
     description: Optional[str] = None
@@ -303,6 +310,8 @@ class StartInterviewResponse(BaseModel):
     role: str
     difficulty: str
     duration_minutes: int
+    interview_type: Optional[str] = "Technical Interview"
+    domain: Optional[str] = "General Software Engineering"
     questions: List[InterviewQuestion]
 
 
@@ -313,11 +322,16 @@ class CandidateAnswer(BaseModel):
 
 
 class SubmitInterviewRequest(BaseModel):
+    session_id: Optional[str] = None
     company: str
     role: str
     difficulty: str
     duration_minutes: int = 45
+    interview_type: Optional[str] = "Technical Interview"
+    domain: Optional[str] = "General Software Engineering"
     answers: List[CandidateAnswer]
+    warning_count: Optional[int] = 0
+    proctoring_data: Optional[dict] = None
 
 
 class QuestionFeedback(BaseModel):
@@ -340,6 +354,9 @@ class EvaluateQuestionRequest(BaseModel):
     company: Optional[str] = "Google"
     role: Optional[str] = "Frontend Developer"
     difficulty: Optional[str] = "Medium"
+    interview_type: Optional[str] = "Technical Interview"
+    domain: Optional[str] = "General Software Engineering"
+    expected_key_points: Optional[List[str]] = []
     test_results: Optional[dict] = None
 
 
@@ -357,6 +374,49 @@ class EvaluateQuestionResponse(BaseModel):
     problem_solving: Optional[int] = 0
 
 
+# ---------- Proctoring & Anti-Cheating Schemas ----------
+
+class ViolationDetail(BaseModel):
+    type: str  # TAB_SWITCH, WINDOW_BLUR, FULLSCREEN_EXIT, SCREEN_SHARE_STOPPED, CAMERA_DISCONNECTED, MIC_DISCONNECTED, PASTE_DETECTED
+    timestamp: str
+    warning_number: int
+    message: str
+    severity: Optional[str] = "HIGH"
+
+
+class RecordViolationRequest(BaseModel):
+    session_id: str
+    company: Optional[str] = "Tech Company"
+    role: Optional[str] = "Software Engineer"
+    difficulty: Optional[str] = "Medium"
+    duration_minutes: Optional[int] = 45
+    violation_type: str
+    message: str
+    timestamp: Optional[str] = None
+    severity: Optional[str] = "HIGH"
+
+
+class RecordViolationResponse(BaseModel):
+    session_id: str
+    warning_count: int
+    max_warnings: int = 5
+    status: str  # "ACTIVE" | "TERMINATED_FOR_CHEATING"
+    terminated: bool
+    message: str
+    violations: List[ViolationDetail]
+    termination_reason: Optional[str] = None
+    interview_id: Optional[int] = None
+
+
+class ProctoringStatusResponse(BaseModel):
+    session_id: str
+    warning_count: int
+    max_warnings: int = 5
+    status: str
+    terminated: bool
+    violations: List[ViolationDetail]
+    termination_reason: Optional[str] = None
+
 
 class SubmitInterviewResponse(BaseModel):
     interview_id: int
@@ -371,6 +431,8 @@ class SubmitInterviewResponse(BaseModel):
     communication_score: Optional[int] = 0
     problem_solving_score: Optional[int] = 0
     identified_keywords: Optional[List[str]] = []
+    warning_count: Optional[int] = 0
+    proctoring_summary: Optional[dict] = None
 
 
 class ScheduleInterviewRequest(BaseModel):

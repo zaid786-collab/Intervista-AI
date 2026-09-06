@@ -44,6 +44,7 @@ import {
   FaListAlt,
   FaLayerGroup,
   FaCodeBranch,
+  FaBan,
 } from "react-icons/fa";
 import { useAuth } from "../../context/useAuth";
 import { generateInterviewPDF } from "../../utils/pdfGenerator";
@@ -51,6 +52,7 @@ import { evaluateInterview, evaluateSingleQuestion, evaluateQuestionAPI } from "
 import { getToken, recordLocalInterviewSession, recordLocalScheduledInterview } from "../../api";
 import { STRUCTURED_DSA_BY_ROLE } from "../../utils/dsaQuestions";
 import { runTestCases } from "../../utils/codeRunner";
+import { ProctoringManager, PROCTORING_VIOLATION_TYPES } from "../../utils/ProctoringManager";
 import aiBotImage from "../../assets/ai_bot.jpg";
 
 const COMPANIES = [
@@ -66,11 +68,38 @@ const COMPANIES = [
   "IBM",
 ];
 
+const INTERVIEW_TYPES = [
+  "Technical Interview",
+  "Coding & DSA",
+  "System Design & Architecture",
+  "Behavioral & HR",
+  "Comprehensive (All Rounds)",
+];
+
+const DOMAINS = [
+  "C++",
+  "Python",
+  "Java",
+  "JavaScript",
+  "TypeScript",
+  "React",
+  "Go (Golang)",
+  "Rust",
+  "SQL & Databases",
+  "System Design & Architecture",
+  "Machine Learning & AI",
+  "Cloud & DevOps",
+  "Custom / Other Topic",
+];
+
 const ROLES = [
+  "Software Engineer",
   "Frontend Developer",
   "Backend Developer",
   "Full Stack Engineer",
   "AI / ML Engineer",
+  "DevOps / SRE",
+  "System Software Engineer",
 ];
 
 const DIFFICULTIES = ["Easy", "Medium", "Hard"];
@@ -289,94 +318,357 @@ const DSA_BY_ROLE = {
   ],
 };
 
-function generate20Questions(companyName, roleName) {
-  const r1 = APTITUDE_QUESTIONS;
-  const r2 = STRUCTURED_DSA_BY_ROLE[roleName] || STRUCTURED_DSA_BY_ROLE["Frontend Developer"];
-  const r3 = [
+const FALLBACK_DOMAIN_BANKS = {
+  "C++": [
     {
-      id: 11,
-      round_number: 3,
-      round_title: `Company Architecture & System Design (${companyName})`,
-      category: "System Design - High Availability & Scale",
-      question: `Architect a global distributed system for ${companyName} handling 500 Million Daily Active Users. Discuss Geo-DNS routing, L4/L7 load balancing, Multi-Region replication, and edge caching.`,
-      hint: "Address Anycast DNS, NGINX/Envoy ingress proxies, CDN points of presence, active-active multi-region databases, and partition tolerance.",
+      id: 1,
+      round_number: 1,
+      round_title: "C++ Modern Semantics & Memory",
+      category: "C++ Modern Semantics",
+      question: "Explain move semantics and rvalue references (&&) introduced in C++11. How does std::move convert an lvalue to an rvalue, and what actually happens during resource transfer?",
+      hint: "Focus on preventing expensive deep copies of heap memory by transferring internal pointers and setting the source pointer to nullptr.",
+      expected_key_points: ["Move semantics & rvalue references (&&)", "std::move ownership transfer", "Pointers reassignment and nullptr reset"],
+      domain: "C++",
     },
     {
-      id: 12,
-      round_number: 3,
-      round_title: `Company Architecture & System Design (${companyName})`,
-      category: `${companyName} Core Engineering Challenge`,
-      question: `How would you solve ${companyName}'s signature engineering challenge: designing high-throughput data pipelines with sub-second query latency and zero-downtime rolling deployments?`,
-      hint: `Discuss blue-green deployments, canary testing, distributed tracing (OpenTelemetry), and auto-healing infrastructure tailored to ${companyName}.`,
+      id: 2,
+      round_number: 1,
+      round_title: "C++ Smart Pointers & RAII",
+      category: "C++ Smart Pointers",
+      question: "Compare std::unique_ptr and std::shared_ptr in C++. When would you use std::weak_ptr, and how does it prevent cyclic dependency memory leaks?",
+      hint: "unique_ptr has zero runtime overhead with exclusive ownership; shared_ptr uses atomic reference counting control block; weak_ptr observes without incrementing strong refcount.",
+      expected_key_points: ["Exclusive vs shared ownership semantics", "Atomic reference count overhead", "weak_ptr breaking reference cycles"],
+      domain: "C++",
     },
     {
-      id: 13,
-      round_number: 3,
-      round_title: `Company Architecture & System Design (${companyName})`,
-      category: "System Design - Data Sharding & Partitions",
-      question: `Design a resilient data sharding strategy for ${companyName} that dynamically handles hotspots (e.g. celebrity accounts or viral flash events) without manual database re-indexing.`,
-      hint: "Explain Consistent Hashing with virtual nodes, composite shard keys (TenantID + Salt), and micro-sharding with automated live data migration.",
+      id: 3,
+      round_number: 1,
+      round_title: "C++ Object Model & Virtual Dispatch",
+      category: "C++ Vtable & Virtual Dispatch",
+      question: "Describe how the C++ compiler and runtime implement dynamic polymorphism via vtables and vptrs. What are the space and runtime performance costs?",
+      hint: "Each class with virtual functions gets a static vtable; each object gets a hidden 8-byte vptr pointing to the vtable. Virtual call requires double indirection.",
+      expected_key_points: ["Vtable structure and per-instance vptr", "Double indirection invocation cost", "Virtual destructor importance for derived classes"],
+      domain: "C++",
     },
     {
-      id: 14,
-      round_number: 3,
-      round_title: `Company Architecture & System Design (${companyName})`,
-      category: "System Design - Fault Tolerance & Circuit Breakers",
-      question: `In a mission-critical microservices mesh at ${companyName}, how do you prevent cascading service failures when a downstream database slows down under heavy load?`,
-      hint: "Cover Circuit Breaker state machines (Closed, Open, Half-Open), exponential backoff with full jitter, bulkhead thread pools, and graceful degradation.",
+      id: 4,
+      round_number: 1,
+      round_title: "C++ Compile-Time Metaprogramming",
+      category: "C++ Templates & Metaprogramming",
+      question: "What is the difference between template specialization and function overloading in C++? How do modern C++20 Concepts improve upon SFINAE?",
+      hint: "Concepts provide compile-time predicates evaluated cleanly with readable compiler diagnostics, avoiding verbose std::enable_if SFINAE boilerplate.",
+      expected_key_points: ["SFINAE vs C++20 concepts constraints", "Template specialization rules", "Compile-time validation and diagnostics"],
+      domain: "C++",
     },
     {
-      id: 15,
-      round_number: 3,
-      round_title: `Company Architecture & System Design (${companyName})`,
-      category: "System Design - Zero Trust & API Security",
-      question: `Design an enterprise Zero-Trust security and mTLS authentication architecture for thousands of microservices communicating across ${companyName}'s cloud VPCs.`,
-      hint: "Discuss SPIFFE/SPIRE identity issuance, short-lived X.509 certificates with automated rotation via service mesh (Istio/Linkerd), and fine-grained RBAC.",
+      id: 5,
+      round_number: 1,
+      round_title: "C++ Concurrency & Memory Model",
+      category: "C++ Concurrency & Memory Model",
+      question: "Explain the difference between std::mutex and std::atomic in C++. What are memory orders (relaxed, acquire-release, sequentially consistent) and when should they be used?",
+      hint: "std::atomic provides lock-free hardware CPU instructions (e.g. CAS/LOCK XADD) without kernel context switches, while memory orders define visibility across CPU cores.",
+      expected_key_points: ["Atomic CPU instructions vs kernel mutexes", "Acquire-release synchronization", "False sharing prevention with alignas"],
+      domain: "C++",
+    },
+  ],
+  "Python": [
+    {
+      id: 1,
+      round_number: 1,
+      round_title: "Python Runtime & Architecture",
+      category: "Python GIL & Concurrency",
+      question: "Explain Python's Global Interpreter Lock (GIL). Why does it exist in CPython, and how does it affect CPU-bound versus IO-bound multithreaded applications?",
+      hint: "GIL protects CPython memory management and reference counting. IO-bound tasks release the GIL during syscalls; CPU-bound tasks require multiprocessing or C-extensions.",
+      expected_key_points: ["CPython reference counting safety", "CPU-bound contention vs IO-bound GIL release", "multiprocessing / asyncio alternatives"],
+      domain: "Python",
+    },
+    {
+      id: 2,
+      round_number: 1,
+      round_title: "Python Memory Management",
+      category: "Python Memory & GC",
+      question: "How does Python manage memory using reference counting and generational garbage collection? How do weakref and cyclic references interact?",
+      hint: "Reference counting deallocates immediately when refcount reaches 0; generational GC (Gen 0, 1, 2) breaks reference cycles using graph traversal.",
+      expected_key_points: ["Immediate refcount deallocation", "3-tier generational cycle detection", "weakref avoiding cyclic retention"],
+      domain: "Python",
+    },
+    {
+      id: 3,
+      round_number: 1,
+      round_title: "Python Metaprogramming & Internals",
+      category: "Python Metaprogramming & Decorators",
+      question: "Explain how Python decorators work under the hood using first-class functions and closures. Why is functools.wraps important when writing production decorators?",
+      hint: "Decorators wrap a callable with another callable, capturing lexical scope. functools.wraps preserves docstrings, __name__, and metadata.",
+      expected_key_points: ["First-class function closures", "functools.wraps preserving __name__ and introspection", "Parameterized decorator outer factories"],
+      domain: "Python",
+    },
+    {
+      id: 4,
+      round_number: 1,
+      round_title: "Python AsyncIO & Event Loop",
+      category: "Python AsyncIO & Event Loop",
+      question: "How does asyncio coordinate asynchronous tasks in Python? Contrast coroutines with OS threads and explain what happens when a coroutine yields control.",
+      hint: "AsyncIO runs a single-threaded event loop utilizing epoll/kqueue. When a coroutine awaits, it yields a Future to the event loop without blocking the thread.",
+      expected_key_points: ["Single-threaded event loop with epoll/kqueue", "Cooperative multitasking vs OS preemptive threads", "Coroutines generator-based execution"],
+      domain: "Python",
+    },
+    {
+      id: 5,
+      round_number: 1,
+      round_title: "Python Data Model & Generators",
+      category: "Python Generators & Iterables",
+      question: "Describe the Python Iterator Protocol (__iter__ and __next__). How do generators provide lazy evaluation and significant memory reduction over lists?",
+      hint: "Generators pause execution state on yield, producing values on-demand with O(1) memory footprint instead of allocating the full array in RAM.",
+      expected_key_points: ["Iterator protocol (__iter__ and __next__)", "Lazy evaluation yielding values on-demand", "O(1) memory complexity vs O(N) lists"],
+      domain: "Python",
+    },
+  ],
+  "Java": [
+    {
+      id: 1,
+      round_number: 1,
+      round_title: "Java Memory & JVM Architecture",
+      category: "JVM Memory Model",
+      question: "Explain the JVM memory architecture: Heap (Eden, Survivor, Tenured/Old), Stack, and Metaspace. How does G1 GC collect garbage compared to ZGC?",
+      hint: "Objects allocate in Eden, promote to Survivor, and move to Tenured if they survive aging threshold. G1 GC divides heap into regions, while ZGC achieves sub-millisecond pauses.",
+      expected_key_points: ["Eden, Survivor, Tenured generations", "Thread-local Stack vs shared Heap", "G1 regional GC vs concurrent ZGC"],
+      domain: "Java",
+    },
+    {
+      id: 2,
+      round_number: 1,
+      round_title: "Java Concurrency & Synchronization",
+      category: "Java Concurrency",
+      question: "Compare synchronized blocks, volatile variables, and ReentrantLock in Java. What does the Java Memory Model (JMM) happens-before relationship guarantee?",
+      hint: "volatile guarantees CPU cache visibility and prevents instruction reordering; synchronized guarantees both atomicity and mutual exclusion.",
+      expected_key_points: ["volatile visibility without atomicity", "synchronized monitor locks and JMM happens-before", "ReentrantLock condition variables and fairness"],
+      domain: "Java",
+    },
+    {
+      id: 3,
+      round_number: 1,
+      round_title: "Java Collections & Internals",
+      category: "Java ConcurrentHashMap",
+      question: "How is ConcurrentHashMap implemented in Java 8+? Explain how it achieves high concurrency without locking the entire map like Hashtable.",
+      hint: "Java 8 uses CAS operations for empty buckets and synchronized locking on the bucket node header only. Large buckets convert from linked lists to red-black trees.",
+      expected_key_points: ["CAS on empty buckets", "Synchronized lock on bucket head node only", "Treeify threshold converting lists to Red-Black Trees"],
+      domain: "Java",
+    },
+    {
+      id: 4,
+      round_number: 1,
+      round_title: "Java Virtual Threads & Loom",
+      category: "Java Virtual Threads",
+      question: "What are Project Loom Virtual Threads in Java 21+? How do they differ from traditional platform threads, and what is carrier thread unmounting?",
+      hint: "Virtual threads are lightweight user-mode threads managed by JVM (M:N mapping). When blocking on IO, the virtual thread unmounts from the carrier platform thread.",
+      expected_key_points: ["M:N user-space scheduling by JVM", "Carrier thread unmounting on IO blocking", "Massive throughput without reactive boilerplate"],
+      domain: "Java",
+    },
+    {
+      id: 5,
+      round_number: 1,
+      round_title: "Java Classloading & Bytecode",
+      category: "Java ClassLoaders",
+      question: "Explain the Java ClassLoader delegation model (Bootstrap, Platform/Extension, Application). What is ClassNotFoundException vs NoClassDefFoundError?",
+      hint: "Parent-first delegation queries parent classloader first. ClassNotFoundException is checked runtime failure; NoClassDefFoundError occurs when linking fails.",
+      expected_key_points: ["Parent-first delegation hierarchy", "Bytecode verification and linking stages", "ClassNotFoundException vs NoClassDefFoundError"],
+      domain: "Java",
+    },
+  ],
+};
+
+function generateDomainQuestions(companyName, roleName, interviewType, domainName, difficultyLevel, count = 10) {
+  const normDom = (domainName || "C++").trim();
+  const matchedKey = Object.keys(FALLBACK_DOMAIN_BANKS).find(k => k.toLowerCase() === normDom.toLowerCase());
+
+  if (interviewType === "Comprehensive (All Rounds)") {
+    const r1 = APTITUDE_QUESTIONS;
+    const r2 = STRUCTURED_DSA_BY_ROLE[roleName] || STRUCTURED_DSA_BY_ROLE["Frontend Developer"];
+    const r3 = [
+      {
+        id: 11,
+        round_number: 3,
+        round_title: `Company Architecture & System Design (${companyName})`,
+        category: "System Design - High Availability & Scale",
+        question: `Architect a global distributed system for ${companyName} handling 500 Million Daily Active Users. Discuss Geo-DNS routing, L4/L7 load balancing, Multi-Region replication, and edge caching.`,
+        hint: "Address Anycast DNS, NGINX/Envoy ingress proxies, CDN points of presence, active-active multi-region databases, and partition tolerance.",
+      },
+      {
+        id: 12,
+        round_number: 3,
+        round_title: `Company Architecture & System Design (${companyName})`,
+        category: `${companyName} Core Engineering Challenge`,
+        question: `How would you solve ${companyName}'s signature engineering challenge: designing high-throughput data pipelines with sub-second query latency and zero-downtime rolling deployments?`,
+        hint: `Discuss blue-green deployments, canary testing, distributed tracing (OpenTelemetry), and auto-healing infrastructure tailored to ${companyName}.`,
+      },
+      {
+        id: 13,
+        round_number: 3,
+        round_title: `Company Architecture & System Design (${companyName})`,
+        category: "System Design - Data Sharding & Partitions",
+        question: `Design a resilient data sharding strategy for ${companyName} that dynamically handles hotspots (e.g. celebrity accounts or viral flash events) without manual database re-indexing.`,
+        hint: "Explain Consistent Hashing with virtual nodes, composite shard keys (TenantID + Salt), and micro-sharding with automated live data migration.",
+      },
+      {
+        id: 14,
+        round_number: 3,
+        round_title: `Company Architecture & System Design (${companyName})`,
+        category: "System Design - Fault Tolerance & Circuit Breakers",
+        question: `In a mission-critical microservices mesh at ${companyName}, how do you prevent cascading service failures when a downstream database slows down under heavy load?`,
+        hint: "Cover Circuit Breaker state machines (Closed, Open, Half-Open), exponential backoff with full jitter, bulkhead thread pools, and graceful degradation.",
+      },
+      {
+        id: 15,
+        round_number: 3,
+        round_title: `Company Architecture & System Design (${companyName})`,
+        category: "System Design - Zero Trust & API Security",
+        question: `Design an enterprise Zero-Trust security and mTLS authentication architecture for thousands of microservices communicating across ${companyName}'s cloud VPCs.`,
+        hint: "Discuss SPIFFE/SPIRE identity issuance, short-lived X.509 certificates with automated rotation via service mesh (Istio/Linkerd), and fine-grained RBAC.",
+      },
+    ];
+    const r4 = [
+      {
+        id: 16,
+        round_number: 4,
+        round_title: "Behavioral & HR Leadership Round",
+        category: "HR - Conflict Resolution & Alignment",
+        question: `Describe a situation where you had a strong technical disagreement with a Senior Engineer or Product Manager at ${companyName}. How did you resolve it constructively using the STAR method?`,
+        hint: "Structure using STAR (Situation, Task, Action, Result). Focus on objective data, running benchmarks/POCs, active listening, and 'disagree and commit' alignment.",
+      },
+      {
+        id: 17,
+        round_number: 4,
+        round_title: "Behavioral & HR Leadership Round",
+        category: "HR - Crisis Management & Ownership",
+        question: `Tell me about a high-severity production outage or critical bug that occurred under your ownership. How did you coordinate the incident response and lead the post-mortem?`,
+        hint: "Emphasize rapid mitigation first, transparent communication to stakeholders, root cause analysis (5 Whys), and blameless post-mortem with automated safeguards.",
+      },
+      {
+        id: 18,
+        round_number: 4,
+        round_title: "Behavioral & HR Leadership Round",
+        category: "HR - Failure & Growth Mindset",
+        question: `Can you share an experience where a project or technical architecture you spearheaded failed to meet expectations or hit its deadline? What were your core takeaways?`,
+        hint: "Demonstrate radical ownership, honesty, learning agility, early risk escalation, and how this experience shaped your current engineering standards.",
+      },
+      {
+        id: 19,
+        round_number: 4,
+        round_title: "Behavioral & HR Leadership Round",
+        category: "HR - Leadership & Mentorship",
+        question: `How do you elevate the engineers around you? Give a concrete example of how you mentored a colleague, improved code review quality, or championed engineering best practices.`,
+        hint: "Highlight concrete actions: hosting architecture RFC sessions, creating starter boilerplates, providing empathetic PR reviews, and pairing with junior teammates.",
+      },
+      {
+        id: 20,
+        round_number: 4,
+        round_title: "Behavioral & HR Leadership Round",
+        category: "HR - Company Culture & Vision",
+        question: `Why do you specifically want to join ${companyName} over other top tech firms, and how does your 2-3 year technical vision align with our engineering culture and scale?`,
+        hint: `Connect your personal passions and technical strengths directly to ${companyName}'s core principles, products, and technical scale.`,
+      },
+    ];
+    return [...r1, ...r2, ...r3, ...r4];
+  }
+
+  if (interviewType === "Behavioral & HR") {
+    return [
+      {
+        id: 1,
+        round_number: 1,
+        round_title: "Behavioral & Leadership",
+        category: "HR - Conflict Resolution & Alignment",
+        question: `Describe a situation where you had a strong technical disagreement with a Senior Engineer or Product Manager at ${companyName}. How did you resolve it constructively using the STAR method?`,
+        hint: "Structure using STAR (Situation, Task, Action, Result). Focus on objective data, running benchmarks, active listening, and 'disagree and commit' alignment.",
+        expected_key_points: ["STAR method structure", "Objective data and proof-of-concept", "Alignment and impact"],
+        domain: "Behavioral & HR",
+      },
+      {
+        id: 2,
+        round_number: 1,
+        round_title: "Behavioral & Leadership",
+        category: "HR - Crisis Management & Ownership",
+        question: `Tell me about a high-severity production outage or critical bug that occurred under your ownership. How did you coordinate incident response and lead the post-mortem?`,
+        hint: "Emphasize rapid mitigation first, transparent communication, root cause analysis (5 Whys), and blameless post-mortem safeguards.",
+        expected_key_points: ["Rapid triage and mitigation", "Transparent communication", "Blameless post-mortem"],
+        domain: "Behavioral & HR",
+      },
+      {
+        id: 3,
+        round_number: 1,
+        round_title: "Behavioral & Leadership",
+        category: "HR - Failure & Growth Mindset",
+        question: `Can you share an experience where a project you spearheaded failed to meet expectations or hit its deadline? What were your core takeaways?`,
+        hint: "Demonstrate radical ownership, honesty, learning agility, early risk escalation, and how this experience shaped your current engineering standards.",
+        expected_key_points: ["Radical ownership", "Learning agility", "Long-term standards"],
+        domain: "Behavioral & HR",
+      },
+      {
+        id: 4,
+        round_number: 1,
+        round_title: "Behavioral & Leadership",
+        category: "HR - Leadership & Mentorship",
+        question: `How do you elevate the engineers around you? Give a concrete example of how you mentored a colleague, improved code review quality, or championed engineering best practices.`,
+        hint: "Highlight concrete actions: hosting architecture RFC sessions, creating starter boilerplates, providing empathetic PR reviews, and pairing with junior teammates.",
+        expected_key_points: ["Mentorship and pairing", "Architecture RFCs", "Engineering standards elevation"],
+        domain: "Behavioral & HR",
+      },
+      {
+        id: 5,
+        round_number: 1,
+        round_title: "Behavioral & Leadership",
+        category: "HR - Company Culture & Vision",
+        question: `Why do you specifically want to join ${companyName} over other top tech firms, and how does your 2-3 year technical vision align with our engineering culture and scale?`,
+        hint: `Connect your personal passions and technical strengths directly to ${companyName}'s core principles, products, and technical scale.`,
+        expected_key_points: ["Company mission alignment", "Technical ambition at scale", "Culture fit"],
+        domain: "Behavioral & HR",
+      },
+    ];
+  }
+
+  if (matchedKey) {
+    const bank = FALLBACK_DOMAIN_BANKS[matchedKey];
+    return bank.map((q, idx) => ({
+      ...q,
+      id: idx + 1,
+      round_number: Math.floor(idx / 5) + 1,
+      round_title: `${normDom} ${interviewType}`,
+    }));
+  }
+
+  // Generic domain fallback
+  return [
+    {
+      id: 1,
+      round_number: 1,
+      round_title: `${normDom} Core Concepts`,
+      category: `${normDom} Fundamentals`,
+      question: `Explain the core architecture, memory model, and execution lifecycle of ${normDom}. How does it handle concurrency and resource management?`,
+      hint: `Discuss runtime execution, memory safety guarantees, threading models, and optimization techniques in ${normDom}.`,
+      expected_key_points: [`${normDom} memory model`, "Concurrency and thread safety", "Resource lifecycle management"],
+      domain: normDom,
+    },
+    {
+      id: 2,
+      round_number: 1,
+      round_title: `${normDom} Performance & Trade-offs`,
+      category: `${normDom} Performance`,
+      question: `What are the primary performance bottlenecks and optimization strategies in ${normDom}? Detail profiling, latency reduction, and memory overhead mitigation.`,
+      hint: `Address CPU cache efficiency, allocation overhead, algorithmic complexity, and asynchronous execution in ${normDom}.`,
+      expected_key_points: ["Profiling and bottleneck analysis", "Memory overhead mitigation", "Throughput optimization"],
+      domain: normDom,
+    },
+    {
+      id: 3,
+      round_number: 1,
+      round_title: `${normDom} Production Architecture`,
+      category: `${normDom} Architecture`,
+      question: `How would you architect a mission-critical, scalable production system using ${normDom}? Discuss error handling, testing patterns, and graceful degradation.`,
+      hint: `Explain architectural isolation, distributed communication, fault resilience, and maintainability in ${normDom}.`,
+      expected_key_points: ["Production architectural resilience", "Structured error handling and testing", "Scalability patterns"],
+      domain: normDom,
     },
   ];
-  const r4 = [
-    {
-      id: 16,
-      round_number: 4,
-      round_title: "Behavioral & HR Leadership Round",
-      category: "HR - Conflict Resolution & Alignment",
-      question: `Describe a situation where you had a strong technical disagreement with a Senior Engineer or Product Manager at work. How did you resolve it constructively using the STAR method?`,
-      hint: "Structure using STAR (Situation, Task, Action, Result). Focus on objective data, running benchmarks/POCs, active listening, and 'disagree and commit' alignment.",
-    },
-    {
-      id: 17,
-      round_number: 4,
-      round_title: "Behavioral & HR Leadership Round",
-      category: "HR - Crisis Management & Ownership",
-      question: `Tell me about a high-severity production outage or critical bug that occurred under your ownership. How did you coordinate the incident response and lead the post-mortem?`,
-      hint: "Emphasize rapid mitigation first, transparent communication to stakeholders, root cause analysis (5 Whys), and blameless post-mortem with automated safeguards.",
-    },
-    {
-      id: 18,
-      round_number: 4,
-      round_title: "Behavioral & HR Leadership Round",
-      category: "HR - Failure & Growth Mindset",
-      question: `Can you share an experience where a project or technical architecture you spearheaded failed to meet expectations or hit its deadline? What were your core takeaways?`,
-      hint: "Demonstrate radical ownership, honesty, learning agility, early risk escalation, and how this experience shaped your current engineering standards.",
-    },
-    {
-      id: 19,
-      round_number: 4,
-      round_title: "Behavioral & HR Leadership Round",
-      category: "HR - Leadership & Mentorship",
-      question: `How do you elevate the engineers around you? Give a concrete example of how you mentored a colleague, improved code review quality, or championed engineering best practices.`,
-      hint: "Highlight concrete actions: hosting architecture RFC sessions, creating starter boilerplates, providing empathetic PR reviews, and pairing with junior teammates.",
-    },
-    {
-      id: 20,
-      round_number: 4,
-      round_title: "Behavioral & HR Leadership Round",
-      category: "HR - Company Culture & Vision",
-      question: `Why do you specifically want to join ${companyName} over other top tech firms, and how does your 2-3 year technical vision align with our engineering culture and scale?`,
-      hint: `Connect your personal passions and technical strengths directly to ${companyName}'s core principles, products, and technical scale.`,
-    },
-  ];
-  return [...r1, ...r2, ...r3, ...r4];
 }
 
 // Resilient Video Stream Player Component
@@ -417,8 +709,11 @@ function VideoPlayer({ stream, mirrored = false, style = {}, className = "" }) {
 function MockInterview({ onInterviewCompleted }) {
   const { user } = useAuth();
   const [company, setCompany] = useState("Google");
-  const [role, setRole] = useState("Frontend Developer");
+  const [role, setRole] = useState("Software Engineer");
   const [difficulty, setDifficulty] = useState("Medium");
+  const [interviewType, setInterviewType] = useState("Technical Interview");
+  const [domain, setDomain] = useState("C++");
+  const [customDomain, setCustomDomain] = useState("");
   const [loading, setLoading] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfSuccess, setPdfSuccess] = useState(false);
@@ -437,6 +732,13 @@ function MockInterview({ onInterviewCompleted }) {
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false); // Question submission & evaluation state
   const [initError, setInitError] = useState(null); // Error state for interview initialization
   const [streamWarning, setStreamWarning] = useState(null); // Warning when a stream drops during active interview
+
+  // Proctoring & Anti-Cheating States
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [proctoringWarning, setProctoringWarning] = useState(null); // { warningNumber, maxWarnings, type, message, violations }
+  const [terminationData, setTerminationData] = useState(null); // { warningCount, maxWarnings, status, terminationReason, violations, interviewId }
+  const [mediaGracePeriod, setMediaGracePeriod] = useState(null); // { device: "Camera"|"Microphone", secondsLeft: 10 }
+  const proctoringManagerRef = useRef(null);
 
   // Independent Media Stream States
   const [cameraStatus, setCameraStatus] = useState("idle"); // idle | requesting | granted | denied
@@ -577,6 +879,7 @@ function MockInterview({ onInterviewCompleted }) {
     }
 
     try {
+      proctoringManagerRef.current?.setPermissionRequesting(true);
       setCameraStatus("requesting");
       console.log("[MEDIA] Requesting camera via getUserMedia");
       let stream;
@@ -604,6 +907,9 @@ function MockInterview({ onInterviewCompleted }) {
           setCameraStream(null);
           setCameraStatus("idle");
           setIsCameraActive(false);
+          if (interviewActive && !terminationData) {
+            proctoringManagerRef.current?.handleCameraDropped();
+          }
         };
       }
 
@@ -611,11 +917,16 @@ function MockInterview({ onInterviewCompleted }) {
       setCameraStream(stream);
       setCameraStatus("granted");
       setIsCameraActive(true);
+      proctoringManagerRef.current?.handleCameraRecovered();
       return stream;
     } catch (err) {
       console.warn("[MEDIA] Camera access warning:", err);
       setCameraStatus(err.name === "NotAllowedError" ? "denied" : err.name === "NotFoundError" ? "denied" : err.name === "NotReadableError" ? "denied" : "idle");
       return null;
+    } finally {
+      setTimeout(() => {
+        proctoringManagerRef.current?.setPermissionRequesting(false);
+      }, 800);
     }
   };
 
@@ -633,6 +944,7 @@ function MockInterview({ onInterviewCompleted }) {
     }
 
     try {
+      proctoringManagerRef.current?.setPermissionRequesting(true);
       setMicStatus("requesting");
       console.log("[MEDIA] Requesting microphone via getUserMedia");
       let stream;
@@ -660,6 +972,9 @@ function MockInterview({ onInterviewCompleted }) {
           setMicStatus("idle");
           setIsMicActive(false);
           setAudioLevel(0);
+          if (interviewActive && !terminationData) {
+            proctoringManagerRef.current?.handleMicrophoneDropped();
+          }
         };
       }
 
@@ -668,11 +983,16 @@ function MockInterview({ onInterviewCompleted }) {
       setMicStatus("granted");
       setIsMicActive(true);
       setupAudioAnalyser(stream);
+      proctoringManagerRef.current?.handleMicrophoneRecovered();
       return stream;
     } catch (err) {
       console.warn("[MEDIA] Microphone access warning:", err);
       setMicStatus(err.name === "NotAllowedError" ? "denied" : err.name === "NotFoundError" ? "denied" : err.name === "NotReadableError" ? "denied" : "idle");
       return null;
+    } finally {
+      setTimeout(() => {
+        proctoringManagerRef.current?.setPermissionRequesting(false);
+      }, 800);
     }
   };
 
@@ -688,6 +1008,7 @@ function MockInterview({ onInterviewCompleted }) {
     }
 
     try {
+      proctoringManagerRef.current?.setPermissionRequesting(true);
       setScreenStatus("requesting");
       console.log("[MEDIA] Requesting screen share via getDisplayMedia");
       const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -704,6 +1025,9 @@ function MockInterview({ onInterviewCompleted }) {
           screenStreamRef.current = null;
           setScreenStream(null);
           setScreenStatus("idle");
+          if (interviewActive && !terminationData) {
+            proctoringManagerRef.current?.handleScreenShareStopped();
+          }
         };
       }
 
@@ -720,12 +1044,17 @@ function MockInterview({ onInterviewCompleted }) {
         setScreenStatus("denied");
       }
       return null;
+    } finally {
+      setTimeout(() => {
+        proctoringManagerRef.current?.setPermissionRequesting(false);
+      }, 800);
     }
   };
 
   // Connect both Camera & Mic in ONE single browser permission dialog
   const requestCombinedCamAndMic = async () => {
     try {
+      proctoringManagerRef.current?.setPermissionRequesting(true);
       setCameraStatus("requesting");
       setMicStatus("requesting");
       console.log("[MEDIA] Requesting combined camera & microphone");
@@ -755,12 +1084,16 @@ function MockInterview({ onInterviewCompleted }) {
             setCameraStream(null);
             setCameraStatus("idle");
             setIsCameraActive(false);
+            if (interviewActive && !terminationData) {
+              proctoringManagerRef.current?.handleCameraDropped();
+            }
           };
         }
         cameraStreamRef.current = vStream;
         setCameraStream(vStream);
         setCameraStatus("granted");
         setIsCameraActive(true);
+        proctoringManagerRef.current?.handleCameraRecovered();
       }
 
       if (audioTracks.length > 0) {
@@ -774,6 +1107,9 @@ function MockInterview({ onInterviewCompleted }) {
             setMicStatus("idle");
             setIsMicActive(false);
             setAudioLevel(0);
+            if (interviewActive && !terminationData) {
+              proctoringManagerRef.current?.handleMicrophoneDropped();
+            }
           };
         }
         micStreamRef.current = aStream;
@@ -781,6 +1117,7 @@ function MockInterview({ onInterviewCompleted }) {
         setMicStatus("granted");
         setIsMicActive(true);
         setupAudioAnalyser(aStream);
+        proctoringManagerRef.current?.handleMicrophoneRecovered();
       }
 
       return stream;
@@ -789,6 +1126,10 @@ function MockInterview({ onInterviewCompleted }) {
       if (!cameraStreamRef.current) setCameraStatus(err.name === "NotAllowedError" ? "denied" : "idle");
       if (!micStreamRef.current) setMicStatus(err.name === "NotAllowedError" ? "denied" : "idle");
       return null;
+    } finally {
+      setTimeout(() => {
+        proctoringManagerRef.current?.setPermissionRequesting(false);
+      }, 800);
     }
   };
 
@@ -1057,15 +1398,20 @@ function solution() {
     setAiSpeechState("observing");
   }, []);
 
-  // Auto-speak HR & Culture questions (Q16-Q20) when navigated to
+  // Auto-speak HR & Culture questions when navigated to
   useEffect(() => {
+    const curQ = sessionQuestions[currentQIndex];
+    const isHR = (curQ?.category && curQ.category.toLowerCase().includes("hr")) ||
+                 (curQ?.round_title && (curQ.round_title.toLowerCase().includes("behavioral") || curQ.round_title.toLowerCase().includes("hr"))) ||
+                 interviewType === "Behavioral & HR" ||
+                 (sessionQuestions.length === 20 && currentQIndex >= 15);
     if (
       interviewActive &&
       !evaluationResult &&
-      currentQIndex >= 15 &&
+      isHR &&
       autoPlayAudio
     ) {
-      const qText = sessionQuestions[currentQIndex]?.question;
+      const qText = curQ?.question;
       if (qText) {
         const timer = setTimeout(() => {
           speakQuestionAudio(`Question ${currentQIndex + 1}. ${qText}`);
@@ -1238,6 +1584,7 @@ function solution() {
 
     try {
       // Evaluate question via API (or local evaluator fallback)
+      const effectiveDomain = domain === "Custom / Other Topic" ? (customDomain.trim() || "General Software Engineering") : domain;
       const evalRes = await evaluateQuestionAPI({
         question_id: q.id,
         question: q.question,
@@ -1245,6 +1592,9 @@ function solution() {
         company,
         role,
         difficulty,
+        interview_type: interviewType,
+        domain: q.domain || effectiveDomain,
+        expected_key_points: q.expected_key_points || [],
         test_results: testResultsMap[q.id] || null,
       });
 
@@ -1324,10 +1674,10 @@ function solution() {
     }
   };
 
-  // Countdown timer during active interview
+  // Countdown timer during active interview (halted immediately upon termination)
   useEffect(() => {
     let timer = null;
-    if (interviewActive && !evaluationResult && timeLeft > 0) {
+    if (interviewActive && !evaluationResult && !terminationData && timeLeft > 0) {
       timer = setInterval(() => {
         setTimeLeft((prev) => Math.max(prev - 1, 0));
       }, 1000);
@@ -1335,7 +1685,22 @@ function solution() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [interviewActive, evaluationResult, timeLeft]);
+  }, [interviewActive, evaluationResult, terminationData, timeLeft]);
+
+  // Live countdown for media disconnection grace period
+  useEffect(() => {
+    if (!mediaGracePeriod) return;
+    const interval = setInterval(() => {
+      setMediaGracePeriod((prev) => {
+        if (!prev) return null;
+        if (prev.secondsLeft <= 1) {
+          return null;
+        }
+        return { ...prev, secondsLeft: prev.secondsLeft - 1 };
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [mediaGracePeriod]);
 
   const formatTimer = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -1461,6 +1826,18 @@ function solution() {
       const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
       let fetchedQuestions = null;
 
+      const effectiveDomain = domain === "Custom / Other Topic" ? (customDomain.trim() || "General Software Engineering") : domain;
+      const questionCount = interviewType === "Comprehensive (All Rounds)" ? 20 : 10;
+      const payload = {
+        company,
+        role,
+        difficulty,
+        interview_type: interviewType,
+        domain: effectiveDomain,
+        question_count: questionCount,
+        duration_minutes: 60,
+      };
+
       for (const base of candidateBases) {
         try {
           const url = base ? `${base}/api/interviews/start` : `/api/interviews/start`;
@@ -1470,12 +1847,15 @@ function solution() {
               "Content-Type": "application/json",
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({ company, role, difficulty, duration_minutes: 60 }),
+            body: JSON.stringify(payload),
           });
 
           if (res.ok) {
             const data = await res.json();
-            if (data.questions && data.questions.length >= 20) {
+            if (data.session_id) {
+              sessionIdentifier = data.session_id;
+            }
+            if (data.questions && data.questions.length > 0) {
               fetchedQuestions = data.questions;
               break;
             }
@@ -1485,16 +1865,35 @@ function solution() {
         }
       }
 
-      // Fallback if backend unreachable or returns less than 20
-      if (!fetchedQuestions || fetchedQuestions.length < 20) {
-        fetchedQuestions = generate20Questions(company, role);
+      // Fallback if backend unreachable
+      if (!fetchedQuestions || fetchedQuestions.length === 0) {
+        fetchedQuestions = generateDomainQuestions(company, role, interviewType, effectiveDomain, difficulty, questionCount);
+      }
+
+      // Automatically sync coding editor language to domain
+      const lowerDom = effectiveDomain.toLowerCase();
+      if (lowerDom.includes("c++")) {
+        setSelectedLanguage("cpp");
+      } else if (lowerDom.includes("python")) {
+        setSelectedLanguage("python");
+      } else if (lowerDom.includes("java") && !lowerDom.includes("javascript")) {
+        setSelectedLanguage("java");
+      } else {
+        setSelectedLanguage("javascript");
       }
 
       setSessionQuestions(fetchedQuestions);
       const initialAns = {};
       fetchedQuestions.forEach((q) => {
-        if (q.starter_templates && q.starter_templates.javascript) {
-          initialAns[q.id] = q.starter_templates.javascript;
+        if (q.starter_templates) {
+          const lang = lowerDom.includes("c++") ? "cpp" : lowerDom.includes("python") ? "python" : lowerDom.includes("java") ? "java" : "javascript";
+          if (q.starter_templates[lang]) {
+            initialAns[q.id] = q.starter_templates[lang];
+          } else if (q.starter_templates.javascript) {
+            initialAns[q.id] = q.starter_templates.javascript;
+          } else {
+            initialAns[q.id] = Object.values(q.starter_templates)[0] || "";
+          }
         } else {
           initialAns[q.id] = "";
         }
@@ -1507,6 +1906,55 @@ function solution() {
       setInterviewActive(true);
       setSessionStartTime(Date.now());
       setStreamWarning(null);
+
+      // Initialize Proctoring Engine for the session
+      setActiveSessionId(sessionIdentifier);
+      setProctoringWarning(null);
+      setTerminationData(null);
+      setMediaGracePeriod(null);
+
+      if (proctoringManagerRef.current) {
+        proctoringManagerRef.current.stop();
+      }
+
+      const proctor = new ProctoringManager({
+        sessionId: sessionIdentifier,
+        company,
+        role,
+        difficulty,
+        config: {
+          maxWarnings: 5,
+          detectTabSwitch: true,
+          detectWindowBlur: true,
+          requireFullscreen: false,
+          requireScreenShare: true,
+          monitorCamera: true,
+          monitorMicrophone: true,
+          detectCopyPaste: true,
+          incidentDebounceMs: 2500,
+          mediaGracePeriodMs: 10000,
+        },
+        onWarning: (warningInfo) => {
+          console.warn("[PROCTORING] Warning received:", warningInfo);
+          setProctoringWarning(warningInfo);
+        },
+        onTerminate: (termInfo) => {
+          console.error("[PROCTORING] Termination triggered:", termInfo);
+          setTerminationData(termInfo);
+          setProctoringWarning(null);
+          setMediaGracePeriod(null);
+          stopAllStreams();
+        },
+        onGracePeriodStart: (device, seconds) => {
+          setMediaGracePeriod({ device, secondsLeft: seconds });
+        },
+        onGracePeriodEnd: () => {
+          setMediaGracePeriod(null);
+        },
+      });
+
+      proctoringManagerRef.current = proctor;
+      proctor.start();
     } catch (err) {
       console.error("[Interview Init] Failed to start interview session:", err);
       setInitError(`Interview initialization failed: ${err.message || "Unknown error"}. Please check your connection and try again.`);
@@ -1517,6 +1965,11 @@ function solution() {
 
   // 2. SUBMIT INTERVIEW HANDLER
   const handleSubmitInterview = async () => {
+    if (terminationData) {
+      alert("This interview has been terminated for proctoring violations. Answer submission is disabled.");
+      return;
+    }
+
     setLoading(true);
     setAiSpeechState("analyzing");
 
@@ -1536,6 +1989,7 @@ function solution() {
     const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
     let evalData = null;
 
+    const effectiveDomain = domain === "Custom / Other Topic" ? (customDomain.trim() || "General Software Engineering") : domain;
     for (const base of candidateBases) {
       try {
         const url = base ? `${base}/api/interviews/submit` : `/api/interviews/submit`;
@@ -1546,11 +2000,18 @@ function solution() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
+            session_id: activeSessionId,
             company,
             role,
             difficulty,
+            interview_type: interviewType,
+            domain: effectiveDomain,
             duration_minutes: activeMinutes,
             answers: answersPayload,
+            warning_count: proctoringManagerRef.current?.getWarningCount() || 0,
+            proctoring_data: {
+              violations: proctoringManagerRef.current?.getViolationHistory() || [],
+            },
           }),
         });
 
@@ -1564,7 +2025,7 @@ function solution() {
     }
 
     if (!evalData) {
-      evalData = await evaluateInterview(company, role, difficulty, answersPayload, apiKey);
+      evalData = await evaluateInterview(company, role, difficulty, answersPayload, apiKey, interviewType, effectiveDomain);
     }
 
     recordLocalInterviewSession({
@@ -1658,9 +2119,27 @@ function solution() {
   };
 
   const handleCloseSession = () => {
+    if (terminationData) {
+      setInterviewActive(false);
+      setEvaluationResult(null);
+      setTerminationData(null);
+      setProctoringWarning(null);
+      setMediaGracePeriod(null);
+      if (proctoringManagerRef.current) {
+        proctoringManagerRef.current.reset();
+      }
+      stopAllStreams();
+      return;
+    }
     if (window.confirm("Are you sure you want to end this interview session? Your progress will be saved.")) {
       setInterviewActive(false);
       setEvaluationResult(null);
+      setTerminationData(null);
+      setProctoringWarning(null);
+      setMediaGracePeriod(null);
+      if (proctoringManagerRef.current) {
+        proctoringManagerRef.current.stop();
+      }
       stopAllStreams();
     }
   };
@@ -1704,7 +2183,7 @@ function solution() {
       </div>
 
       {/* Target Role & Configuration Grid */}
-      <div className="mock-grid">
+      <div className="mock-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
         <div className="mock-card">
           <h3>Target Company</h3>
           <select
@@ -1721,7 +2200,47 @@ function solution() {
         </div>
 
         <div className="mock-card">
-          <h3>Domain Role</h3>
+          <h3>Interview Type</h3>
+          <select
+            value={interviewType}
+            onChange={(e) => setInterviewType(e.target.value)}
+            className="mock-select"
+          >
+            {INTERVIEW_TYPES.map((t) => (
+              <option key={t} value={t} style={{ background: "#1e293b", color: "#fff" }}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="mock-card">
+          <h3>Domain / Topic</h3>
+          <select
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            className="mock-select"
+          >
+            {DOMAINS.map((d) => (
+              <option key={d} value={d} style={{ background: "#1e293b", color: "#fff" }}>
+                {d}
+              </option>
+            ))}
+          </select>
+          {domain === "Custom / Other Topic" && (
+            <input
+              type="text"
+              placeholder="e.g. Kubernetes, Rust, Solana"
+              value={customDomain}
+              onChange={(e) => setCustomDomain(e.target.value)}
+              className="mock-select"
+              style={{ marginTop: "8px" }}
+            />
+          )}
+        </div>
+
+        <div className="mock-card">
+          <h3>Job Role</h3>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
@@ -1749,13 +2268,45 @@ function solution() {
             ))}
           </select>
         </div>
+      </div>
 
-        <div className="mock-card">
-          <h3>Session Length</h3>
-          <p style={{ marginTop: "12px", fontWeight: "bold", fontSize: "16px", color: "#38bdf8" }}>
-            45 Minutes Live
-          </p>
+      {/* Strict Constraint Status Banner */}
+      <div style={{
+        marginTop: "12px",
+        marginBottom: "20px",
+        padding: "10px 16px",
+        background: "rgba(14, 165, 233, 0.08)",
+        border: "1px solid rgba(56, 189, 248, 0.25)",
+        borderRadius: "8px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: "10px",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#38bdf8", fontWeight: "600", fontSize: "14px" }}>
+          <span>🎯 Active Hard Constraints:</span>
+          <span style={{ color: "#f8fafc", fontWeight: "700" }}>
+            {domain === "Custom / Other Topic" ? (customDomain.trim() || "Custom Topic") : domain}
+          </span>
+          <span style={{ color: "#64748b" }}>•</span>
+          <span style={{ color: "#38bdf8" }}>{interviewType}</span>
+          <span style={{ color: "#64748b" }}>•</span>
+          <span style={{ color: "#a855f7" }}>{role}</span>
+          <span style={{ color: "#64748b" }}>•</span>
+          <span style={{
+            padding: "2px 8px",
+            borderRadius: "4px",
+            fontSize: "12px",
+            background: difficulty === "Easy" ? "rgba(34, 197, 94, 0.2)" : difficulty === "Medium" ? "rgba(234, 179, 8, 0.2)" : "rgba(239, 68, 68, 0.2)",
+            color: difficulty === "Easy" ? "#4ade80" : difficulty === "Medium" ? "#facc15" : "#f87171"
+          }}>
+            {difficulty}
+          </span>
         </div>
+        <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+          Every question is dynamically generated and strictly validated against these constraints.
+        </span>
       </div>
 
       {/* ================= COMPULSORY PARAMETERS SECTION ================= */}
@@ -2229,6 +2780,52 @@ function solution() {
         </div>
       )}
 
+      {/* ================= PROCTORING WARNING MODAL (WARNINGS 1 TO 4) ================= */}
+      {proctoringWarning && !terminationData && (
+        <div className="proctoring-modal-overlay">
+          <div className="proctoring-modal-card">
+            <div className="proctoring-warning-badge">
+              <FaExclamationTriangle />
+              <span>PROCTORING VIOLATION DETECTED</span>
+            </div>
+
+            <h2 className="proctoring-modal-title">⚠️ Interview Warning</h2>
+            <div className="proctoring-warning-counter">
+              Warning <strong>{proctoringWarning.warningNumber}</strong> of {proctoringWarning.maxWarnings}
+            </div>
+
+            {/* Visual meter */}
+            <div className="proctoring-meter-bar">
+              {[1, 2, 3, 4, 5].map((step) => (
+                <div
+                  key={step}
+                  className={`meter-step ${step <= proctoringWarning.warningNumber ? "step-violation" : "step-safe"}`}
+                />
+              ))}
+            </div>
+
+            <div className="proctoring-incident-box">
+              <div className="incident-label">Violation Reason:</div>
+              <p className="incident-message">{proctoringWarning.message}</p>
+            </div>
+
+            <div className="proctoring-warning-notice">
+              <strong>Important:</strong> Please remain on the interview screen and maintain active audio, video, and screen sharing. You have <strong>{proctoringWarning.maxWarnings - proctoringWarning.warningNumber}</strong> warning(s) remaining before your interview is <strong>immediately terminated</strong>.
+            </div>
+
+            <div className="proctoring-modal-actions">
+              <button
+                type="button"
+                className="proctoring-ack-btn"
+                onClick={() => setProctoringWarning(null)}
+              >
+                <FaCheck /> Acknowledge & Return to Interview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ================= LIVE INTERVIEW COCKPIT SESSION MODAL ================= */}
       {interviewActive && (
         <div className="interview-live-cockpit-overlay">
@@ -2241,7 +2838,92 @@ function solution() {
           />
 
           <div className="cockpit-container">
-            {!evaluationResult ? (
+            {terminationData ? (
+              /* ================= INTERVIEW TERMINATED FOR CHEATING SCREEN ================= */
+              <div className="proctoring-terminated-container">
+                <div className="terminated-card">
+                  <div className="terminated-icon-wrapper">
+                    <FaBan />
+                  </div>
+
+                  <div className="terminated-badge">STATUS: TERMINATED FOR CHEATING</div>
+
+                  <h1 className="terminated-title">Interview Terminated</h1>
+
+                  <div className="terminated-counter-summary">
+                    Maximum Proctoring Violations Reached: <strong>5 / 5 Warnings</strong>
+                  </div>
+
+                  <p className="terminated-explanation">
+                    {terminationData.terminationReason ||
+                      "Your interview has been officially terminated because the maximum number of proctoring violations was reached. Media streams have been disconnected and further answer submissions are prohibited."}
+                  </p>
+
+                  {/* Violation Category Breakdown */}
+                  <div className="violation-breakdown-grid">
+                    <div className="breakdown-stat-card">
+                      <span className="stat-num">
+                        {terminationData.violations?.filter((v) => v.type === "TAB_SWITCH" || v.type === "WINDOW_BLUR").length || 0}
+                      </span>
+                      <span className="stat-title">Tab / Window Switches</span>
+                    </div>
+                    <div className="breakdown-stat-card">
+                      <span className="stat-num">
+                        {terminationData.violations?.filter((v) => v.type === "FULLSCREEN_EXIT").length || 0}
+                      </span>
+                      <span className="stat-title">Fullscreen Exits</span>
+                    </div>
+                    <div className="breakdown-stat-card">
+                      <span className="stat-num">
+                        {terminationData.violations?.filter((v) => v.type === "SCREEN_SHARE_STOPPED").length || 0}
+                      </span>
+                      <span className="stat-title">Screen Share Stops</span>
+                    </div>
+                    <div className="breakdown-stat-card">
+                      <span className="stat-num">
+                        {terminationData.violations?.filter((v) => v.type === "PASTE_DETECTED").length || 0}
+                      </span>
+                      <span className="stat-title">Paste Violations</span>
+                    </div>
+                    <div className="breakdown-stat-card">
+                      <span className="stat-num">
+                        {terminationData.violations?.filter((v) => v.type === "CAMERA_DISCONNECTED" || v.type === "MIC_DISCONNECTED").length || 0}
+                      </span>
+                      <span className="stat-title">Media Interruptions</span>
+                    </div>
+                  </div>
+
+                  {/* Logged Violations Timeline */}
+                  {terminationData.violations && terminationData.violations.length > 0 && (
+                    <div className="violation-timeline-section">
+                      <h3>Logged Violations Audit Trail:</h3>
+                      <div className="violation-timeline-list">
+                        {terminationData.violations.map((v, idx) => (
+                          <div key={idx} className="timeline-item">
+                            <span className="timeline-badge">Warning #{v.warningNumber || idx + 1}</span>
+                            <span className="timeline-type">[{v.type}]</span>
+                            <span className="timeline-msg">{v.message}</span>
+                            <span className="timeline-time">
+                              {v.timestamp ? new Date(v.timestamp).toLocaleTimeString() : ""}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="terminated-actions">
+                    <button
+                      type="button"
+                      className="terminated-dashboard-btn"
+                      onClick={handleCloseSession}
+                    >
+                      <FaTimes /> Return to Dashboard
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : !evaluationResult ? (
               <>
                 {/* COCKPIT TOP HEADER */}
                 <div className="cockpit-top-bar">
@@ -2253,6 +2935,15 @@ function solution() {
                   </div>
 
                   <div className="cockpit-telemetry-cluster">
+                    {/* Proctoring Integrity indicator */}
+                    <div
+                      className={`telemetry-pill proctoring-pill ${(proctoringManagerRef.current?.getWarningCount() || 0) > 0 ? "warning-pill" : "safe-pill"}`}
+                      title="Proctoring & Anti-Cheating Integrity Monitor"
+                    >
+                      <FaShieldAlt />
+                      <span>Warnings: {proctoringManagerRef.current?.getWarningCount() || 0}/5</span>
+                    </div>
+
                     {/* Camera indicator */}
                     <div className={`telemetry-pill ${isCameraReady && isCameraActive ? "active" : "inactive"}`}>
                       <FaVideo />
@@ -2296,6 +2987,26 @@ function solution() {
                     </button>
                   </div>
                 </div>
+
+                {/* Media Disconnection Grace Period Recovery Banner */}
+                {mediaGracePeriod && (
+                  <div className="proctoring-grace-banner">
+                    <div className="grace-banner-content">
+                      <FaExclamationTriangle className="grace-icon" />
+                      <div>
+                        <strong>{mediaGracePeriod.device} Disconnected!</strong>
+                        <span> Recovery grace period active: <strong>{mediaGracePeriod.secondsLeft}s</strong> remaining before a proctoring violation is recorded.</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="grace-reconnect-btn"
+                      onClick={mediaGracePeriod.device === "Camera" ? requestCamera : requestMicrophone}
+                    >
+                      <FaSyncAlt /> Re-enable {mediaGracePeriod.device} Now
+                    </button>
+                  </div>
+                )}
 
                 {/* COCKPIT MAIN GRID */}
                 <div className="cockpit-main-grid">
@@ -2451,29 +3162,37 @@ function solution() {
                   {/* RIGHT WORKSPACE: QUESTIONS & CODE EDITOR */}
                   <div className="cockpit-right-pane">
                     {sessionQuestions.length > 0 && (() => {
-                      const currentRoundIdx = Math.min(Math.floor(currentQIndex / 5), 3);
-                      const activeRound = [
-                        { id: 1, title: "Aptitude & Logical Reasoning", icon: "🧩", short: "Aptitude & Logic", range: "Q1-5" },
-                        { id: 2, title: "Data Structures & Algorithms", icon: "💻", short: "DSA & Core", range: "Q6-10" },
-                        { id: 3, title: `Company Architecture (${company})`, icon: "🏢", short: "Company Design", range: "Q11-15" },
-                        { id: 4, title: "Behavioral & HR Leadership Round", icon: "👥", short: "HR & Leadership", range: "Q16-20" },
-                      ][currentRoundIdx];
+                      // Dynamically group sessionQuestions by round_number
+                      const roundsMap = sessionQuestions.reduce((acc, q, idx) => {
+                        const rNum = q.round_number || (Math.floor(idx / 5) + 1);
+                        if (!acc[rNum]) {
+                          const icon = rNum === 1 ? "🧩" : rNum === 2 ? "💻" : rNum === 3 ? "🏢" : "👥";
+                          acc[rNum] = {
+                            id: rNum,
+                            title: q.round_title || `Round ${rNum}`,
+                            short: q.round_title ? (q.round_title.length > 20 ? q.round_title.slice(0, 18) + "..." : q.round_title) : `Part ${rNum}`,
+                            icon,
+                            startIdx: idx,
+                            questions: [],
+                          };
+                        }
+                        acc[rNum].questions.push({ ...q, globalIdx: idx });
+                        return acc;
+                      }, {});
+                      const dynamicRounds = Object.values(roundsMap);
+
+                      const curQ = sessionQuestions[currentQIndex] || sessionQuestions[0];
+                      const curRoundNum = curQ?.round_number || (Math.floor(currentQIndex / 5) + 1);
+                      const activeRound = roundsMap[curRoundNum] || { id: curRoundNum, title: curQ?.round_title || `Round ${curRoundNum}`, icon: "⚡", questions: [] };
 
                       return (
                         <div className="interview-workspace">
-                          {/* 4-ROUND STAGE TRACKER TABS */}
+                          {/* DYNAMIC ROUND STAGE TRACKER TABS */}
                           <div className="rounds-stage-tracker">
-                            {[
-                              { id: 1, title: "Aptitude & Logic", icon: "🧩", short: "Aptitude", startIdx: 0, endIdx: 4 },
-                              { id: 2, title: "DSA & Technical", icon: "💻", short: "DSA & Coding", startIdx: 5, endIdx: 9 },
-                              { id: 3, title: `Company & Design`, icon: "🏢", short: "Company Design", startIdx: 10, endIdx: 14 },
-                              { id: 4, title: "Behavioral & HR", icon: "👥", short: "HR & Culture", startIdx: 15, endIdx: 19 },
-                            ].map((r, rIdx) => {
-                              const isCurrentRound = currentRoundIdx === rIdx;
-                              const evaluatedInRound = sessionQuestions
-                                .slice(r.startIdx, r.endIdx + 1)
-                                .filter((q) => !!questionEvaluations[q.id]).length;
-                              const isRoundDone = evaluatedInRound === 5;
+                            {dynamicRounds.map((r) => {
+                              const isCurrentRound = curRoundNum === r.id;
+                              const evaluatedInRound = r.questions.filter((q) => !!questionEvaluations[q.id]).length;
+                              const isRoundDone = evaluatedInRound === r.questions.length && r.questions.length > 0;
                               return (
                                 <div
                                   key={r.id}
@@ -2487,7 +3206,7 @@ function solution() {
                                   <div className="round-pill-info">
                                     <span className="round-pill-title">Round {r.id}: {r.short}</span>
                                     <small className="round-pill-progress">
-                                      {evaluatedInRound}/5 Evaluated {isRoundDone ? "✓" : ""}
+                                      {evaluatedInRound}/{r.questions.length} Evaluated {isRoundDone ? "✓" : ""}
                                     </small>
                                   </div>
                                 </div>
@@ -2495,10 +3214,10 @@ function solution() {
                             })}
                           </div>
 
-                          {/* 20-QUESTION QUICK NAVIGATION MATRIX */}
+                          {/* DYNAMIC QUESTION QUICK NAVIGATION MATRIX */}
                           <div className="questions-matrix-row">
                             {sessionQuestions.map((q, idx) => {
-                              const roundNum = Math.floor(idx / 5) + 1;
+                              const roundNum = q.round_number || (Math.floor(idx / 5) + 1);
                               const evaluation = questionEvaluations[q.id];
                               const isEvaluated = !!evaluation;
                               const isPass = isEvaluated && (evaluation.status === "correct" || evaluation.score >= 70);
@@ -2506,7 +3225,9 @@ function solution() {
                               const isFail = isEvaluated && !isPass && !isPartial;
                               
                               const userAns = (answers[q.id] || "").trim();
-                              const defaultTemplate = (q.starter_templates && q.starter_templates.javascript) ? q.starter_templates.javascript.trim() : "";
+                              const defaultTemplate = (q.starter_templates && (q.starter_templates[selectedLanguage] || q.starter_templates.javascript))
+                                ? (q.starter_templates[selectedLanguage] || q.starter_templates.javascript).trim()
+                                : "";
                               const isDrafting = !isEvaluated && userAns.length > 0 && userAns !== defaultTemplate;
 
                               const statusClass = isPass
@@ -2528,7 +3249,7 @@ function solution() {
                                     setShowHint(false);
                                   }}
                                   className={`question-matrix-btn round-${roundNum} ${currentQIndex === idx ? "active" : ""} ${statusClass}`}
-                                  title={`Round ${roundNum}: Q${idx + 1} (${q.category}) • ${isEvaluated ? `Evaluated: ${evaluation.score}%` : isDrafting ? "Drafting answer" : "Unanswered"}`}
+                                  title={`Round ${roundNum}: Q${idx + 1} (${q.category || q.round_title}) • ${isEvaluated ? `Evaluated: ${evaluation.score}%` : isDrafting ? "Drafting answer" : "Unanswered"}`}
                                 >
                                   {isPass && <span className="tab-evaluated-dot pass">✓</span>}
                                   {isPartial && <span className="tab-evaluated-dot partial">~</span>}
@@ -2550,17 +3271,23 @@ function solution() {
                           {/* ================= QUESTION PROMPT / DSA PROBLEM CARD ================= */}
                           {(() => {
                             const curQ = sessionQuestions[currentQIndex];
-                            const isDSA = currentRoundIdx === 1 || (curQ?.test_cases && curQ.test_cases.length > 0);
+                            const isDSA = (curQ?.test_cases && curQ.test_cases.length > 0) ||
+                                          (curQ?.starter_templates && Object.keys(curQ.starter_templates).length > 0) ||
+                                          (curQ?.category && (curQ.category.toLowerCase().includes("coding") || curQ.category.toLowerCase().includes("dsa"))) ||
+                                          interviewType === "Coding & DSA";
+                            const isHR = (curQ?.category && curQ.category.toLowerCase().includes("hr")) ||
+                                         (curQ?.round_title && (curQ.round_title.toLowerCase().includes("behavioral") || curQ.round_title.toLowerCase().includes("hr"))) ||
+                                         interviewType === "Behavioral & HR";
                             const qTestResults = testResultsMap[curQ?.id];
                             const isSubmitted = !!submittedCodeMap[curQ?.id];
 
                             return (
                               <>
-                                <div className={`cockpit-question-box ${currentRoundIdx === 3 ? "hr-round-box" : ""} ${isDSA ? "dsa-structured-box" : ""}`}>
+                                <div className={`cockpit-question-box ${isHR ? "hr-round-box" : ""} ${isDSA ? "dsa-structured-box" : ""}`}>
                                   <div className="question-box-header">
                                     <div className="q-badge-group">
                                       <span className="round-badge">
-                                        {activeRound.icon} Round {activeRound.id}/4: {activeRound.title}
+                                        {activeRound.icon} Round {activeRound.id} of {dynamicRounds.length}: {activeRound.title}
                                       </span>
                                       <span className="q-badge">
                                         Question {currentQIndex + 1} of {sessionQuestions.length} • {curQ?.category}
@@ -2624,8 +3351,8 @@ function solution() {
                                     </div>
                                   </div>
 
-                                  {/* HR AUDIO NARRATOR (Round 4) */}
-                                  {currentRoundIdx === 3 && (
+                                  {/* HR AUDIO NARRATOR */}
+                                  {isHR && (
                                     <div className={`hr-audio-question-banner ${isSpeakingQuestion ? "speaking" : ""}`}>
                                       <div className="hr-audio-status-wrap">
                                         <div className={`hr-audio-eq-bars ${isSpeakingQuestion ? "active" : ""}`}>
@@ -2730,8 +3457,8 @@ function solution() {
                                 </div>
 
                                 {/* ================= CODE / SOLUTION EDITOR CONTAINER ================= */}
-                                <div className={`solution-editor-container ${currentRoundIdx === 3 ? "hr-editor-mode" : ""} ${isDSA ? "dsa-editor-mode" : ""} editor-screen-${editorScreenMode}`}>
-                                  {currentRoundIdx === 3 && (
+                                <div className={`solution-editor-container ${isHR ? "hr-editor-mode" : ""} ${isDSA ? "dsa-editor-mode" : ""} editor-screen-${editorScreenMode}`}>
+                                  {isHR && (
                                     <div className="hr-dual-mode-banner">
                                       <div className="hr-banner-left">
                                         <span className="hr-mode-badge">🎙️ Audio + ✍️ Text Response Active</span>
@@ -2769,7 +3496,7 @@ function solution() {
                                             </span>
                                           )}
                                         </>
-                                      ) : currentRoundIdx === 3 ? (
+                                      ) : isHR ? (
                                         <>
                                           <FaMicrophone style={{ color: "#38bdf8" }} />
                                           <label>Your HR Voice & Text Response:</label>
@@ -2823,7 +3550,7 @@ function solution() {
                                         </button>
                                       )}
 
-                                      {currentRoundIdx === 3 ? (
+                                      {isHR ? (
                                         <button
                                           type="button"
                                           onClick={handleInsertSTARTemplate}
@@ -2893,11 +3620,11 @@ function solution() {
                                           <button
                                             type="button"
                                             onClick={toggleVoiceDictation}
-                                            className={`voice-dictation-btn ${isDictating ? "active pulse" : ""} ${currentRoundIdx === 3 ? "hr-primary-voice" : ""}`}
+                                            className={`voice-dictation-btn ${isDictating ? "active pulse" : ""} ${isHR ? "hr-primary-voice" : ""}`}
                                             title="Record your voice response with real-time speech transcription"
                                           >
                                             <FaMicrophone className={isDictating ? "pulse-dot" : ""} />
-                                            {isDictating ? "🎙️ Recording..." : currentRoundIdx === 3 ? "🎙️ Answer with Voice" : "🎙️ Dictate"}
+                                            {isDictating ? "🎙️ Recording..." : isHR ? "🎙️ Answer with Voice" : "🎙️ Dictate"}
                                           </button>
                                         </div>
                                       )}
@@ -2906,7 +3633,7 @@ function solution() {
 
                                   {/* Code Textarea */}
                                   <textarea
-                                    rows={isDSA ? 12 : currentRoundIdx === 3 ? 11 : 10}
+                                    rows={isDSA ? 12 : isHR ? 11 : 10}
                                     value={answers[curQ?.id] || ""}
                                     onChange={(e) => {
                                       const val = e.target.value;
@@ -2915,10 +3642,15 @@ function solution() {
                                         [curQ.id]: val,
                                       }));
                                     }}
+                                    onPaste={(e) => {
+                                      if (proctoringManagerRef.current) {
+                                        proctoringManagerRef.current.handlePasteEvent(e);
+                                      }
+                                    }}
                                     placeholder={
                                       isDSA
                                         ? `// Write your ${selectedLanguage} solution here...\n// Function signature: ${curQ?.function_name || "solution"}(...)`
-                                        : currentRoundIdx === 3
+                                        : isHR
                                         ? "// Speak into your microphone (click 'Answer with Voice' above) or type your response here...\n// [Situation]: Outline the specific scenario or production challenge.\n// [Task]: What was your goal and ownership?\n// [Action]: What concrete technical and leadership steps did you take?\n// [Result]: What was the measurable impact and takeaway?"
                                         : "// Type or voice-dictate your structured response here:\n// 1. High-Level Technical Approach\n// 2. Implementation & Architecture\n// 3. Time/Space Complexity O(...) & Trade-offs\n// 4. Edge Cases, Resiliency & Scale..."
                                     }
@@ -3282,10 +4014,10 @@ function solution() {
                                       <span className="dsa-footer-hint">
                                         ✦ LeetCode Assessment Sandbox • Tests verified in real-time
                                       </span>
-                                    ) : currentRoundIdx === 3 ? (
+                                    ) : isHR ? (
                                       <span className="hr-footer-hint">✦ Audio Speech & Written Text Synchronized • STAR Evaluation</span>
                                     ) : (
-                                      <span>✦ Round {activeRound.id} of 4 ({activeRound.range})</span>
+                                      <span>✦ Round {activeRound.id} of {dynamicRounds.length} ({activeRound.title})</span>
                                     )}
                                   </div>
                                 </div>
@@ -3366,7 +4098,7 @@ function solution() {
                   </div>
                   <h2>Interview Performance & AI Rubric Report</h2>
                   <p>
-                    {company} • {role} ({difficulty}) • All 4 Rounds Completed (20 Questions)
+                    {company} • {role} ({difficulty}) • {interviewType} • {domain === "Custom / Other Topic" ? (customDomain.trim() || "Custom Topic") : domain} • {sessionQuestions.length} Questions Completed
                   </p>
                   <button
                     type="button"
@@ -3404,24 +4136,30 @@ function solution() {
                     <h3 className="score-val amber">{evaluationResult.problem_solving_score || 84}%</h3>
                     <small>Aptitude & Logic</small>
                   </div>
+
+                  <div className="score-summary-card">
+                    <span className="score-label">Proctoring & Integrity</span>
+                    <h3 className={`score-val ${(evaluationResult.warning_count || 0) === 0 ? "green" : "amber"}`}>
+                      {(evaluationResult.warning_count || 0) === 0 ? "100%" : `${Math.max(100 - (evaluationResult.warning_count || 0) * 10, 50)}%`}
+                    </h3>
+                    <small>{(evaluationResult.warning_count || 0) === 0 ? "✓ Clean Session (0 Warnings)" : `⚠️ ${evaluationResult.warning_count}/5 Warnings Incurred`}</small>
+                  </div>
                 </div>
 
-                {/* 4-Round Performance Matrix */}
+                {/* Dynamic Round Performance Matrix */}
                 <div className="report-rounds-matrix">
-                  <h4>🎯 4-Round Interview Performance Breakdown</h4>
+                  <h4>🎯 Performance Breakdown by Round & Focus Area</h4>
                   <div className="report-rounds-grid">
                     {(evaluationResult.rounds_breakdown || [
-                      { round_number: 1, title: "Aptitude & Logical Reasoning", score: Math.round(evaluationResult.problem_solving_score || 80), questions_count: 5 },
-                      { round_number: 2, title: "Data Structures & Algorithms", score: Math.round(evaluationResult.technical_score || 85), questions_count: 5 },
-                      { round_number: 3, title: `Company System Design (${company})`, score: Math.round((evaluationResult.technical_score + evaluationResult.problem_solving_score) / 2 || 82), questions_count: 5 },
-                      { round_number: 4, title: "Behavioral & HR Leadership", score: Math.round(evaluationResult.communication_score || 88), questions_count: 5 },
+                      { round_number: 1, title: `${interviewType} - Part 1`, score: Math.round(evaluationResult.problem_solving_score || 80), questions_count: Math.ceil(sessionQuestions.length / 2) || 5 },
+                      { round_number: 2, title: `${interviewType} - Part 2`, score: Math.round(evaluationResult.technical_score || 85), questions_count: Math.floor(sessionQuestions.length / 2) || 5 },
                     ]).map((rb) => {
                       const score = rb.score;
                       const badge = score >= 85 ? "Strong Hire" : score >= 70 ? "Hire" : score >= 50 ? "Average" : "Needs Practice";
                       return (
                         <div key={rb.round_number} className="round-score-card">
                           <div className="round-score-top">
-                            <span className="round-num-tag">Round {rb.round_number} (5 Qs)</span>
+                            <span className="round-num-tag">Round {rb.round_number} ({rb.questions_count || 1} Qs)</span>
                             <span className={`round-score-badge ${score >= 70 ? "pass" : "retry"}`}>{badge}</span>
                           </div>
                           <h5>{rb.title}</h5>
@@ -3462,11 +4200,12 @@ function solution() {
                 {/* Per-Question Detailed Breakdown */}
                 {evaluationResult.detailed_feedback && evaluationResult.detailed_feedback.length > 0 && (
                   <div className="report-questions-breakdown">
-                    <h4>📝 Question-by-Question Detailed Analysis (20 Questions across 4 Rounds)</h4>
+                    <h4>📝 Question-by-Question Detailed Analysis ({evaluationResult.detailed_feedback.length} Questions)</h4>
                     <div className="report-questions-list">
                       {evaluationResult.detailed_feedback.map((qf, idx) => {
-                        const roundNum = Math.floor(idx / 5) + 1;
-                        const roundName = ["Aptitude & Logic", "DSA & Technical Core", `Company Architecture (${company})`, "Behavioral & HR Leadership"][roundNum - 1];
+                        const curQ = sessionQuestions[idx];
+                        const roundNum = curQ?.round_number || qf.round_number || (Math.floor(idx / 5) + 1);
+                        const roundName = curQ?.round_title || qf.round_title || `Part ${roundNum}`;
                         return (
                           <div key={idx} className="report-question-item">
                             <div className="item-header">

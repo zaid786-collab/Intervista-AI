@@ -101,6 +101,9 @@ class Interview(Base):
     mode = Column(String(50), nullable=True)  # Virtual, Online Coding, In-Person
     feedback = Column(Text, nullable=True)
     report_data = Column(Text, nullable=True)  # JSON string of detailed feedback & marks
+    warning_count = Column(Integer, default=0, nullable=True)
+    termination_reason = Column(String(255), nullable=True)
+    proctoring_data = Column(Text, nullable=True)  # JSON string of violations history and audit trail
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
