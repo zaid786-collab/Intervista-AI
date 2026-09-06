@@ -114,7 +114,7 @@ def find_rubric_for_question(question_text: str):
     if "vllm" in lower or "quantization" in lower or "inference" in lower or "kv cache" in lower:
         return QUESTION_RUBRICS["vllm"]
     # System design & architecture
-    if "500 million" in lower or "geo-dns" in lower or "multi-region" in lower or "high availability" in lower:
+    if "500 million" in lower or "geo-dns" in lower or "multi-region" in lower or "high availability" in lower or "high-availability" in lower or "distributed system" in lower:
         return QUESTION_RUBRICS["sys_scale"]
     if "sharding" in lower or "hotspot" in lower or "consistent hashing" in lower:
         return QUESTION_RUBRICS["sys_sharding"]
@@ -148,6 +148,70 @@ def is_non_answer(text: str) -> bool:
     words = trimmed.split()
     if len(words) <= 2 and not any(kw in lower for kw in ["virtual", "cache", "node", "8", "110", "runs", "dom", "o(n)"]):
         return True
+    return False
+
+
+def is_irrelevant_to_question(question: str, answer: str) -> bool:
+    """
+    Detects whether the answer is completely off-topic relative to the question.
+    Returns True if the answer has no topical overlap with the question whatsoever.
+    This catches cases like 'I like playing football' for a distributed systems question.
+    """
+    lower_q = question.lower()
+    lower_a = answer.lower()
+
+    # Broad technical vocabulary that ANY technical interview answer should contain
+    # if the candidate is genuinely attempting the question
+    broad_technical_terms = [
+        "algorithm", "data structure", "function", "variable", "array", "list", "hash",
+        "tree", "graph", "node", "queue", "stack", "map", "set", "pointer", "memory",
+        "cache", "database", "sql", "api", "server", "client", "request", "response",
+        "http", "tcp", "network", "protocol", "thread", "process", "lock", "mutex",
+        "latency", "throughput", "bandwidth", "scalab", "performance", "optimiz",
+        "complex", "o(n)", "o(1)", "o(log", "big-o", "time", "space", "sort", "search",
+        "binary", "linear", "dynamic", "greedy", "recursion", "recursi", "iteration",
+        "loop", "condition", "return", "class", "object", "inherit", "polymorphi",
+        "abstraction", "encapsulat", "interface", "pattern", "design", "architect",
+        "system", "component", "module", "service", "microservice", "container",
+        "deploy", "cloud", "docker", "kubernet", "load balanc", "replica", "shard",
+        "partition", "consistent", "distribut", "consensus", "raft", "paxos",
+        "websocket", "event", "callback", "promise", "async", "await", "stream",
+        "buffer", "queue", "pub", "sub", "message", "broker", "kafka", "redis",
+        "index", "query", "join", "table", "row", "column", "schema", "model",
+        "test", "debug", "error", "exception", "log", "monitor", "metric",
+        "security", "auth", "token", "encrypt", "certificate", "tls", "ssl",
+        "react", "vue", "angular", "dom", "render", "component", "state", "hook",
+        "css", "html", "javascript", "python", "java", "golang", "rust", "c++",
+        "code", "implement", "solution", "approach", "method", "technique",
+        "trade-off", "tradeoff", "advantage", "disadvantage", "bottleneck",
+        "constraint", "requirement", "edge case", "boundary", "null", "undefined",
+        "machine learning", "neural", "model", "training", "inference", "embedding",
+        "vector", "tensor", "gpu", "cpu", "pipeline", "batch", "epoch",
+        "star", "situation", "task", "action", "result", "leadership", "mentor",
+        "conflict", "resolution", "team", "project", "deadline", "stakeholder",
+        "communication", "ownership", "initiative", "collaborat", "feedback",
+    ]
+
+    # Also extract significant words from the question itself (4+ chars, excluding common words)
+    stop_words = {"what", "when", "where", "which", "that", "this", "with", "from", "your", "have",
+                  "been", "does", "will", "would", "could", "should", "about", "their", "there",
+                  "than", "then", "into", "also", "each", "other", "some", "more", "most",
+                  "very", "just", "like", "make", "many", "only", "over", "such", "take",
+                  "they", "these", "much", "well", "here"}
+    q_words = set(w for w in re.findall(r'[a-z]{4,}', lower_q) if w not in stop_words)
+
+    # Check 1: Does the answer contain ANY broad technical term?
+    has_any_technical = any(term in lower_a for term in broad_technical_terms)
+
+    # Check 2: Does the answer share ANY significant words with the question?
+    a_words = set(re.findall(r'[a-z]{4,}', lower_a))
+    shared_words = q_words & a_words
+    has_question_overlap = len(shared_words) >= 1
+
+    # If the answer has neither technical terms NOR question overlap, it's irrelevant
+    if not has_any_technical and not has_question_overlap:
+        return True
+
     return False
 
 def evaluate_aptitude_answer(q_text: str, answer_text: str) -> Optional[Dict[str, Any]]:
@@ -488,6 +552,27 @@ def evaluate_single_question(
     has_structure = any(s in trimmed_ans for s in ["1.", "2.", "-", "•", "\n\n", "step", "first", "second", "finally"])
     has_code = any(f in lower_ans for f in ["function", "const", "def ", "class ", "return", "select", "import", "async", "await", "()", "{}"])
 
+    # 4a. Explicit Relevance Check — catch completely off-topic answers
+    if is_irrelevant_to_question(question, trimmed_ans):
+        return {
+            "question_id": question_id,
+            "question": question,
+            "score": 5,
+            "status": "incorrect",
+            "verdict": "Off-Topic • 5/100",
+            "feedback": "Your answer appears to be completely unrelated to the question asked. Please re-read the question and provide a relevant technical response.",
+            "suggested_answer_points": rubric["coreConcepts"] if rubric else [
+                "Address the core problem stated in the question",
+                "Use relevant technical terminology",
+                "Provide concrete examples or implementations",
+            ],
+            "identified_keywords": [],
+            "technical_accuracy": 3,
+            "communication_clarity": 8,
+            "problem_solving": 3,
+        }
+
+    # 4b. Semantic Rubric Evaluation (Rounds 3 & 4 or General)
     if len(matched_kw) == 0:
         tech = min(15 + word_count * 0.4, 28)
         comm = min(25 + word_count * 0.5, 45)
@@ -619,6 +704,27 @@ def evaluate_with_local_rubric(
         has_tradeoffs = any(t in lower_answer for t in ["trade-off", "tradeoff", "advantage", "disadvantage", "pros", "cons", "scale", "bottleneck", "edge case", "versus", "vs"])
         has_structure = any(s in answer_text for s in ["1.", "2.", "-", "•", "\n\n", "step", "first", "second", "finally"])
         has_code = any(f in lower_answer for f in ["function", "const", "def ", "class ", "return", "select", "import", "async", "await", "()", "{}"])
+
+        # 2b. Explicit Relevance Check — catch completely off-topic answers
+        if is_irrelevant_to_question(q_text, answer_text):
+            detailed_feedback.append({
+                "question_id": q_id,
+                "question": q_text,
+                "score": 5,
+                "technical_accuracy": 3,
+                "communication_clarity": 8,
+                "feedback": "Answer is completely off-topic and unrelated to the question asked. No relevant concepts detected.",
+                "identified_keywords": [],
+                "suggested_answer_points": rubric["coreConcepts"] if rubric else [
+                    "Address the core problem stated in the question",
+                    "Use relevant technical terminology",
+                    "Provide concrete examples or implementations",
+                ],
+            })
+            total_tech_score += 3
+            total_comm_score += 8
+            total_problem_score += 3
+            continue
 
         # 3. Dynamic multi-factor scoring based on question depth
         if len(matched_kw) == 0:

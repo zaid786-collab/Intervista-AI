@@ -433,6 +433,10 @@ function MockInterview({ onInterviewCompleted }) {
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
   const [submittedQuestions, setSubmittedQuestions] = useState({}); // Tracks submitted questions during the test; full evaluation takes place at the end
+  const [questionEvaluations, setQuestionEvaluations] = useState({}); // Per-question evaluation results
+  const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false); // Question submission & evaluation state
+  const [initError, setInitError] = useState(null); // Error state for interview initialization
+  const [streamWarning, setStreamWarning] = useState(null); // Warning when a stream drops during active interview
 
   // Independent Media Stream States
   const [cameraStatus, setCameraStatus] = useState("idle"); // idle | requesting | granted | denied
@@ -441,6 +445,10 @@ function MockInterview({ onInterviewCompleted }) {
   const [cameraStream, setCameraStream] = useState(null);
   const [micStream, setMicStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
+  // Persistent refs for reliable stream lifecycle and unmount cleanup (independent of re-renders)
+  const cameraStreamRef = useRef(null);
+  const micStreamRef = useRef(null);
+  const screenStreamRef = useRef(null);
   const [isCameraActive, setIsCameraActive] = useState(true);
   const [isMicActive, setIsMicActive] = useState(true);
   const [cameraMirrored, setCameraMirrored] = useState(true);
@@ -557,9 +565,11 @@ function MockInterview({ onInterviewCompleted }) {
 
   // --- INDEPENDENT STREAM REQUEST HANDLERS (RESILIENT & NON-BLOCKING) ---
   const requestCamera = async () => {
-    if (cameraStream) {
-      // Toggle off / release camera stream
-      cameraStream.getTracks().forEach((t) => t.stop());
+    console.log("[MEDIA] Camera button clicked. Current camera stream active:", !!cameraStreamRef.current);
+    if (cameraStreamRef.current) {
+      console.log("[MEDIA] Toggling off camera stream explicitly");
+      cameraStreamRef.current.getTracks().forEach((t) => t.stop());
+      cameraStreamRef.current = null;
       setCameraStream(null);
       setCameraStatus("idle");
       setIsCameraActive(false);
@@ -568,6 +578,7 @@ function MockInterview({ onInterviewCompleted }) {
 
     try {
       setCameraStatus("requesting");
+      console.log("[MEDIA] Requesting camera via getUserMedia");
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -581,21 +592,39 @@ function MockInterview({ onInterviewCompleted }) {
           audio: false,
         });
       }
+
+      console.log("[MEDIA] Camera stream created successfully. Track ID:", stream.getVideoTracks()[0]?.id);
+
+      // Attach track.onended handler to detect hardware disconnection
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          console.log("[MEDIA] Camera track ended event fired (hardware/OS disconnected)");
+          cameraStreamRef.current = null;
+          setCameraStream(null);
+          setCameraStatus("idle");
+          setIsCameraActive(false);
+        };
+      }
+
+      cameraStreamRef.current = stream;
       setCameraStream(stream);
       setCameraStatus("granted");
       setIsCameraActive(true);
       return stream;
     } catch (err) {
-      console.warn("Camera access warning:", err);
-      setCameraStatus(err.name === "NotAllowedError" ? "denied" : "idle");
+      console.warn("[MEDIA] Camera access warning:", err);
+      setCameraStatus(err.name === "NotAllowedError" ? "denied" : err.name === "NotFoundError" ? "denied" : err.name === "NotReadableError" ? "denied" : "idle");
       return null;
     }
   };
 
   const requestMicrophone = async () => {
-    if (micStream) {
-      // Toggle off / release mic stream
-      micStream.getTracks().forEach((t) => t.stop());
+    console.log("[MEDIA] Microphone button clicked. Current mic stream active:", !!micStreamRef.current);
+    if (micStreamRef.current) {
+      console.log("[MEDIA] Toggling off microphone stream explicitly");
+      micStreamRef.current.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
       setMicStream(null);
       setMicStatus("idle");
       setIsMicActive(false);
@@ -605,6 +634,7 @@ function MockInterview({ onInterviewCompleted }) {
 
     try {
       setMicStatus("requesting");
+      console.log("[MEDIA] Requesting microphone via getUserMedia");
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -617,22 +647,41 @@ function MockInterview({ onInterviewCompleted }) {
           video: false,
         });
       }
+
+      console.log("[MEDIA] Microphone stream created successfully. Track ID:", stream.getAudioTracks()[0]?.id);
+
+      // Attach track.onended handler to detect hardware disconnection
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.onended = () => {
+          console.log("[MEDIA] Microphone track ended event fired (hardware/OS disconnected)");
+          micStreamRef.current = null;
+          setMicStream(null);
+          setMicStatus("idle");
+          setIsMicActive(false);
+          setAudioLevel(0);
+        };
+      }
+
+      micStreamRef.current = stream;
       setMicStream(stream);
       setMicStatus("granted");
       setIsMicActive(true);
       setupAudioAnalyser(stream);
       return stream;
     } catch (err) {
-      console.warn("Microphone access warning:", err);
-      setMicStatus(err.name === "NotAllowedError" ? "denied" : "idle");
+      console.warn("[MEDIA] Microphone access warning:", err);
+      setMicStatus(err.name === "NotAllowedError" ? "denied" : err.name === "NotFoundError" ? "denied" : err.name === "NotReadableError" ? "denied" : "idle");
       return null;
     }
   };
 
   const requestScreenShare = async () => {
-    if (screenStream) {
-      // Stop sharing
-      screenStream.getTracks().forEach((t) => t.stop());
+    console.log("[MEDIA] Screen share button clicked. Current screen stream active:", !!screenStreamRef.current);
+    if (screenStreamRef.current) {
+      console.log("[MEDIA] Toggling off screen share stream explicitly");
+      screenStreamRef.current.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
       setScreenStream(null);
       setScreenStatus("idle");
       return null;
@@ -640,23 +689,30 @@ function MockInterview({ onInterviewCompleted }) {
 
     try {
       setScreenStatus("requesting");
+      console.log("[MEDIA] Requesting screen share via getDisplayMedia");
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { cursor: "always" },
         audio: false,
       });
-      setScreenStream(stream);
-      setScreenStatus("granted");
+
+      console.log("[MEDIA] Screen share stream created successfully. Track ID:", stream.getVideoTracks()[0]?.id);
 
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.onended = () => {
+          console.log("[MEDIA] Screen share track ended event fired (user stopped sharing)");
+          screenStreamRef.current = null;
           setScreenStream(null);
           setScreenStatus("idle");
         };
       }
+
+      screenStreamRef.current = stream;
+      setScreenStream(stream);
+      setScreenStatus("granted");
       return stream;
     } catch (err) {
-      console.warn("Screen share cancelled or error:", err);
+      console.warn("[MEDIA] Screen share cancelled or error:", err);
       // If user simply closed or cancelled the picker dialog, reset to idle
       if (err.name === "NotAllowedError" || err.name === "AbortError") {
         setScreenStatus("idle");
@@ -672,6 +728,7 @@ function MockInterview({ onInterviewCompleted }) {
     try {
       setCameraStatus("requesting");
       setMicStatus("requesting");
+      console.log("[MEDIA] Requesting combined camera & microphone");
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -690,6 +747,17 @@ function MockInterview({ onInterviewCompleted }) {
 
       if (videoTracks.length > 0) {
         const vStream = new MediaStream(videoTracks);
+        const vTrack = vStream.getVideoTracks()[0];
+        if (vTrack) {
+          vTrack.onended = () => {
+            console.log("[MEDIA] Combined: Camera track ended");
+            cameraStreamRef.current = null;
+            setCameraStream(null);
+            setCameraStatus("idle");
+            setIsCameraActive(false);
+          };
+        }
+        cameraStreamRef.current = vStream;
         setCameraStream(vStream);
         setCameraStatus("granted");
         setIsCameraActive(true);
@@ -697,6 +765,18 @@ function MockInterview({ onInterviewCompleted }) {
 
       if (audioTracks.length > 0) {
         const aStream = new MediaStream(audioTracks);
+        const aTrack = aStream.getAudioTracks()[0];
+        if (aTrack) {
+          aTrack.onended = () => {
+            console.log("[MEDIA] Combined: Microphone track ended");
+            micStreamRef.current = null;
+            setMicStream(null);
+            setMicStatus("idle");
+            setIsMicActive(false);
+            setAudioLevel(0);
+          };
+        }
+        micStreamRef.current = aStream;
         setMicStream(aStream);
         setMicStatus("granted");
         setIsMicActive(true);
@@ -705,17 +785,18 @@ function MockInterview({ onInterviewCompleted }) {
 
       return stream;
     } catch (err) {
-      console.warn("Combined Cam/Mic warning:", err);
-      if (!cameraStream) setCameraStatus(err.name === "NotAllowedError" ? "denied" : "idle");
-      if (!micStream) setMicStatus(err.name === "NotAllowedError" ? "denied" : "idle");
+      console.warn("[MEDIA] Combined Cam/Mic warning:", err);
+      if (!cameraStreamRef.current) setCameraStatus(err.name === "NotAllowedError" ? "denied" : "idle");
+      if (!micStreamRef.current) setMicStatus(err.name === "NotAllowedError" ? "denied" : "idle");
       return null;
     }
   };
 
   // Toggle Camera Track Mute
   const toggleCamera = () => {
-    if (cameraStream) {
-      const tracks = cameraStream.getVideoTracks();
+    const activeStream = cameraStreamRef.current || cameraStream;
+    if (activeStream) {
+      const tracks = activeStream.getVideoTracks();
       tracks.forEach((t) => (t.enabled = !isCameraActive));
       setIsCameraActive(!isCameraActive);
     }
@@ -723,30 +804,43 @@ function MockInterview({ onInterviewCompleted }) {
 
   // Toggle Mic Track Mute
   const toggleMic = () => {
-    if (micStream) {
-      const tracks = micStream.getAudioTracks();
+    const activeStream = micStreamRef.current || micStream;
+    if (activeStream) {
+      const tracks = activeStream.getAudioTracks();
       tracks.forEach((t) => (t.enabled = !isMicActive));
       setIsMicActive(!isMicActive);
     }
   };
 
-  // Cleanup All Media Streams on Unmount or Session End
+  // Cleanup All Media Streams on Session End or Manual Stop
   const stopAllStreams = useCallback(() => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((t) => t.stop());
-      setCameraStream(null);
-      setCameraStatus("idle");
+    console.log("[MEDIA] stopAllStreams invoked explicitly");
+    if (cameraStreamRef.current) {
+      console.log("[MEDIA] Cleaning camera stream");
+      cameraStreamRef.current.getTracks().forEach((t) => t.stop());
+      cameraStreamRef.current = null;
     }
-    if (micStream) {
-      micStream.getTracks().forEach((t) => t.stop());
-      setMicStream(null);
-      setMicStatus("idle");
+    setCameraStream(null);
+    setCameraStatus("idle");
+    setIsCameraActive(false);
+
+    if (micStreamRef.current) {
+      console.log("[MEDIA] Cleaning microphone stream");
+      micStreamRef.current.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
     }
-    if (screenStream) {
-      screenStream.getTracks().forEach((t) => t.stop());
-      setScreenStream(null);
-      setScreenStatus("idle");
+    setMicStream(null);
+    setMicStatus("idle");
+    setIsMicActive(false);
+
+    if (screenStreamRef.current) {
+      console.log("[MEDIA] Cleaning screen-share stream");
+      screenStreamRef.current.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
     }
+    setScreenStream(null);
+    setScreenStatus("idle");
+
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
@@ -764,14 +858,44 @@ function MockInterview({ onInterviewCompleted }) {
       setIsDictating(false);
     }
     setAudioLevel(0);
-  }, [cameraStream, micStream, screenStream]);
+  }, []);
 
-  // Clean up on component unmount
+  // Clean up ONLY on component unmount — NOT during stream state changes
   useEffect(() => {
     return () => {
-      stopAllStreams();
+      console.log("[MEDIA] MockInterview unmounted from DOM — stopping all active streams");
+      if (cameraStreamRef.current) {
+        console.log("[MEDIA] Unmount: stopping camera stream");
+        cameraStreamRef.current.getTracks().forEach((t) => t.stop());
+        cameraStreamRef.current = null;
+      }
+      if (micStreamRef.current) {
+        console.log("[MEDIA] Unmount: stopping microphone stream");
+        micStreamRef.current.getTracks().forEach((t) => t.stop());
+        micStreamRef.current = null;
+      }
+      if (screenStreamRef.current) {
+        console.log("[MEDIA] Unmount: stopping screen-share stream");
+        screenStreamRef.current.getTracks().forEach((t) => t.stop());
+        screenStreamRef.current = null;
+      }
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      if (audioContextRef.current) {
+        try {
+          audioContextRef.current.close();
+        } catch {}
+        audioContextRef.current = null;
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
     };
-  }, [stopAllStreams]);
+  }, []); // Empty dependency array: NEVER executes on stream state changes, ONLY on actual DOM unmount!
 
   // --- SPEECH RECOGNITION (VOICE-TO-TEXT) ---
   const toggleVoiceDictation = () => {
@@ -1099,9 +1223,9 @@ function solution() {
     }
   };
 
-  // 2b. SUBMIT SINGLE QUESTION (SAVED & RECORDED FOR FINAL EVALUATION)
-  const handleSubmitSingleQuestion = (q) => {
-    if (!q) return;
+  // 2b. SUBMIT SINGLE QUESTION (SAVED & EVALUATED WITH AI)
+  const handleSubmitSingleQuestion = async (q) => {
+    if (!q || isSubmittingQuestion) return;
     const currentAns = (answers[q.id] || "").trim();
     if (!currentAns) {
       setRunSuccessToast("Please type or record an answer before submitting.");
@@ -1109,13 +1233,48 @@ function solution() {
       return;
     }
 
-    setSubmittedQuestions((prev) => ({
-      ...prev,
-      [q.id]: true,
-    }));
+    setIsSubmittingQuestion(true);
+    setAiSpeechState("analyzing");
 
-    setRunSuccessToast(`✓ Question ${currentQIndex + 1} answer submitted & saved.`);
-    setTimeout(() => setRunSuccessToast(""), 3500);
+    try {
+      // Evaluate question via API (or local evaluator fallback)
+      const evalRes = await evaluateQuestionAPI({
+        question_id: q.id,
+        question: q.question,
+        answer: currentAns,
+        company,
+        role,
+        difficulty,
+        test_results: testResultsMap[q.id] || null,
+      });
+
+      if (evalRes) {
+        setQuestionEvaluations((prev) => ({
+          ...prev,
+          [q.id]: evalRes,
+        }));
+      }
+
+      setSubmittedQuestions((prev) => ({
+        ...prev,
+        [q.id]: true,
+      }));
+
+      setRunSuccessToast(`✓ Question ${currentQIndex + 1} evaluated: ${evalRes?.score ?? 0}/100`);
+      setTimeout(() => setRunSuccessToast(""), 3500);
+    } catch (err) {
+      console.warn("Single question evaluation error:", err);
+      // Fallback: save question submission state locally
+      setSubmittedQuestions((prev) => ({
+        ...prev,
+        [q.id]: true,
+      }));
+      setRunSuccessToast(`✓ Question ${currentQIndex + 1} answer submitted & saved.`);
+      setTimeout(() => setRunSuccessToast(""), 3500);
+    } finally {
+      setIsSubmittingQuestion(false);
+      setAiSpeechState("observing");
+    }
   };
 
   // 3. RUN CUSTOM TEST CASE HANDLER
@@ -1207,15 +1366,35 @@ function solution() {
   };
 
   // --- PARAMETERS VALIDATION & TELEMETRY ---
-  const isCameraReady = cameraStatus === "granted" && !!cameraStream;
-  const isMicReady = micStatus === "granted" && !!micStream;
-  const isScreenReady = screenStatus === "granted" && !!screenStream;
+  // Verify both state AND actual track liveness for each stream
+  const isCameraReady = cameraStatus === "granted" && !!cameraStream && cameraStream.getVideoTracks().some(t => t.readyState === "live");
+  const isMicReady = micStatus === "granted" && !!micStream && micStream.getAudioTracks().some(t => t.readyState === "live");
+  const isScreenReady = screenStatus === "granted" && !!screenStream && screenStream.getVideoTracks().some(t => t.readyState === "live");
   const allParametersReady = isCameraReady && isMicReady && isScreenReady;
   const anyParameterReady = isCameraReady || isMicReady || isScreenReady;
   const readyCount = (isCameraReady ? 1 : 0) + (isMicReady ? 1 : 0) + (isScreenReady ? 1 : 0);
 
+  // Monitor stream health during active interview — pause if any stream drops
+  useEffect(() => {
+    if (!interviewActive || evaluationResult) {
+      setStreamWarning(null);
+      return;
+    }
+    const missing = [];
+    if (!isCameraReady) missing.push("Camera");
+    if (!isMicReady) missing.push("Microphone");
+    if (!isScreenReady) missing.push("Screen Share");
+    if (missing.length > 0) {
+      setStreamWarning(`${missing.join(", ")} ${missing.length === 1 ? "has" : "have"} stopped. Please re-enable to continue the interview.`);
+    } else {
+      setStreamWarning(null);
+    }
+  }, [interviewActive, evaluationResult, isCameraReady, isMicReady, isScreenReady]);
+
   const handleInitiateInterview = () => {
-    if (!anyParameterReady) {
+    setInitError(null);
+    if (!allParametersReady) {
+      // Always show pre-flight modal when any device is missing
       setShowPreFlightModal(true);
     } else {
       startLiveInterviewSession();
@@ -1227,7 +1406,7 @@ function solution() {
       if (!interviewActive) {
         const el = document.getElementById("mock-interview");
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-        if (!anyParameterReady) {
+        if (!allParametersReady) {
           setShowPreFlightModal(true);
         } else {
           startLiveInterviewSession();
@@ -1251,12 +1430,23 @@ function solution() {
       window.removeEventListener("intervista_start_interview", handleQuickStart);
       window.removeEventListener("intervista_voice_practice", handleQuickVoice);
     };
-  }, [interviewActive, anyParameterReady, isMicReady]);
+  }, [interviewActive, allParametersReady, isMicReady]);
 
   // 1. START INTERVIEW HANDLER (20 Questions across 4 Rounds)
   const startLiveInterviewSession = async () => {
+    // Final validation: require all 3 streams to be live before starting
+    if (!allParametersReady) {
+      const missing = [];
+      if (!isCameraReady) missing.push("Camera");
+      if (!isMicReady) missing.push("Microphone");
+      if (!isScreenReady) missing.push("Screen Share");
+      setInitError(`Cannot start interview. Missing: ${missing.join(", ")}. Please enable all 3 devices.`);
+      return;
+    }
+
     setShowPreFlightModal(false);
     setLoading(true);
+    setInitError(null);
     setEvaluationResult(null);
     setCurrentQIndex(0);
     setShowHint(false);
@@ -1266,54 +1456,63 @@ function solution() {
     setTestResultsMap({});
     setSubmittedCodeMap({});
 
-    const token = getToken();
-    const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
-    let fetchedQuestions = null;
+    try {
+      const token = getToken();
+      const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+      let fetchedQuestions = null;
 
-    for (const base of candidateBases) {
-      try {
-        const url = base ? `${base}/api/interviews/start` : `/api/interviews/start`;
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ company, role, difficulty, duration_minutes: 60 }),
-        });
+      for (const base of candidateBases) {
+        try {
+          const url = base ? `${base}/api/interviews/start` : `/api/interviews/start`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ company, role, difficulty, duration_minutes: 60 }),
+          });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data.questions && data.questions.length >= 20) {
-            fetchedQuestions = data.questions;
-            break;
+          if (res.ok) {
+            const data = await res.json();
+            if (data.questions && data.questions.length >= 20) {
+              fetchedQuestions = data.questions;
+              break;
+            }
           }
+        } catch {
+          // continue to next base URL
         }
-      } catch {
-        // continue
       }
-    }
 
-    // Fallback if backend unreachable or returns less than 20
-    if (!fetchedQuestions || fetchedQuestions.length < 20) {
-      fetchedQuestions = generate20Questions(company, role);
-    }
-
-    setSessionQuestions(fetchedQuestions);
-    const initialAns = {};
-    fetchedQuestions.forEach((q) => {
-      if (q.starter_templates && q.starter_templates.javascript) {
-        initialAns[q.id] = q.starter_templates.javascript;
-      } else {
-        initialAns[q.id] = "";
+      // Fallback if backend unreachable or returns less than 20
+      if (!fetchedQuestions || fetchedQuestions.length < 20) {
+        fetchedQuestions = generate20Questions(company, role);
       }
-    });
-    setAnswers(initialAns);
-    setQuestionEvaluations({});
-    setCurrentQIndex(0);
-    setInterviewActive(true);
-    setSessionStartTime(Date.now());
-    setLoading(false);
+
+      setSessionQuestions(fetchedQuestions);
+      const initialAns = {};
+      fetchedQuestions.forEach((q) => {
+        if (q.starter_templates && q.starter_templates.javascript) {
+          initialAns[q.id] = q.starter_templates.javascript;
+        } else {
+          initialAns[q.id] = "";
+        }
+      });
+      setAnswers(initialAns);
+      setQuestionEvaluations({});
+      setSubmittedQuestions({});
+      setIsSubmittingQuestion(false);
+      setCurrentQIndex(0);
+      setInterviewActive(true);
+      setSessionStartTime(Date.now());
+      setStreamWarning(null);
+    } catch (err) {
+      console.error("[Interview Init] Failed to start interview session:", err);
+      setInitError(`Interview initialization failed: ${err.message || "Unknown error"}. Please check your connection and try again.`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 2. SUBMIT INTERVIEW HANDLER
@@ -1394,6 +1593,11 @@ function solution() {
 
     if (onInterviewCompleted) {
       onInterviewCompleted();
+    }
+    try {
+      window.dispatchEvent(new Event("intervista_profile_refresh"));
+    } catch {
+      // ignore
     }
   };
 
@@ -1705,6 +1909,32 @@ function solution() {
         </div>
       </div>
 
+      {/* Initialization Error Display */}
+      {initError && (
+        <div style={{
+          background: "rgba(239,68,68,0.12)",
+          border: "1px solid rgba(239,68,68,0.4)",
+          borderRadius: "12px",
+          padding: "14px 18px",
+          marginBottom: "12px",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          color: "#fca5a5",
+          fontSize: "14px",
+        }}>
+          <FaExclamationTriangle style={{ color: "#ef4444", fontSize: "18px", flexShrink: 0 }} />
+          <span>{initError}</span>
+          <button
+            type="button"
+            onClick={() => setInitError(null)}
+            style={{ marginLeft: "auto", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "16px" }}
+          >
+            <FaTimes />
+          </button>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="interview-actions">
         <button
@@ -1717,10 +1947,8 @@ function solution() {
           {loading
             ? "Initializing AI Cockpit..."
             : allParametersReady
-            ? "Start Interview Room (All Verified)"
-            : isCameraReady || isMicReady
-            ? "Start Interview Room"
-            : `Set Up Devices & Start (${readyCount}/3 Active)`}
+            ? "🚀 Start Interview Room (All 3 Verified)"
+            : `Set Up All 3 Devices First (${readyCount}/3 Active)`}
         </button>
 
         <button
@@ -1895,17 +2123,38 @@ function solution() {
 
             {/* Launch Action */}
             <div className="preflight-actions">
+              {!allParametersReady && (
+                <div style={{
+                  background: "rgba(245,158,11,0.12)",
+                  border: "1px solid rgba(245,158,11,0.3)",
+                  borderRadius: "10px",
+                  padding: "10px 14px",
+                  marginBottom: "12px",
+                  color: "#fbbf24",
+                  fontSize: "13px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}>
+                  <FaExclamationTriangle style={{ flexShrink: 0 }} />
+                  <span>
+                    All 3 devices (Camera, Microphone, Screen Share) must be active to start the interview.
+                    {!isCameraReady && " ❌ Camera is not active."}
+                    {!isMicReady && " ❌ Microphone is not active."}
+                    {!isScreenReady && " ❌ Screen Share is not active."}
+                  </span>
+                </div>
+              )}
               <button
                 type="button"
-                className={`preflight-launch-btn ${!anyParameterReady ? "disabled-lock" : "ready-glow"}`}
+                className={`preflight-launch-btn ${!allParametersReady ? "disabled-lock" : "ready-glow"}`}
                 onClick={startLiveInterviewSession}
+                disabled={!allParametersReady || loading}
               >
                 <FaPlayCircle />
                 {allParametersReady
                   ? "🚀 Launch AI Interview Room (All 3 Parameters Ready)"
-                  : anyParameterReady
-                  ? `🚀 Launch AI Interview Room (${readyCount}/3 Parameters Configured)`
-                  : "🚀 Launch AI Interview Room"}
+                  : `🔒 Enable All 3 Devices to Launch (${readyCount}/3 Active)`}
               </button>
             </div>
           </div>
@@ -1928,6 +2177,53 @@ function solution() {
             </div>
             <div className="screen-expanded-video-wrap">
               <VideoPlayer stream={screenStream} mirrored={false} style={{ background: "#000" }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= STREAM WARNING OVERLAY DURING ACTIVE INTERVIEW ================= */}
+      {interviewActive && streamWarning && !evaluationResult && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 100001,
+          background: "rgba(0,0,0,0.85)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}>
+          <div style={{
+            background: "linear-gradient(135deg, #1e293b, #0f172a)",
+            border: "1px solid rgba(239,68,68,0.4)",
+            borderRadius: "20px",
+            padding: "40px",
+            maxWidth: "520px",
+            textAlign: "center",
+            color: "#fff",
+          }}>
+            <FaExclamationTriangle style={{ fontSize: "48px", color: "#ef4444", marginBottom: "16px" }} />
+            <h3 style={{ marginBottom: "12px", fontSize: "20px" }}>Interview Paused</h3>
+            <p style={{ color: "#94a3b8", marginBottom: "20px", lineHeight: 1.6 }}>{streamWarning}</p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+              {!isCameraReady && (
+                <button type="button" onClick={requestCamera} className="preflight-btn" style={{ padding: "10px 20px" }}>
+                  <FaVideo style={{ marginRight: "6px" }} /> Re-enable Camera
+                </button>
+              )}
+              {!isMicReady && (
+                <button type="button" onClick={requestMicrophone} className="preflight-btn" style={{ padding: "10px 20px" }}>
+                  <FaMicrophone style={{ marginRight: "6px" }} /> Re-enable Microphone
+                </button>
+              )}
+              {!isScreenReady && (
+                <button type="button" onClick={requestScreenShare} className="preflight-btn" style={{ padding: "10px 20px" }}>
+                  <FaDesktop style={{ marginRight: "6px" }} /> Re-enable Screen Share
+                </button>
+              )}
             </div>
           </div>
         </div>

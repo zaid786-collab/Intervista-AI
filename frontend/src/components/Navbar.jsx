@@ -22,7 +22,7 @@ function Navbar() {
     { label: "Resources", to: "/resources" },
     { label: "Dashboard", to: "/dashboard" },
     { label: "Companies", to: "/companies" },
-    { label: "Pricing", to: "/pricing" },
+    // { label: "Pricing", to: "/pricing" },
     { label: "FAQ", to: "/faq" },
   ];
 
