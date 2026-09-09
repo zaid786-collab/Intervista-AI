@@ -13,6 +13,8 @@ import Companies from "./pages/Companies";
 import Profile from "./pages/Profile";
 import AdminPortal from "./pages/AdminPortal";
 import Dashboard from "./components/dashboard/Dashboard";
+import Analysis from "./pages/Analysis";
+import OAuthCallback from "./pages/OAuthCallback";
 import "./App.css";
 
 function ScrollToTop() {
@@ -29,7 +31,7 @@ function AppLayout() {
   const location = useLocation();
   const path = location.pathname;
 
-  const hideFooter = ["/login", "/signup", "/profile", "/admin", "/dashboard"].includes(path);
+  const hideFooter = ["/login", "/signup", "/oauth/callback", "/profile", "/admin", "/dashboard"].includes(path);
 
   return (
     <>
@@ -37,13 +39,54 @@ function AppLayout() {
       <Navbar />
 
       <Routes>
+        {/* Explicitly Public Routes */}
         <Route path="/" element={<Home />} />
-        <Route path="/resources" element={<Resources />} />
-        <Route path="/companies" element={<Companies />} />
-        {/* <Route path="/pricing" element={<Pricing />} /> */}
         <Route path="/faq" element={<FAQ />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/login" element={<AuthPage mode="login" />} />
+        <Route path="/signup" element={<AuthPage mode="signup" />} />
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
+
+        {/* Global Protected Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analysis"
+          element={
+            <ProtectedRoute>
+              <Analysis />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/resources"
+          element={
+            <ProtectedRoute>
+              <Resources />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/companies"
+          element={
+            <ProtectedRoute>
+              <Companies />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin"
           element={
@@ -52,8 +95,8 @@ function AppLayout() {
             </ProtectedRoute>
           }
         />
-        <Route path="/login" element={<AuthPage mode="login" />} />
-        <Route path="/signup" element={<AuthPage mode="signup" />} />
+
+        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

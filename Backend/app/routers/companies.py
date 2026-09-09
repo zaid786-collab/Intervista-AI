@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
-from app.dependencies import get_current_user_optional
+from app.dependencies import get_current_user, get_current_user_optional
 
 router = APIRouter(prefix="/api/companies", tags=["Company Intelligence"])
 
@@ -106,11 +106,9 @@ def get_company_details(
 def toggle_company_topic(
     name: str,
     payload: schemas.ToggleSolvedRequest,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not current_user:
-        return {"company": name, "topic": payload.title, "is_solved": True, "solved_topics": [payload.title]}
 
     comp_key = next((c for c in COMPANIES_LIST if c.lower() == name.lower()), name)
     existing = db.query(models.CompanyTopicSolved).filter(

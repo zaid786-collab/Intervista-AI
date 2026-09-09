@@ -8459,7 +8459,148 @@ body:has(.interview-live-cockpit-overlay) .dashboard-main {
   transform: translateY(-1px);
 }
 
-/* Proctoring Warning Modal Overlay (Warnings 1 - 4) */
+/* =========================================================================
+   Fixed Red Left-Side Warning Popup (Proctoring Warnings 1 - 4)
+   ========================================================================= */
+.proctoring-warning-toast-left {
+  position: fixed !important;
+  left: 24px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 100000000 !important;
+  width: 360px !important;
+  max-width: calc(100vw - 48px) !important;
+  background: linear-gradient(155deg, rgba(35, 10, 10, 0.96), rgba(18, 4, 4, 0.98)) !important;
+  border: 2px solid #ef4444 !important;
+  border-radius: 16px !important;
+  padding: 22px 20px !important;
+  box-shadow: 0 16px 48px rgba(239, 68, 68, 0.45), 0 0 25px rgba(239, 68, 68, 0.3), inset 0 0 25px rgba(239, 68, 68, 0.12) !important;
+  color: #f8fafc !important;
+  animation: slideInToastLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-sizing: border-box !important;
+  backdrop-filter: blur(16px) !important;
+  pointer-events: auto !important;
+}
+
+@keyframes slideInToastLeft {
+  from {
+    opacity: 0;
+    transform: translate(-40px, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+.proctoring-warning-toast-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 10px !important;
+}
+
+.toast-warning-icon {
+  color: #ef4444 !important;
+  font-size: 22px !important;
+  animation: pulseToastWarning 1.5s infinite ease-in-out !important;
+}
+
+@keyframes pulseToastWarning {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px #ef4444);
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 10px #f87171);
+  }
+}
+
+.toast-warning-title {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  letter-spacing: 1.2px !important;
+  text-transform: uppercase !important;
+  color: #ef4444 !important;
+}
+
+.toast-warning-desc {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  margin: 0 0 12px 0 !important;
+  line-height: 1.4 !important;
+}
+
+.toast-warning-count-badge {
+  display: inline-block !important;
+  background: rgba(239, 68, 68, 0.25) !important;
+  border: 1px solid rgba(239, 68, 68, 0.65) !important;
+  color: #fca5a5 !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.8px !important;
+  padding: 6px 14px !important;
+  border-radius: 20px !important;
+  margin-bottom: 12px !important;
+}
+
+.toast-warning-meter {
+  display: flex !important;
+  gap: 6px !important;
+  margin-bottom: 14px !important;
+}
+
+.toast-meter-step {
+  flex: 1 !important;
+  height: 6px !important;
+  border-radius: 3px !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  transition: all 0.25s ease !important;
+}
+
+.toast-meter-step.step-active {
+  background: #ef4444 !important;
+  box-shadow: 0 0 8px #ef4444 !important;
+}
+
+.toast-warning-subtext {
+  font-size: 12px !important;
+  color: #fecaca !important;
+  line-height: 1.45 !important;
+  margin: 0 0 16px 0 !important;
+  opacity: 0.95 !important;
+}
+
+.toast-warning-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+
+.toast-ack-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 9px 18px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45) !important;
+}
+
+.toast-ack-btn:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.65) !important;
+}
+
+/* Proctoring Warning Modal Overlay (Legacy fallback) */
 .proctoring-modal-overlay {
   position: fixed;
   inset: 0;

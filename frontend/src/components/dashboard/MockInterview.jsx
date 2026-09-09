@@ -736,6 +736,7 @@ function MockInterview({ onInterviewCompleted }) {
   // Proctoring & Anti-Cheating States
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [proctoringWarning, setProctoringWarning] = useState(null); // { warningNumber, maxWarnings, type, message, violations }
+  const [warningCount, setWarningCount] = useState(0);
   const [terminationData, setTerminationData] = useState(null); // { warningCount, maxWarnings, status, terminationReason, violations, interviewId }
   const [mediaGracePeriod, setMediaGracePeriod] = useState(null); // { device: "Camera"|"Microphone", secondsLeft: 10 }
   const proctoringManagerRef = useRef(null);
@@ -1235,6 +1236,9 @@ function MockInterview({ onInterviewCompleted }) {
           recognitionRef.current.stop();
         } catch {}
       }
+      if (proctoringManagerRef.current) {
+        proctoringManagerRef.current.stop();
+      }
     };
   }, []); // Empty dependency array: NEVER executes on stream state changes, ONLY on actual DOM unmount!
 
@@ -1569,40 +1573,42 @@ function solution() {
     }
   };
 
-  // 2b. SUBMIT SINGLE QUESTION (SAVED & EVALUATED WITH AI)
-  const handleSubmitSingleQuestion = async (q) => {
+  // 2b. SAVE SINGLE ANSWER (SILENT DB PERSISTENCE - NO LIVE EVALUATION SHOWN)
+  const handleSaveSingleAnswer = async (q, advance = false) => {
     if (!q || isSubmittingQuestion) return;
     const currentAns = (answers[q.id] || "").trim();
     if (!currentAns) {
-      setRunSuccessToast("Please type or record an answer before submitting.");
-      setTimeout(() => setRunSuccessToast(""), 3500);
+      setRunSuccessToast("Please enter an answer before saving, or click 'Skip Question'.");
+      setTimeout(() => setRunSuccessToast(""), 3000);
       return;
     }
 
     setIsSubmittingQuestion(true);
-    setAiSpeechState("analyzing");
+    const token = getToken();
+    const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
 
     try {
-      // Evaluate question via API (or local evaluator fallback)
-      const effectiveDomain = domain === "Custom / Other Topic" ? (customDomain.trim() || "General Software Engineering") : domain;
-      const evalRes = await evaluateQuestionAPI({
-        question_id: q.id,
-        question: q.question,
-        answer: currentAns,
-        company,
-        role,
-        difficulty,
-        interview_type: interviewType,
-        domain: q.domain || effectiveDomain,
-        expected_key_points: q.expected_key_points || [],
-        test_results: testResultsMap[q.id] || null,
-      });
-
-      if (evalRes) {
-        setQuestionEvaluations((prev) => ({
-          ...prev,
-          [q.id]: evalRes,
-        }));
+      for (const base of candidateBases) {
+        try {
+          const url = base ? `${base}/api/interviews/save-answer` : `/api/interviews/save-answer`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({
+              session_id: activeSessionId,
+              question_id: q.id,
+              question: q.question,
+              candidate_answer: currentAns,
+              status: "COMPLETED",
+            }),
+          });
+          if (res.ok) break;
+        } catch {
+          // fallback to next base
+        }
       }
 
       setSubmittedQuestions((prev) => ({
@@ -1610,20 +1616,71 @@ function solution() {
         [q.id]: true,
       }));
 
-      setRunSuccessToast(`✓ Question ${currentQIndex + 1} evaluated: ${evalRes?.score ?? 0}/100`);
-      setTimeout(() => setRunSuccessToast(""), 3500);
-    } catch (err) {
-      console.warn("Single question evaluation error:", err);
-      // Fallback: save question submission state locally
-      setSubmittedQuestions((prev) => ({
-        ...prev,
-        [q.id]: true,
-      }));
-      setRunSuccessToast(`✓ Question ${currentQIndex + 1} answer submitted & saved.`);
-      setTimeout(() => setRunSuccessToast(""), 3500);
+      setRunSuccessToast(`✓ Question ${currentQIndex + 1} answer saved.`);
+      setTimeout(() => setRunSuccessToast(""), 2500);
+
+      if (advance && currentQIndex < sessionQuestions.length - 1) {
+        setCurrentQIndex((prev) => prev + 1);
+        setShowHint(false);
+        setActiveTestCaseTab(0);
+      }
     } finally {
       setIsSubmittingQuestion(false);
-      setAiSpeechState("observing");
+    }
+  };
+
+  // 2c. SKIP QUESTION (RECORD AS SKIPPED WITH 0 SCORE DEFERRED)
+  const handleSkipQuestion = async (q) => {
+    if (!q || isSubmittingQuestion) return;
+
+    setAnswers((prev) => ({
+      ...prev,
+      [q.id]: "",
+    }));
+
+    setIsSubmittingQuestion(true);
+    const token = getToken();
+    const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+
+    try {
+      for (const base of candidateBases) {
+        try {
+          const url = base ? `${base}/api/interviews/save-answer` : `/api/interviews/save-answer`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({
+              session_id: activeSessionId,
+              question_id: q.id,
+              question: q.question,
+              candidate_answer: "",
+              status: "SKIPPED",
+            }),
+          });
+          if (res.ok) break;
+        } catch {
+          // next base
+        }
+      }
+
+      setSubmittedQuestions((prev) => ({
+        ...prev,
+        [q.id]: "SKIPPED",
+      }));
+
+      setRunSuccessToast(`Question ${currentQIndex + 1} skipped.`);
+      setTimeout(() => setRunSuccessToast(""), 2500);
+
+      if (currentQIndex < sessionQuestions.length - 1) {
+        setCurrentQIndex((prev) => prev + 1);
+        setShowHint(false);
+        setActiveTestCaseTab(0);
+      }
+    } finally {
+      setIsSubmittingQuestion(false);
     }
   };
 
@@ -1838,6 +1895,8 @@ function solution() {
         duration_minutes: 60,
       };
 
+      let sessionIdentifier = `intv_sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
       for (const base of candidateBases) {
         try {
           const url = base ? `${base}/api/interviews/start` : `/api/interviews/start`;
@@ -1909,6 +1968,7 @@ function solution() {
 
       // Initialize Proctoring Engine for the session
       setActiveSessionId(sessionIdentifier);
+      setWarningCount(0);
       setProctoringWarning(null);
       setTerminationData(null);
       setMediaGracePeriod(null);
@@ -1925,7 +1985,7 @@ function solution() {
         config: {
           maxWarnings: 5,
           detectTabSwitch: true,
-          detectWindowBlur: true,
+          detectWindowBlur: false,
           requireFullscreen: false,
           requireScreenShare: true,
           monitorCamera: true,
@@ -1937,10 +1997,12 @@ function solution() {
         onWarning: (warningInfo) => {
           console.warn("[PROCTORING] Warning received:", warningInfo);
           setProctoringWarning(warningInfo);
+          setWarningCount(warningInfo.warningNumber);
         },
         onTerminate: (termInfo) => {
           console.error("[PROCTORING] Termination triggered:", termInfo);
           setTerminationData(termInfo);
+          setWarningCount(termInfo.warningCount);
           setProctoringWarning(null);
           setMediaGracePeriod(null);
           stopAllStreams();
@@ -1978,12 +2040,18 @@ function solution() {
       : Math.max(45 * 60 - timeLeft, 1);
     const activeMinutes = Math.max(Math.round(elapsedSeconds / 60), 1);
 
-    const answersPayload = sessionQuestions.map((q) => ({
-      question_id: q.id,
-      question: q.question,
-      answer: answers[q.id] || "No answer provided.",
-      test_results: testResultsMap[q.id] || null,
-    }));
+    const answersPayload = sessionQuestions.map((q) => {
+      const isSkipped = submittedQuestions[q.id] === "SKIPPED";
+      const ansVal = isSkipped ? "" : (answers[q.id] || "");
+      return {
+        question_id: q.id,
+        question: q.question,
+        answer: ansVal,
+        candidate_answer: ansVal,
+        status: isSkipped ? "SKIPPED" : ansVal.trim() ? "COMPLETED" : "EMPTY",
+        test_results: testResultsMap[q.id] || null,
+      };
+    });
 
     const token = getToken();
     const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
@@ -2047,6 +2115,11 @@ function solution() {
       detailed_feedback: evalData.detailed_feedback,
       identified_keywords: evalData.identified_keywords,
     });
+
+    if (proctoringManagerRef.current) {
+      proctoringManagerRef.current.stop();
+    }
+    setProctoringWarning(null);
 
     setEvaluationResult(evalData);
     setLoading(false);
@@ -2124,6 +2197,7 @@ function solution() {
       setEvaluationResult(null);
       setTerminationData(null);
       setProctoringWarning(null);
+      setWarningCount(0);
       setMediaGracePeriod(null);
       if (proctoringManagerRef.current) {
         proctoringManagerRef.current.reset();
@@ -2136,6 +2210,7 @@ function solution() {
       setEvaluationResult(null);
       setTerminationData(null);
       setProctoringWarning(null);
+      setWarningCount(0);
       setMediaGracePeriod(null);
       if (proctoringManagerRef.current) {
         proctoringManagerRef.current.stop();
@@ -2780,52 +2855,6 @@ function solution() {
         </div>
       )}
 
-      {/* ================= PROCTORING WARNING MODAL (WARNINGS 1 TO 4) ================= */}
-      {proctoringWarning && !terminationData && (
-        <div className="proctoring-modal-overlay">
-          <div className="proctoring-modal-card">
-            <div className="proctoring-warning-badge">
-              <FaExclamationTriangle />
-              <span>PROCTORING VIOLATION DETECTED</span>
-            </div>
-
-            <h2 className="proctoring-modal-title">⚠️ Interview Warning</h2>
-            <div className="proctoring-warning-counter">
-              Warning <strong>{proctoringWarning.warningNumber}</strong> of {proctoringWarning.maxWarnings}
-            </div>
-
-            {/* Visual meter */}
-            <div className="proctoring-meter-bar">
-              {[1, 2, 3, 4, 5].map((step) => (
-                <div
-                  key={step}
-                  className={`meter-step ${step <= proctoringWarning.warningNumber ? "step-violation" : "step-safe"}`}
-                />
-              ))}
-            </div>
-
-            <div className="proctoring-incident-box">
-              <div className="incident-label">Violation Reason:</div>
-              <p className="incident-message">{proctoringWarning.message}</p>
-            </div>
-
-            <div className="proctoring-warning-notice">
-              <strong>Important:</strong> Please remain on the interview screen and maintain active audio, video, and screen sharing. You have <strong>{proctoringWarning.maxWarnings - proctoringWarning.warningNumber}</strong> warning(s) remaining before your interview is <strong>immediately terminated</strong>.
-            </div>
-
-            <div className="proctoring-modal-actions">
-              <button
-                type="button"
-                className="proctoring-ack-btn"
-                onClick={() => setProctoringWarning(null)}
-              >
-                <FaCheck /> Acknowledge & Return to Interview
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ================= LIVE INTERVIEW COCKPIT SESSION MODAL ================= */}
       {interviewActive && (
         <div className="interview-live-cockpit-overlay">
@@ -2837,26 +2866,73 @@ function solution() {
             }}
           />
 
+          {/* ================= RED WARNING POPUP (LEFT SIDE) (WARNINGS 1 TO 4) ================= */}
+          {proctoringWarning && !terminationData && (
+            <div className="proctoring-warning-toast-left" role="alert" aria-live="assertive">
+              <div className="proctoring-warning-toast-header">
+                <FaExclamationTriangle className="toast-warning-icon" />
+                <span className="toast-warning-title">INTERVIEW WARNING</span>
+              </div>
+
+              <p className="toast-warning-desc">
+                You left the interview window.
+              </p>
+
+              <div className="toast-warning-count-badge">
+                WARNING {proctoringWarning.warningNumber} / {proctoringWarning.maxWarnings}
+              </div>
+
+              {/* Visual step meter */}
+              <div className="toast-warning-meter">
+                {[1, 2, 3, 4, 5].map((step) => (
+                  <div
+                    key={step}
+                    className={`toast-meter-step ${step <= proctoringWarning.warningNumber ? "step-active" : "step-inactive"}`}
+                  />
+                ))}
+              </div>
+
+              <p className="toast-warning-subtext">
+                Please remain on the interview screen. Repeated violations will terminate your interview.
+              </p>
+
+              <div className="toast-warning-actions">
+                <button
+                  type="button"
+                  className="toast-ack-btn"
+                  onClick={() => setProctoringWarning(null)}
+                >
+                  <FaCheck /> Continue Interview
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="cockpit-container">
             {terminationData ? (
-              /* ================= INTERVIEW TERMINATED FOR CHEATING SCREEN ================= */
+              /* ================= INTERVIEW TERMINATED FOR PROCTORING VIOLATIONS SCREEN ================= */
               <div className="proctoring-terminated-container">
                 <div className="terminated-card">
                   <div className="terminated-icon-wrapper">
                     <FaBan />
                   </div>
 
-                  <div className="terminated-badge">STATUS: TERMINATED FOR CHEATING</div>
+                  <div className="terminated-badge">STATUS: TERMINATED FOR PROCTORING VIOLATIONS</div>
 
                   <h1 className="terminated-title">Interview Terminated</h1>
 
                   <div className="terminated-counter-summary">
-                    Maximum Proctoring Violations Reached: <strong>5 / 5 Warnings</strong>
+                    Proctoring Warnings: <strong>5 / 5 Warnings</strong>
+                  </div>
+
+                  <div className="terminated-reason-box" style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "8px", padding: "10px 14px", margin: "12px 0 16px 0", textAlign: "left" }}>
+                    <div style={{ color: "#ef4444", fontWeight: "700", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Reason:</div>
+                    <div style={{ color: "#fca5a5", fontSize: "14px", fontWeight: "500", marginTop: "2px" }}>Repeatedly leaving the interview window.</div>
                   </div>
 
                   <p className="terminated-explanation">
                     {terminationData.terminationReason ||
-                      "Your interview has been officially terminated because the maximum number of proctoring violations was reached. Media streams have been disconnected and further answer submissions are prohibited."}
+                      "Interview terminated due to repeated proctoring violations. Media streams have been disconnected and further answer submissions are prohibited."}
                   </p>
 
                   {/* Violation Category Breakdown */}
@@ -2925,6 +3001,39 @@ function solution() {
               </div>
             ) : !evaluationResult ? (
               <>
+                {/* SUBMISSION & EVALUATION OVERLAY */}
+                {loading && (
+                  <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: "rgba(15, 23, 42, 0.92)",
+                    zIndex: 999999,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backdropFilter: "blur(8px)"
+                  }}>
+                    <div style={{
+                      textAlign: "center",
+                      padding: "40px",
+                      background: "rgba(30, 41, 59, 0.8)",
+                      border: "1px solid rgba(56, 189, 248, 0.3)",
+                      borderRadius: "16px",
+                      maxWidth: "480px"
+                    }}>
+                      <FaSpinner className="fa-spin" style={{ fontSize: "48px", color: "#38bdf8", marginBottom: "20px" }} />
+                      <h3 style={{ fontSize: "22px", color: "#f8fafc", marginBottom: "12px" }}>Analyzing Your Interview...</h3>
+                      <p style={{ color: "#94a3b8", fontSize: "14px", lineHeight: "1.6" }}>
+                        Our AI Proctor & Technical Evaluator is auditing all candidate responses, validating semantic relevance, and synthesizing your comprehensive performance report.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* COCKPIT TOP HEADER */}
                 <div className="cockpit-top-bar">
                   <div className="cockpit-brand">
@@ -2937,11 +3046,11 @@ function solution() {
                   <div className="cockpit-telemetry-cluster">
                     {/* Proctoring Integrity indicator */}
                     <div
-                      className={`telemetry-pill proctoring-pill ${(proctoringManagerRef.current?.getWarningCount() || 0) > 0 ? "warning-pill" : "safe-pill"}`}
+                      className={`telemetry-pill proctoring-pill ${warningCount > 0 ? "warning-pill" : "safe-pill"}`}
                       title="Proctoring & Anti-Cheating Integrity Monitor"
                     >
                       <FaShieldAlt />
-                      <span>Warnings: {proctoringManagerRef.current?.getWarningCount() || 0}/5</span>
+                      <span>Warnings: {warningCount}/5</span>
                     </div>
 
                     {/* Camera indicator */}
@@ -3191,8 +3300,8 @@ function solution() {
                           <div className="rounds-stage-tracker">
                             {dynamicRounds.map((r) => {
                               const isCurrentRound = curRoundNum === r.id;
-                              const evaluatedInRound = r.questions.filter((q) => !!questionEvaluations[q.id]).length;
-                              const isRoundDone = evaluatedInRound === r.questions.length && r.questions.length > 0;
+                              const answeredInRound = r.questions.filter((q) => !!submittedQuestions[q.id]).length;
+                              const isRoundDone = answeredInRound === r.questions.length && r.questions.length > 0;
                               return (
                                 <div
                                   key={r.id}
@@ -3206,7 +3315,7 @@ function solution() {
                                   <div className="round-pill-info">
                                     <span className="round-pill-title">Round {r.id}: {r.short}</span>
                                     <small className="round-pill-progress">
-                                      {evaluatedInRound}/{r.questions.length} Evaluated {isRoundDone ? "✓" : ""}
+                                      {answeredInRound}/{r.questions.length} Saved {isRoundDone ? "✓" : ""}
                                     </small>
                                   </div>
                                 </div>
@@ -3218,24 +3327,19 @@ function solution() {
                           <div className="questions-matrix-row">
                             {sessionQuestions.map((q, idx) => {
                               const roundNum = q.round_number || (Math.floor(idx / 5) + 1);
-                              const evaluation = questionEvaluations[q.id];
-                              const isEvaluated = !!evaluation;
-                              const isPass = isEvaluated && (evaluation.status === "correct" || evaluation.score >= 70);
-                              const isPartial = isEvaluated && (evaluation.status === "partial" || (evaluation.score >= 40 && evaluation.score < 70));
-                              const isFail = isEvaluated && !isPass && !isPartial;
+                              const isSaved = submittedQuestions[q.id] === true;
+                              const isSkipped = submittedQuestions[q.id] === "SKIPPED";
                               
                               const userAns = (answers[q.id] || "").trim();
                               const defaultTemplate = (q.starter_templates && (q.starter_templates[selectedLanguage] || q.starter_templates.javascript))
                                 ? (q.starter_templates[selectedLanguage] || q.starter_templates.javascript).trim()
                                 : "";
-                              const isDrafting = !isEvaluated && userAns.length > 0 && userAns !== defaultTemplate;
+                              const isDrafting = !isSaved && !isSkipped && userAns.length > 0 && userAns !== defaultTemplate;
 
-                              const statusClass = isPass
-                                ? "evaluated-pass"
-                                : isPartial
-                                ? "evaluated-partial"
-                                : isFail
-                                ? "evaluated-fail"
+                              const statusClass = isSaved
+                                ? "saved"
+                                : isSkipped
+                                ? "skipped"
                                 : isDrafting
                                 ? "drafting"
                                 : "";
@@ -3249,11 +3353,10 @@ function solution() {
                                     setShowHint(false);
                                   }}
                                   className={`question-matrix-btn round-${roundNum} ${currentQIndex === idx ? "active" : ""} ${statusClass}`}
-                                  title={`Round ${roundNum}: Q${idx + 1} (${q.category || q.round_title}) • ${isEvaluated ? `Evaluated: ${evaluation.score}%` : isDrafting ? "Drafting answer" : "Unanswered"}`}
+                                  title={`Round ${roundNum}: Q${idx + 1} (${q.category || q.round_title}) • ${isSaved ? "Answer Saved" : isSkipped ? "Skipped" : isDrafting ? "Drafting answer" : "Unanswered"}`}
                                 >
-                                  {isPass && <span className="tab-evaluated-dot pass">✓</span>}
-                                  {isPartial && <span className="tab-evaluated-dot partial">~</span>}
-                                  {isFail && <span className="tab-evaluated-dot fail">✗</span>}
+                                  {isSaved && <span className="tab-evaluated-dot pass">✓</span>}
+                                  {isSkipped && <span className="tab-evaluated-dot fail">⊘</span>}
                                   {isDrafting && <span className="tab-draft-dot" />}
                                   <span className="q-num">{idx + 1}</span>
                                 </button>
@@ -3297,9 +3400,14 @@ function solution() {
                                           {curQ.difficulty}
                                         </span>
                                       )}
-                                      {questionEvaluations[curQ?.id] && (
-                                        <span className={`dsa-solved-pill ${questionEvaluations[curQ.id].status || "evaluated"}`}>
-                                          {questionEvaluations[curQ.id].score >= 70 ? "✓ Evaluated" : questionEvaluations[curQ.id].score >= 40 ? "⚠️ Partial" : "✗ Needs Work"} ({questionEvaluations[curQ.id].score}/100)
+                                      {submittedQuestions[curQ?.id] === true && (
+                                        <span className="dsa-solved-pill pass">
+                                          ✓ Answer Saved
+                                        </span>
+                                      )}
+                                      {submittedQuestions[curQ?.id] === "SKIPPED" && (
+                                        <span className="dsa-solved-pill retry">
+                                          ⊘ Skipped
                                         </span>
                                       )}
                                     </div>
@@ -3608,13 +3716,23 @@ function solution() {
                                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                           <button
                                             type="button"
-                                            onClick={() => handleSubmitSingleQuestion(curQ)}
+                                            onClick={() => handleSaveSingleAnswer(curQ, false)}
                                             disabled={isSubmittingQuestion}
                                             className="question-submit-answer-btn"
-                                            title="Submit your answer to this question for AI evaluation"
+                                            title="Save your answer to this question in the database"
                                           >
                                             {isSubmittingQuestion ? <FaSpinner className="fa-spin" /> : <FaCheckCircle />}
-                                            {isSubmittingQuestion ? "Evaluating..." : questionEvaluations[curQ?.id] ? "Re-submit & Evaluate" : "Submit Answer"}
+                                            {isSubmittingQuestion ? "Saving..." : submittedQuestions[curQ?.id] === true ? "✓ Answer Saved" : "Save Answer"}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSkipQuestion(curQ)}
+                                            disabled={isSubmittingQuestion}
+                                            className="editor-tool-btn"
+                                            style={{ fontSize: "12px", padding: "6px 10px", color: "#f87171" }}
+                                            title="Skip this question (0 score recorded)"
+                                          >
+                                            <FaBan /> Skip
                                           </button>
                                           {/* VOICE DICTATION (Non-DSA rounds) */}
                                           <button
@@ -3961,52 +4079,6 @@ function solution() {
                                     </div>
                                   )}
 
-                                  {/* INDIVIDUAL QUESTION EVALUATION RESULT CARD */}
-                                  {questionEvaluations[curQ?.id] && (() => {
-                                    const evalItem = questionEvaluations[curQ.id];
-                                    const isPass = evalItem.status === "correct" || evalItem.score >= 70;
-                                    const isPartial = evalItem.status === "partial" || (evalItem.score >= 40 && evalItem.score < 70);
-                                    const cardClass = isPass ? "pass" : isPartial ? "partial" : "fail";
-
-                                    return (
-                                      <div className={`question-eval-result-card ${cardClass} animate-fade-in`}>
-                                        <div className="eval-result-header">
-                                          <div className="eval-status-pill">
-                                            {isPass ? <FaCheckCircle /> : isPartial ? <FaLightbulb /> : <FaTimes />}
-                                            <span>{evalItem.verdict || (isPass ? "Accepted" : isPartial ? "Partially Correct" : "Needs Improvement")}</span>
-                                          </div>
-                                          <div className="eval-score-badge">
-                                            Question Score: <strong>{evalItem.score}/100</strong>
-                                          </div>
-                                        </div>
-
-                                        <div className="eval-feedback-body">
-                                          <p className="eval-commentary">{evalItem.feedback}</p>
-
-                                          {evalItem.identified_keywords && evalItem.identified_keywords.length > 0 && (
-                                            <div className="eval-kw-chips">
-                                              <span className="eval-chip-label">Concepts Detected:</span>
-                                              {evalItem.identified_keywords.map((kw, kIdx) => (
-                                                <span key={kIdx} className="eval-chip">✓ {kw}</span>
-                                              ))}
-                                            </div>
-                                          )}
-
-                                          {evalItem.suggested_answer_points && evalItem.suggested_answer_points.length > 0 && (
-                                            <div className="eval-model-points">
-                                              <span className="eval-points-label">💡 Key Solution Points to Include:</span>
-                                              <ul>
-                                                {evalItem.suggested_answer_points.map((pt, pIdx) => (
-                                                  <li key={pIdx}>{pt}</li>
-                                                ))}
-                                              </ul>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    );
-                                  })()}
-
                                   {/* Editor Stats Footer */}
                                   <div className="editor-stats-footer">
                                     <span>Words: <strong>{wordCount}</strong> | Chars: <strong>{charCount}</strong></span>
@@ -4046,14 +4118,27 @@ function solution() {
                                 type="button"
                                 onClick={() => {
                                   const curQ = sessionQuestions[currentQIndex];
-                                  handleSubmitSingleQuestion(curQ);
+                                  handleSaveSingleAnswer(curQ, false);
                                 }}
                                 disabled={isSubmittingQuestion}
                                 className="cockpit-submit-q-btn"
-                                title="Evaluate current question answer"
+                                title="Save current question answer"
                               >
                                 {isSubmittingQuestion ? <FaSpinner className="fa-spin" /> : <FaCheckCircle />}
-                                {isSubmittingQuestion ? "Evaluating Question..." : questionEvaluations[sessionQuestions[currentQIndex]?.id] ? "✓ Re-evaluate This Question" : "Submit This Question"}
+                                {isSubmittingQuestion ? "Saving Answer..." : submittedQuestions[sessionQuestions[currentQIndex]?.id] === true ? "✓ Answer Saved" : "Save Answer"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const curQ = sessionQuestions[currentQIndex];
+                                  handleSkipQuestion(curQ);
+                                }}
+                                disabled={isSubmittingQuestion}
+                                className="cockpit-prev-btn"
+                                style={{ borderColor: "rgba(239, 68, 68, 0.4)", color: "#f87171" }}
+                                title="Skip question (0 points awarded)"
+                              >
+                                <FaBan /> Skip Question
                               </button>
                             </div>
 
@@ -4197,6 +4282,55 @@ function solution() {
                   <p>{evaluationResult.overall_summary}</p>
                 </div>
 
+                {/* Question Statistics Summary */}
+                <div className="report-question-stats-banner" style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+                  gap: "12px",
+                  margin: "20px 0",
+                  padding: "16px",
+                  background: "rgba(30, 41, 59, 0.7)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "12px"
+                }}>
+                  <div style={{ textAlign: "center" }}>
+                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Total Questions</span>
+                    <h4 style={{ fontSize: "22px", margin: "4px 0", color: "#f8fafc" }}>
+                      {evaluationResult.question_count || sessionQuestions.length}
+                    </h4>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Answered</span>
+                    <h4 style={{ fontSize: "22px", margin: "4px 0", color: "#60a5fa" }}>
+                      {evaluationResult.answered_count ?? (evaluationResult.question_count ? evaluationResult.question_count - (evaluationResult.skipped_count || 0) : sessionQuestions.length)}
+                    </h4>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Correct</span>
+                    <h4 style={{ fontSize: "22px", margin: "4px 0", color: "#22c55e" }}>
+                      {evaluationResult.correct_count ?? 0}
+                    </h4>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Partially Correct</span>
+                    <h4 style={{ fontSize: "22px", margin: "4px 0", color: "#f59e0b" }}>
+                      {evaluationResult.partially_correct_count ?? evaluationResult.partial_count ?? 0}
+                    </h4>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Incorrect / Irrelevant</span>
+                    <h4 style={{ fontSize: "22px", margin: "4px 0", color: "#ef4444" }}>
+                      {evaluationResult.incorrect_count ?? 0}
+                    </h4>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>Skipped</span>
+                    <h4 style={{ fontSize: "22px", margin: "4px 0", color: "#a855f7" }}>
+                      {evaluationResult.skipped_count ?? 0}
+                    </h4>
+                  </div>
+                </div>
+
                 {/* Per-Question Detailed Breakdown */}
                 {evaluationResult.detailed_feedback && evaluationResult.detailed_feedback.length > 0 && (
                   <div className="report-questions-breakdown">
@@ -4206,22 +4340,69 @@ function solution() {
                         const curQ = sessionQuestions[idx];
                         const roundNum = curQ?.round_number || qf.round_number || (Math.floor(idx / 5) + 1);
                         const roundName = curQ?.round_title || qf.round_title || `Part ${roundNum}`;
+                        const statusUpper = (qf.status || "").toUpperCase();
+                        const isSkipped = statusUpper === "SKIPPED";
+                        const isIrrelevant = statusUpper === "IRRELEVANT";
+                        const isZero = qf.score === 0;
+
                         return (
-                          <div key={idx} className="report-question-item">
-                            <div className="item-header">
+                          <div key={idx} className="report-question-item" style={{
+                            borderLeft: isZero ? "4px solid #ef4444" : qf.score >= 70 ? "4px solid #22c55e" : "4px solid #f59e0b",
+                            marginBottom: "16px",
+                            padding: "16px",
+                            background: "rgba(15, 23, 42, 0.6)",
+                            borderRadius: "8px"
+                          }}>
+                            <div className="item-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                               <div>
-                                <span className="item-round-tag">Round {roundNum}: {roundName}</span>
-                                <span className="item-q-title">Q{idx + 1}: {qf.question}</span>
+                                <span className="item-round-tag" style={{ marginRight: "8px" }}>Round {roundNum}: {roundName}</span>
+                                <span className="item-q-title" style={{ fontWeight: 600 }}>Q{idx + 1}: {qf.question}</span>
                               </div>
-                              <span className={`item-score ${qf.score >= 80 ? "good" : "avg"}`}>
-                                {qf.score}%
-                              </span>
+                              <div style={{ textAlign: "right" }}>
+                                <span className={`item-score ${qf.score >= 70 ? "good" : qf.score >= 35 ? "avg" : "fail"}`} style={{
+                                  padding: "4px 10px",
+                                  borderRadius: "6px",
+                                  fontSize: "14px",
+                                  fontWeight: "bold",
+                                  background: qf.score >= 70 ? "rgba(34, 197, 94, 0.2)" : qf.score >= 35 ? "rgba(245, 158, 11, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                                  color: qf.score >= 70 ? "#4ade80" : qf.score >= 35 ? "#fbbf24" : "#f87171"
+                                }}>
+                                  {qf.score} / 100
+                                </span>
+                                <div style={{ fontSize: "11px", marginTop: "4px", color: "#94a3b8" }}>
+                                  Status: <strong>{qf.status || (qf.score >= 70 ? "CORRECT" : qf.score >= 35 ? "PARTIAL" : "INCORRECT")}</strong>
+                                </div>
+                              </div>
                             </div>
-                            <p className="item-feedback">
+
+                            {/* Candidate's Original Immutable Answer */}
+                            <div style={{ margin: "10px 0", padding: "10px", background: "rgba(0,0,0,0.3)", borderRadius: "6px", fontSize: "13px" }}>
+                              <strong style={{ color: "#93c5fd" }}>Candidate's Submitted Answer:</strong>
+                              <p style={{ margin: "4px 0 0 0", color: (qf.candidate_answer || answers[curQ?.id] || "").trim() ? "#e2e8f0" : "#64748b", fontStyle: (qf.candidate_answer || answers[curQ?.id] || "").trim() ? "normal" : "italic" }}>
+                                {(qf.candidate_answer || answers[curQ?.id] || "").trim() || "[No Answer / Skipped]"}
+                              </p>
+                            </div>
+
+                            <p className="item-feedback" style={{ margin: "8px 0" }}>
                               <strong>AI Feedback:</strong> {qf.feedback}
                             </p>
+
+                            {/* Missing Concepts if any */}
+                            {qf.missing_concepts && qf.missing_concepts.length > 0 && (
+                              <div style={{ margin: "6px 0", fontSize: "12px", color: "#fca5a5" }}>
+                                <strong>Missing Concepts:</strong> {qf.missing_concepts.join(", ")}
+                              </div>
+                            )}
+
+                            {/* Suggested Ideal Points */}
+                            {qf.suggested_answer_points && qf.suggested_answer_points.length > 0 && (
+                              <div style={{ margin: "6px 0", fontSize: "12px", color: "#86efac" }}>
+                                <strong>Model Solution Concepts:</strong> {qf.suggested_answer_points.join(" • ")}
+                              </div>
+                            )}
+
                             {qf.identified_keywords && qf.identified_keywords.length > 0 && (
-                              <div className="item-concepts">
+                              <div className="item-concepts" style={{ fontSize: "12px", marginTop: "4px", color: "#cbd5e1" }}>
                                 <strong>Matched Concepts:</strong> {qf.identified_keywords.join(", ")}
                               </div>
                             )}

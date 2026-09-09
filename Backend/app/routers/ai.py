@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
-from app.dependencies import get_current_user_optional
+from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/api", tags=["AI Coach & Resume"])
 
@@ -18,7 +18,7 @@ TECH_SKILLS = [
 @router.post("/ai/chat", response_model=schemas.AIChatResponse)
 def ai_chat(
     payload: schemas.AIChatRequest,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
 ):
     msg = payload.message.lower().strip()
     category = payload.category or "general"
@@ -182,7 +182,7 @@ def evaluate_resume_content(
 @router.post("/resume/analyze", response_model=schemas.ResumeAnalysisResponse)
 def analyze_resume(
     payload: schemas.ResumeAnalysisRequest,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     result = evaluate_resume_content(
@@ -209,7 +209,7 @@ def analyze_resume(
 async def upload_and_analyze_resume(
     target_role: Optional[str] = "Software Engineer",
     target_company: Optional[str] = "Google",
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     # Endpoint for multipart/form uploads

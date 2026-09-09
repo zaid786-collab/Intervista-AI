@@ -31,11 +31,27 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearToken();
+      setUser(null);
+      setLoading(false);
+    };
+    window.addEventListener("intervista:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("intervista:unauthorized", handleUnauthorized);
+  }, []);
+
   const login = async (credentials) => {
     const data = await apiLogin(credentials);
     setToken(data.access_token);
     setUser(data.user);
     return data;
+  };
+
+  const loginWithOAuth = (token, oauthUser) => {
+    setToken(token);
+    setUser(oauthUser);
+    setLoading(false);
   };
 
   const signup = async (credentials) => {
@@ -64,6 +80,7 @@ export function AuthProvider({ children }) {
         user,
         loading,
         login,
+        loginWithOAuth,
         signup,
         verifyEmail,
         logout,

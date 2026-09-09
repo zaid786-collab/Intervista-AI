@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from typing import Optional
 from app.database import get_db
-from app.dependencies import get_current_user_optional
+from app.dependencies import get_current_user
 from app import models, schemas
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
@@ -11,22 +10,21 @@ router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
 @router.get("", response_model=schemas.DashboardDataOut)
 def get_dashboard_data(
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Fetch complete dashboard data directly from database records.
-    Metrics (total_interviews, avg_score, best_score, practice_time),
-    interviews, activities, notifications, and weekly performance
-    are calculated dynamically via SQL queries against database tables.
+    Requires an authenticated user session. Strictly isolates metrics,
+    interviews, activities, and notifications to the active user.
     """
-    user_id = current_user.id if current_user else None
+    user_id = current_user.id
 
-    # Base filters for authenticated user vs guest session
-    interview_filter = (models.Interview.user_id == user_id) if user_id else models.Interview.user_id.is_(None)
-    activity_filter = (models.Activity.user_id == user_id) if user_id else models.Activity.user_id.is_(None)
-    notification_filter = (models.Notification.user_id == user_id) if user_id else models.Notification.user_id.is_(None)
-    performance_filter = (models.WeeklyPerformance.user_id == user_id) if user_id else models.WeeklyPerformance.user_id.is_(None)
+    # Strictly isolated filters for authenticated user
+    interview_filter = (models.Interview.user_id == user_id)
+    activity_filter = (models.Activity.user_id == user_id)
+    notification_filter = (models.Notification.user_id == user_id)
+    performance_filter = (models.WeeklyPerformance.user_id == user_id)
 
     # 1. Compute Metrics dynamically via SQL queries for the active user
     completed_query = db.query(models.Interview).filter(interview_filter, models.Interview.status == "Completed")

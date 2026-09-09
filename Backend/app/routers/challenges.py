@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
-from app.dependencies import get_current_user_optional
+from app.dependencies import get_current_user, get_current_user_optional
 
 router = APIRouter(prefix="/api/challenges", tags=["Coding Challenges"])
 
@@ -64,10 +64,10 @@ def get_daily_challenge(
 @router.post("/solve")
 def solve_daily_challenge(
     payload: schemas.SolveChallengeRequest,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    user_id = current_user.id if current_user else None
+    user_id = current_user.id
 
     if user_id:
         existing = db.query(models.UserSolvedChallenge).filter(

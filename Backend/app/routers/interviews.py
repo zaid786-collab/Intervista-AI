@@ -1,6 +1,6 @@
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import models, schemas
-from app.dependencies import get_current_user_optional
+from app.dependencies import get_current_user, get_current_user_optional
 from app.services.llm_evaluator import evaluate_interview_submission, evaluate_single_question
 from app.services.pdf_generator import generate_interview_pdf_report
 from app.services.question_generator import generate_interview_session
@@ -327,7 +327,7 @@ def get_hr_behavioral_questions(company: str):
 @router.post("/start", response_model=schemas.StartInterviewResponse)
 def start_mock_interview(
     payload: schemas.StartInterviewRequest,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
 ):
     interview_type = payload.interview_type or "Technical Interview"
     domain = payload.domain or "General Software Engineering"
@@ -475,6 +475,7 @@ def start_mock_interview(
         "last_violation_time": 0.0,
         "termination_reason": None,
         "interview_id": None,
+        "answers": {},
     }
 
     return schemas.StartInterviewResponse(
@@ -491,7 +492,7 @@ def start_mock_interview(
 @router.post("/violation", response_model=schemas.RecordViolationResponse)
 def record_proctoring_violation(
     payload: schemas.RecordViolationRequest,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -524,12 +525,12 @@ def record_proctoring_violation(
         ACTIVE_PROCTORING_SESSIONS[session_id] = session
 
     # 1. If already terminated, return immediately with authoritative terminated state
-    if session["status"] == "TERMINATED_FOR_CHEATING":
+    if session["status"] in ("TERMINATED_FOR_PROCTORING", "TERMINATED_FOR_CHEATING"):
         return schemas.RecordViolationResponse(
             session_id=session_id,
             warning_count=session["warning_count"],
             max_warnings=session["max_warnings"],
-            status="TERMINATED_FOR_CHEATING",
+            status="TERMINATED_FOR_PROCTORING",
             terminated=True,
             message="Interview has already been terminated due to maximum proctoring violations.",
             violations=[schemas.ViolationDetail(**v) for v in session["violations"]],
@@ -545,7 +546,7 @@ def record_proctoring_violation(
             warning_count=session["warning_count"],
             max_warnings=session["max_warnings"],
             status=session["status"],
-            terminated=session["status"] == "TERMINATED_FOR_CHEATING",
+            terminated=session["status"] in ("TERMINATED_FOR_PROCTORING", "TERMINATED_FOR_CHEATING"),
             message=f"Event deduplicated ({payload.violation_type}). Current warning count: {session['warning_count']}/{session['max_warnings']}",
             violations=[schemas.ViolationDetail(**v) for v in session["violations"]],
             termination_reason=session["termination_reason"],
@@ -554,19 +555,18 @@ def record_proctoring_violation(
 
     # 3. Increment authoritative warning count
     session["warning_count"] += 1
-    current_warning = session["warning_count"]
     session["last_violation_time"] = now_ts
+    current_warning = session["warning_count"]
 
-    violation_detail = {
-        "type": payload.violation_type,
-        "timestamp": now_iso,
+    violation_entry = {
         "warning_number": current_warning,
+        "type": payload.violation_type,
         "message": payload.message,
         "severity": payload.severity or "HIGH",
+        "timestamp": payload.timestamp or datetime.now().isoformat(),
     }
-    session["violations"].append(violation_detail)
+    session["violations"].append(violation_entry)
 
-    # Required structured backend logs:
     print(f"[PROCTORING] Violation detected")
     print(f"[PROCTORING] Type: {payload.violation_type}")
     print(f"[PROCTORING] Warning: {current_warning}/{session['max_warnings']}")
@@ -576,10 +576,10 @@ def record_proctoring_violation(
     is_terminated = current_warning >= session["max_warnings"]
 
     if is_terminated:
-        session["status"] = "TERMINATED_FOR_CHEATING"
+        session["status"] = "TERMINATED_FOR_PROCTORING"
         session["termination_reason"] = (
             f"Maximum proctoring warnings reached ({current_warning}/{session['max_warnings']}). "
-            "Interview was immediately terminated for suspicious behavior."
+            "Interview was terminated due to repeated proctoring violations."
         )
         print(f"[PROCTORING] Interview terminated")
 
@@ -596,17 +596,17 @@ def record_proctoring_violation(
             problem_solving_score=0,
             grade="Terminated (Proctoring Violation)",
             duration_minutes=payload.duration_minutes or 45,
-            status="TERMINATED_FOR_CHEATING",
+            status="TERMINATED_FOR_PROCTORING",
             date=datetime.now().strftime("%d %b %Y"),
             time=datetime.now().strftime("%I:%M %p"),
             mode="Virtual",
-            feedback="Interview session was permanently terminated due to exceeding 5 proctoring violations.",
+            feedback="Interview session was terminated due to exceeding 5 proctoring violations.",
             warning_count=current_warning,
             termination_reason=session["termination_reason"],
             proctoring_data=json.dumps({
                 "warning_count": current_warning,
                 "max_warnings": session["max_warnings"],
-                "status": "TERMINATED_FOR_CHEATING",
+                "status": "TERMINATED_FOR_PROCTORING",
                 "termination_reason": session["termination_reason"],
                 "violations": session["violations"],
             }),
@@ -619,7 +619,7 @@ def record_proctoring_violation(
         db.add(models.Activity(
             user_id=user_id,
             title=f"Mock Interview Terminated: {session['company']}",
-            company=f"Terminated for Cheating • {session['role']}",
+            company=f"Terminated for Proctoring Violations • {session['role']}",
             time="Just now",
             color="#ef4444",
         ))
@@ -637,9 +637,9 @@ def record_proctoring_violation(
             session_id=session_id,
             warning_count=current_warning,
             max_warnings=session["max_warnings"],
-            status="TERMINATED_FOR_CHEATING",
+            status="TERMINATED_FOR_PROCTORING",
             terminated=True,
-            message="Interview terminated because maximum cheating warnings were reached.",
+            message="Interview terminated due to repeated proctoring violations.",
             violations=[schemas.ViolationDetail(**v) for v in session["violations"]],
             termination_reason=session["termination_reason"],
             interview_id=session["interview_id"],
@@ -675,35 +675,118 @@ def get_session_proctoring_status(session_id: str):
         warning_count=session["warning_count"],
         max_warnings=session["max_warnings"],
         status=session["status"],
-        terminated=session["status"] == "TERMINATED_FOR_CHEATING",
+        terminated=session["status"] in ("TERMINATED_FOR_PROCTORING", "TERMINATED_FOR_CHEATING"),
         violations=[schemas.ViolationDetail(**v) for v in session["violations"]],
         termination_reason=session.get("termination_reason"),
     )
 
+@router.post("/save-answer", response_model=schemas.SaveAnswerResponse)
+def save_candidate_answer(
+    payload: schemas.SaveAnswerRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Silently records candidate's exact answer into the database during the interview.
+    Does NOT evaluate or leak scores during the active session.
+    """
+    user_id = current_user.id
+    cleaned_ans = str(payload.candidate_answer or "").strip()
+    status = payload.status or ("SKIPPED" if not cleaned_ans else "SUBMITTED")
+
+    # Update in-memory session if active
+    if payload.session_id and payload.session_id in ACTIVE_PROCTORING_SESSIONS:
+        sess = ACTIVE_PROCTORING_SESSIONS[payload.session_id]
+        if "answers" not in sess:
+            sess["answers"] = {}
+        sess["answers"][payload.question_id] = {
+            "question_id": payload.question_id,
+            "question": payload.question,
+            "candidate_answer": cleaned_ans,
+            "status": status,
+            "submitted_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    # Persist immutable answer record in database
+    existing = None
+    if payload.session_id:
+        existing = db.query(models.InterviewAnswer).filter(
+            models.InterviewAnswer.session_id == payload.session_id,
+            models.InterviewAnswer.question_id == payload.question_id,
+        ).first()
+
+    if existing:
+        existing.candidate_answer = cleaned_ans
+        existing.status = status
+        existing.submitted_at = datetime.now(timezone.utc)
+    else:
+        new_ans = models.InterviewAnswer(
+            session_id=payload.session_id,
+            user_id=user_id,
+            question_id=payload.question_id,
+            question=payload.question,
+            candidate_answer=cleaned_ans,
+            status=status,
+            submitted_at=datetime.now(timezone.utc),
+        )
+        db.add(new_ans)
+
+    db.commit()
+
+    return schemas.SaveAnswerResponse(
+        success=True,
+        question_id=payload.question_id,
+        status=status,
+        message="Answer stored successfully in database.",
+    )
+
+
 @router.post("/submit", response_model=schemas.SubmitInterviewResponse)
 def submit_mock_interview(
     payload: schemas.SubmitInterviewRequest,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # 0. Reject submission if the interview session was terminated for cheating
+    # 0. Reject submission if the interview session was terminated for cheating or proctoring violations
     if payload.session_id:
         active_sess = ACTIVE_PROCTORING_SESSIONS.get(payload.session_id)
-        if active_sess and active_sess.get("status") == "TERMINATED_FOR_CHEATING":
+        if active_sess and active_sess.get("status") in ("TERMINATED_FOR_PROCTORING", "TERMINATED_FOR_CHEATING"):
             raise HTTPException(
                 status_code=403,
                 detail="Interview was terminated for proctoring violations. Answer submission is strictly prohibited.",
             )
 
-    # 1. Run LLM & Rubric Evaluation
-    answers_dicts = [
-        {
+    # 1. Merge submitted answers with any pre-stored answers from database
+    db_answers_map = {}
+    if payload.session_id:
+        db_stored = db.query(models.InterviewAnswer).filter(
+            models.InterviewAnswer.session_id == payload.session_id
+        ).all()
+        for dba in db_stored:
+            db_answers_map[dba.question_id] = {
+                "answer": dba.candidate_answer or "",
+                "status": dba.status or "SUBMITTED",
+            }
+
+    answers_dicts = []
+    for a in payload.answers:
+        ans_text = a.answer
+        ans_status = a.status or "SUBMITTED"
+        if a.question_id in db_answers_map:
+            db_record = db_answers_map[a.question_id]
+            if not ans_text or ans_text.strip() == "":
+                ans_text = db_record["answer"]
+                ans_status = db_record["status"]
+
+        answers_dicts.append({
             "question_id": a.question_id,
             "question": a.question,
-            "answer": a.answer,
-        }
-        for a in payload.answers
-    ]
+            "answer": ans_text or "",
+            "status": ans_status,
+            "test_results": a.test_results,
+        })
+
+    # 2. Run Deferred Evaluation across ALL answers
     eval_result = evaluate_interview_submission(
         company=payload.company,
         role=payload.role,
@@ -711,27 +794,43 @@ def submit_mock_interview(
         answers=answers_dicts,
     )
 
-    final_score = int(eval_result.get("overall_score", 75))
+    final_score = int(eval_result.get("overall_score", 0))
     tech_score = int(eval_result.get("technical_score", final_score))
     comm_score = int(eval_result.get("communication_score", final_score))
     prob_score = int(eval_result.get("problem_solving_score", final_score))
-    grade = eval_result.get("grade", "A (Strong Performance)")
+    grade = eval_result.get("grade", "F (Incomplete / Unsatisfactory • 0-29%)")
     strengths = eval_result.get("strengths", [])
     improvements = eval_result.get("improvements", [])
+    missing_concepts = eval_result.get("missing_concepts", [])
     overall_summary = eval_result.get("overall_summary", "")
     identified_keywords = eval_result.get("identified_keywords", [])
     raw_detailed = eval_result.get("detailed_feedback", [])
+    analysis = eval_result.get("analysis", {})
+
+    total_questions = eval_result.get("total_questions", len(payload.answers))
+    answered_count = eval_result.get("answered_count", 0)
+    skipped_count = eval_result.get("skipped_count", 0)
+    correct_count = eval_result.get("correct_count", 0)
+    partially_correct_count = eval_result.get("partially_correct_count", 0)
+    incorrect_count = eval_result.get("incorrect_count", 0)
 
     detailed_feedback = [
         schemas.QuestionFeedback(
             question_id=qf.get("question_id", idx + 1),
             question=qf.get("question", f"Question {idx + 1}"),
-            score=int(qf.get("score", 75)),
-            feedback=qf.get("feedback", "Good answer."),
+            candidate_answer=qf.get("candidate_answer", ""),
+            status=qf.get("status", "CORRECT"),
+            score=int(qf.get("score", 0)),
+            feedback=qf.get("feedback", "No feedback available."),
             suggested_answer_points=qf.get("suggested_answer_points", []),
             identified_keywords=qf.get("identified_keywords", []),
-            technical_accuracy=int(qf.get("technical_accuracy", tech_score)),
-            communication_clarity=int(qf.get("communication_clarity", comm_score)),
+            technical_accuracy=int(qf.get("technical_accuracy", 0)),
+            communication_clarity=int(qf.get("communication_clarity", 0)),
+            completeness=int(qf.get("completeness", 0)),
+            technical_depth=int(qf.get("technical_depth", 0)),
+            relevance=int(qf.get("relevance", 0)),
+            missing_concepts=qf.get("missing_concepts", []),
+            ideal_answer=qf.get("ideal_answer"),
         )
         for idx, qf in enumerate(raw_detailed)
     ]
@@ -754,7 +853,7 @@ def submit_mock_interview(
         "violations": violations_history,
     }
 
-    # 2. Persist Full Evaluation in Database
+    # 3. Persist Immutable Full Evaluation in Database
     interview = models.Interview(
         user_id=user_id,
         role=payload.role,
@@ -772,45 +871,70 @@ def submit_mock_interview(
         mode="Virtual",
         feedback=overall_summary,
         warning_count=warning_count,
-        proctoring_data=json.dumps(proctoring_summary),
+        candidate_answers=json.dumps(answers_dicts),
+        question_count=total_questions,
+        answered_count=answered_count,
+        skipped_count=skipped_count,
+        correct_count=correct_count,
+        partial_count=partially_correct_count,
+        incorrect_count=incorrect_count,
         report_data=json.dumps({
             "strengths": strengths,
             "improvements": improvements,
+            "missing_concepts": missing_concepts,
             "detailed_feedback": [df.dict() for df in detailed_feedback],
             "identified_keywords": identified_keywords,
             "proctoring_summary": proctoring_summary,
+            "analysis": analysis,
+            "total_questions": total_questions,
+            "answered_count": answered_count,
+            "skipped_count": skipped_count,
+            "correct_count": correct_count,
+            "partially_correct_count": partially_correct_count,
+            "incorrect_count": incorrect_count,
+            "domain": payload.domain or "General Software Engineering",
+            "difficulty": payload.difficulty or "Medium",
+            "interview_type": payload.interview_type or "Technical Interview",
+            "company": payload.company or "Google",
+            "role": payload.role or "Software Engineer",
         }),
     )
     db.add(interview)
     db.flush()
 
-    # 3. Add Activity Feed Record
+    # Link interview_answers records to this completed interview ID
+    if payload.session_id:
+        db.query(models.InterviewAnswer).filter(
+            models.InterviewAnswer.session_id == payload.session_id
+        ).update({"interview_id": interview.id})
+
+    # 4. Add Activity Feed Record
     activity = models.Activity(
         user_id=user_id,
         title=f"Mock Interview Completed: {payload.company}",
         company=f"Score: {final_score}% ({grade}) • {payload.role}",
         time="Just now",
-        color="#22c55e",
+        color="#22c55e" if final_score >= 70 else "#eab308" if final_score >= 40 else "#ef4444",
     )
     db.add(activity)
 
-    # 4. Add Notification Record
+    # 5. Add Notification Record
     notif = models.Notification(
         user_id=user_id,
         title=f"{payload.company} Evaluation Report Ready",
         desc=f"You scored {final_score}% ({grade}) on {payload.role}",
-        color="#22c55e",
+        color="#22c55e" if final_score >= 70 else "#eab308" if final_score >= 40 else "#ef4444",
         time="Just now",
         is_read=False,
     )
     db.add(notif)
 
-    # 5. Increment XP and readiness progress
+    # 6. Increment XP and readiness progress
     if current_user:
-        current_user.xp = (current_user.xp or 0) + 100
-        current_user.progress = min((current_user.progress or 0) + 5, 100)
+        current_user.xp = (current_user.xp or 0) + (100 if final_score >= 70 else 50 if final_score >= 40 else 20)
+        current_user.progress = min((current_user.progress or 0) + (5 if final_score >= 50 else 2), 100)
 
-    # 6. Update Weekly Performance Chart Record
+    # 7. Update Weekly Performance Chart Record
     day_abbr = datetime.now().strftime("%a")
     perf_filter = (models.WeeklyPerformance.user_id == user_id) if user_id else models.WeeklyPerformance.user_id.is_(None)
     perf = db.query(models.WeeklyPerformance).filter(
@@ -834,8 +958,15 @@ def submit_mock_interview(
         score=final_score,
         score_percentage=f"{final_score}%",
         grade=grade,
+        total_questions=total_questions,
+        answered_count=answered_count,
+        skipped_count=skipped_count,
+        correct_count=correct_count,
+        partially_correct_count=partially_correct_count,
+        incorrect_count=incorrect_count,
         strengths=strengths,
         improvements=improvements,
+        missing_concepts=missing_concepts,
         detailed_feedback=detailed_feedback,
         overall_summary=overall_summary,
         technical_score=tech_score,
@@ -844,12 +975,13 @@ def submit_mock_interview(
         identified_keywords=identified_keywords,
         warning_count=warning_count,
         proctoring_summary=proctoring_summary,
+        analysis=analysis,
     )
 
 @router.post("/evaluate-question", response_model=schemas.EvaluateQuestionResponse)
 def evaluate_single_question_endpoint(
     payload: schemas.EvaluateQuestionRequest,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
 ):
     """Evaluates an individual interview question answer in real-time."""
     result = evaluate_single_question(
@@ -883,13 +1015,17 @@ def evaluate_single_question_endpoint(
 @router.get("/{interview_id}/pdf")
 def download_interview_pdf(
     interview_id: int,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Generates and downloads the Official PDF Assessment Report for a completed interview."""
     interview = db.query(models.Interview).filter(models.Interview.id == interview_id).first()
     if not interview:
         raise HTTPException(status_code=404, detail="Interview record not found.")
+
+    # USER DATA ISOLATION: User A cannot access User B's interview report
+    if interview.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this interview report.")
 
     report_payload = {}
     if interview.report_data:
@@ -934,10 +1070,10 @@ def download_interview_pdf(
 @router.post("/schedule", status_code=status.HTTP_201_CREATED)
 def schedule_interview(
     payload: schemas.ScheduleInterviewRequest,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    user_id = current_user.id if current_user else None
+    user_id = current_user.id
 
     interview = models.Interview(
         user_id=user_id,
@@ -973,7 +1109,7 @@ def schedule_interview(
 @router.post("/run-code", response_model=schemas.RunCodeResponse)
 def run_interview_code(
     payload: schemas.RunCodeRequest,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    current_user: models.User = Depends(get_current_user),
 ):
     code = payload.code.strip()
     test_cases = payload.test_cases or []
@@ -1006,4 +1142,533 @@ def run_interview_code(
         executionTimeMs=24,
         logs=[f"[{payload.language.upper()}] Synthesized and verified against {len(test_cases)} test cases."],
     )
+
+
+# =====================================================================
+# INTERVIEW PERFORMANCE ANALYSIS & LEARNING ROADMAP
+# =====================================================================
+
+CANONICAL_TOPIC_RESOURCES = {
+    "Dynamic Programming": [
+        {"name": "Climbing Stairs (DP Fundamentals)", "difficulty": "Easy", "url": "https://leetcode.com/problems/climbing-stairs/", "type": "Practice Problem"},
+        {"name": "Coin Change (State Transitions Practice)", "difficulty": "Medium", "url": "https://leetcode.com/problems/coin-change/", "type": "Practice Problem"},
+    ],
+    "Graph Traversal & BFS/DFS": [
+        {"name": "Number of Islands (BFS/DFS Traversal)", "difficulty": "Medium", "url": "https://leetcode.com/problems/number-of-islands/", "type": "Practice Problem"},
+        {"name": "Course Schedule (Topological Sort / Cycle Detection)", "difficulty": "Medium", "url": "https://leetcode.com/problems/course-schedule/", "type": "Practice Problem"},
+    ],
+    "Trees & Binary Search Trees": [
+        {"name": "Maximum Depth of Binary Tree", "difficulty": "Easy", "url": "https://leetcode.com/problems/maximum-depth-of-binary-tree/", "type": "Practice Problem"},
+        {"name": "Validate Binary Search Tree", "difficulty": "Medium", "url": "https://leetcode.com/problems/validate-binary-search-tree/", "type": "Practice Problem"},
+    ],
+    "Arrays & Sliding Window": [
+        {"name": "Best Time to Buy and Sell Stock (Two Pointers)", "difficulty": "Easy", "url": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/", "type": "Practice Problem"},
+        {"name": "Longest Substring Without Repeating Characters (Sliding Window)", "difficulty": "Medium", "url": "https://leetcode.com/problems/longest-substring-without-repeating-characters/", "type": "Practice Problem"},
+    ],
+    "Strings & Pattern Matching": [
+        {"name": "Valid Palindrome (Two Pointers)", "difficulty": "Easy", "url": "https://leetcode.com/problems/valid-palindrome/", "type": "Practice Problem"},
+        {"name": "Group Anagrams (Hashing & Strings)", "difficulty": "Medium", "url": "https://leetcode.com/problems/group-anagrams/", "type": "Practice Problem"},
+    ],
+    "Linked Lists": [
+        {"name": "Reverse Linked List (In-Place Manipulation)", "difficulty": "Easy", "url": "https://leetcode.com/problems/reverse-linked-list/", "type": "Practice Problem"},
+        {"name": "Linked List Cycle (Fast & Slow Pointers)", "difficulty": "Easy", "url": "https://leetcode.com/problems/linked-list-cycle/", "type": "Practice Problem"},
+    ],
+    "Stack & Queue Mechanics": [
+        {"name": "Valid Parentheses (Stack Fundamentals)", "difficulty": "Easy", "url": "https://leetcode.com/problems/valid-parentheses/", "type": "Practice Problem"},
+        {"name": "Daily Temperatures (Monotonic Stack)", "difficulty": "Medium", "url": "https://leetcode.com/problems/daily-temperatures/", "type": "Practice Problem"},
+    ],
+    "Time & Space Complexity": [
+        {"name": "Asymptotic Runtime & Big-O Master Theorem Guide", "difficulty": "Medium", "url": "https://en.wikipedia.org/wiki/Time_complexity", "type": "Conceptual Guide"},
+        {"name": "Product of Array Except Self (O(n) Time, O(1) Space)", "difficulty": "Medium", "url": "https://leetcode.com/problems/product-of-array-except-self/", "type": "Practice Problem"},
+    ],
+    "C++ Memory Management & RAII": [
+        {"name": "C++ Smart Pointers (std::unique_ptr & std::shared_ptr) Mastery", "difficulty": "Medium", "url": "https://en.cppreference.com/w/cpp/memory", "type": "Conceptual Guide"},
+        {"name": "RAII & Resource Management in Modern C++", "difficulty": "Hard", "url": "https://en.cppreference.com/w/cpp/language/raii", "type": "Conceptual Guide"},
+    ],
+    "C++ OOP & Const Correctness": [
+        {"name": "Virtual Destructors & Vtable Polymorphism in C++", "difficulty": "Medium", "url": "https://en.cppreference.com/w/cpp/language/virtual", "type": "Conceptual Guide"},
+        {"name": "Const Correctness & Mutable Semantics", "difficulty": "Medium", "url": "https://en.cppreference.com/w/cpp/language/cv", "type": "Conceptual Guide"},
+    ],
+    "STL Containers & Algorithms": [
+        {"name": "C++ STL Complexity & Internal Implementation Guide", "difficulty": "Medium", "url": "https://en.cppreference.com/w/cpp/container", "type": "Conceptual Guide"},
+        {"name": "Top K Frequent Elements (std::priority_queue in C++)", "difficulty": "Medium", "url": "https://leetcode.com/problems/top-k-frequent-elements/", "type": "Practice Problem"},
+    ],
+    "Recursion & Backtracking": [
+        {"name": "Subsets (Backtracking Permutations)", "difficulty": "Medium", "url": "https://leetcode.com/problems/subsets/", "type": "Practice Problem"},
+        {"name": "Combination Sum (Constrained Recursion)", "difficulty": "Medium", "url": "https://leetcode.com/problems/combination-sum/", "type": "Practice Problem"},
+    ],
+    "Distributed Systems & Architecture": [
+        {"name": "Consistent Hashing & Microservice Sharding Guide", "difficulty": "Hard", "url": "https://en.wikipedia.org/wiki/Consistent_hashing", "type": "Conceptual Guide"},
+        {"name": "Cache-Aside Pattern & Distributed Locking with Redis", "difficulty": "Medium", "url": "https://redis.io/docs/manual/patterns/", "type": "Conceptual Guide"},
+    ],
+    "React Fiber & Reconciliation": [
+        {"name": "React Fiber Architecture & Double Buffering Deep Dive", "difficulty": "Hard", "url": "https://github.com/acdlite/react-fiber-architecture", "type": "Conceptual Guide"},
+        {"name": "Virtual DOM Diffing Heuristic Complexity", "difficulty": "Medium", "url": "https://react.dev/learn/preserving-and-resetting-state", "type": "Conceptual Guide"},
+    ],
+    "Core Web Vitals & Web Performance": [
+        {"name": "Optimizing Largest Contentful Paint (LCP) & INP", "difficulty": "Medium", "url": "https://web.dev/explore/fast", "type": "Conceptual Guide"},
+        {"name": "Code Splitting & Dynamic Imports Performance Patterns", "difficulty": "Medium", "url": "https://web.dev/reduce-javascript-payloads-with-code-splitting/", "type": "Conceptual Guide"},
+    ],
+    "Python GIL & Concurrency": [
+        {"name": "Understanding Python Global Interpreter Lock (GIL) & CPU vs I/O Bound Tasks", "difficulty": "Medium", "url": "https://realpython.com/python-gil/", "type": "Conceptual Guide"},
+        {"name": "Asyncio & Event Loop Concurrency in Modern Python", "difficulty": "Medium", "url": "https://docs.python.org/3/library/asyncio.html", "type": "Conceptual Guide"},
+    ],
+}
+
+
+def canonicalize_topic(q_text: str, category: Optional[str] = None, domain: Optional[str] = None) -> str:
+    lower_q = (q_text or "").lower()
+    lower_cat = (category or "").lower()
+    lower_dom = (domain or "").lower()
+
+    if "c++" in lower_dom or "c++" in lower_q or "std::" in lower_q:
+        if any(k in lower_q for k in ["pointer", "reference", "raii", "destructor", "unique_ptr", "shared_ptr", "memory"]):
+            return "C++ Memory Management & RAII"
+        if any(k in lower_q for k in ["const", "virtual", "vtable", "override", "polymorphism", "oop"]):
+            return "C++ OOP & Const Correctness"
+        if any(k in lower_q for k in ["template", "stl", "vector", "map", "container"]):
+            return "STL Containers & Algorithms"
+
+    if "python" in lower_dom or "python" in lower_q:
+        if any(k in lower_q for k in ["gil", "thread", "process", "concurrency", "asyncio"]):
+            return "Python GIL & Concurrency"
+        if any(k in lower_q for k in ["generator", "yield", "iterator", "decorator", "comprehension"]):
+            return "Python Idioms & Generators"
+
+    if "react" in lower_dom or "react" in lower_q or "virtual dom" in lower_q or "fiber" in lower_q:
+        if any(k in lower_q for k in ["fiber", "reconciliation", "virtual dom", "diff"]):
+            return "React Fiber & Reconciliation"
+        if any(k in lower_q for k in ["lcp", "inp", "cls", "performance", "vital"]):
+            return "Core Web Vitals & Web Performance"
+
+    if any(k in lower_q for k in ["dynamic programming", "dp ", "memoiz", "tabulat", "knapsack"]):
+        return "Dynamic Programming"
+    if any(k in lower_q for k in ["graph", "bfs", "dfs", "cycle", "topological", "island"]):
+        return "Graph Traversal & BFS/DFS"
+    if any(k in lower_q for k in ["tree", "bst", "binary tree", "inorder", "level order"]):
+        return "Trees & Binary Search Trees"
+    if any(k in lower_q for k in ["stack", "queue", "monotonic", "parentheses", "histogram"]):
+        return "Stack & Queue Mechanics"
+    if any(k in lower_q for k in ["linked list", "cycle", "fast and slow", "reverse list"]):
+        return "Linked Lists"
+    if any(k in lower_q for k in ["sliding window", "two pointer", "array", "subarray"]):
+        return "Arrays & Sliding Window"
+    if any(k in lower_q for k in ["string", "palindrome", "anagram", "substring", "reversewords"]):
+        return "Strings & Pattern Matching"
+    if any(k in lower_q for k in ["complexity", "big-o", "time complexity", "space complexity", "asymptotic"]):
+        return "Time & Space Complexity"
+    if any(k in lower_q for k in ["recursion", "backtracking", "n-queens"]):
+        return "Recursion & Backtracking"
+    if any(k in lower_q for k in ["system design", "sharding", "distributed", "load balancer", "microservice", "cache"]):
+        return "Distributed Systems & Architecture"
+
+    if category and not any(k in lower_cat for k in ["core concept", "general", "part 1", "part 2", "part 3", "part 4"]):
+        clean = category.split(" - ")[-1] if " - " in category else category
+        return clean.strip()
+
+    return "Core Technical Concepts"
+
+
+@router.get("/analysis", response_model=schemas.InterviewAnalysisResponse)
+def get_interview_analysis(
+    interview_id: Optional[int] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns complete, concise 1-2 page performance analysis for the candidate.
+    Extracts real evaluation data from the latest completed interview:
+    - Target choices (Role, Domain, Difficulty, Type)
+    - Performance score & question counts
+    - Topic-level strength and weakness detection
+    - Recommended topics strictly constrained to user's targeted choice
+    - Resources matching identified weaknesses
+    - 3-step learning roadmap
+    """
+    user_id = current_user.id
+
+    # 1. Fetch targeted interview or latest completed interview for this user only
+    interview = None
+    if interview_id:
+        interview = db.query(models.Interview).filter(models.Interview.id == interview_id).first()
+        if not interview:
+            raise HTTPException(status_code=404, detail="Interview record not found.")
+        # USER DATA ISOLATION: User A cannot see User B's interview analysis
+        if interview.user_id != user_id and not current_user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to view another user's interview analysis.",
+            )
+    else:
+        # Search exclusively by active user ID
+        interview = (
+            db.query(models.Interview)
+            .filter(models.Interview.user_id == user_id, models.Interview.status == "Completed")
+            .order_by(models.Interview.id.desc())
+            .first()
+        )
+
+    # 2. Empty state: no completed interviews found
+    if not interview:
+        return schemas.InterviewAnalysisResponse(
+            has_interview=False,
+            has_data=False,
+            message="No analysis available yet. Complete your first interview to unlock personalized performance analysis and learning recommendations.",
+        )
+
+    # 3. Parse report_data and candidate_answers
+    report_data = {}
+    if interview.report_data:
+        try:
+            report_data = json.loads(interview.report_data)
+        except Exception:
+            report_data = {}
+
+    candidate_answers = []
+    if interview.candidate_answers:
+        try:
+            candidate_answers = json.loads(interview.candidate_answers)
+        except Exception:
+            candidate_answers = []
+
+    detailed_feedback = report_data.get("detailed_feedback", [])
+
+    # 4. Determine Target Choices
+    role = interview.role or "Software Engineer"
+    company = interview.company or "Google"
+    
+    # Infer or extract domain
+    domain = report_data.get("domain")
+    if not domain:
+        # Check questions or role
+        all_q_text = " ".join([q.get("question", "") for q in detailed_feedback] + [interview.role])
+        lower_text = all_q_text.lower()
+        if "c++" in lower_text or "std::" in lower_text or "raii" in lower_text:
+            domain = "C++"
+        elif "python" in lower_text or "gil" in lower_text:
+            domain = "Python"
+        elif "react" in lower_text or "virtual dom" in lower_text:
+            domain = "React"
+        elif "java" in lower_text or "jvm" in lower_text:
+            domain = "Java"
+        elif "golang" in lower_text or "go (" in lower_text:
+            domain = "Go (Golang)"
+        elif "system design" in lower_text:
+            domain = "System Design & Architecture"
+        elif current_user and current_user.target_role:
+            domain = current_user.target_role
+        else:
+            domain = "General Software Engineering"
+
+    difficulty = report_data.get("difficulty") or "Medium"
+    interview_type = report_data.get("interview_type") or "Technical"
+    if "technical" in interview_type.lower():
+        interview_type = "Technical"
+    elif "coding" in interview_type.lower() or "dsa" in interview_type.lower():
+        interview_type = "Coding & DSA"
+    elif "system design" in interview_type.lower():
+        interview_type = "System Design"
+
+    target_choices = schemas.TargetChoicesSchema(
+        role=role,
+        company=company,
+        difficulty=difficulty,
+        domain=domain,
+        interview_type=interview_type,
+        tag_string=f"{role} • {domain} • {difficulty} • {interview_type}",
+    )
+
+    # 5. Extract Accurate Performance Counts
+    overall_score = (
+        interview.score_num
+        if interview.score_num is not None
+        else int(str(interview.score or "0").replace("%", ""))
+        if interview.score
+        else 0
+    )
+    total_q = interview.question_count or len(detailed_feedback) or 10
+    correct_cnt = interview.correct_count if interview.correct_count is not None else sum(1 for df in detailed_feedback if df.get("score", 0) >= 70)
+    partial_cnt = interview.partial_count if interview.partial_count is not None else sum(1 for df in detailed_feedback if 30 <= df.get("score", 0) < 70)
+    incorrect_cnt = interview.incorrect_count if interview.incorrect_count is not None else sum(1 for df in detailed_feedback if df.get("score", 0) < 30 and df.get("status") not in ("SKIPPED", "EMPTY", "NO_ANSWER"))
+    skipped_cnt = interview.skipped_count if interview.skipped_count is not None else sum(1 for df in detailed_feedback if df.get("status") in ("SKIPPED", "EMPTY", "NO_ANSWER"))
+    answered_cnt = interview.answered_count if interview.answered_count is not None else max(0, total_q - skipped_cnt)
+    completion_rate = round((answered_cnt / total_q) * 100) if total_q > 0 else 0
+
+    performance = schemas.PerformanceMetricsSchema(
+        overall_score=overall_score,
+        technical_score=interview.technical_score or overall_score,
+        communication_score=interview.communication_score or overall_score,
+        problem_solving_score=interview.problem_solving_score or overall_score,
+        grade=interview.grade or ("A (Strong Performance)" if overall_score >= 80 else "B (Competent)" if overall_score >= 50 else "Needs Practice"),
+        total_questions=total_q,
+        correct_count=correct_cnt,
+        partial_count=partial_cnt,
+        incorrect_count=incorrect_cnt,
+        skipped_count=skipped_cnt,
+        completion_rate=completion_rate,
+    )
+
+    # 6. Topic-Level Aggregation across Evaluated Questions
+    topic_scores = {}
+    topic_questions = {}
+    topic_missing = {}
+
+    for idx, q_fb in enumerate(detailed_feedback):
+        q_text = q_fb.get("question", f"Question {idx+1}")
+        q_score = int(q_fb.get("score", 0))
+        canonical = canonicalize_topic(q_text, category=q_fb.get("category"), domain=domain)
+        
+        if canonical not in topic_scores:
+            topic_scores[canonical] = []
+            topic_questions[canonical] = []
+            topic_missing[canonical] = []
+
+        topic_scores[canonical].append(q_score)
+        topic_questions[canonical].append(q_fb)
+        
+        # Missing concepts or critique
+        miss = q_fb.get("missing_concepts") or []
+        if isinstance(miss, list):
+            topic_missing[canonical].extend(miss)
+        fb_txt = q_fb.get("feedback", "")
+        if fb_txt and len(fb_txt) > 10:
+            topic_missing[canonical].append(fb_txt)
+
+    # If no detailed feedback existed, populate from domain
+    if not topic_scores:
+        if "c++" in domain.lower():
+            default_topics = ["C++ Memory Management & RAII", "C++ OOP & Const Correctness", "STL Containers & Algorithms", "Time & Space Complexity"]
+        else:
+            default_topics = ["Data Structures", "Dynamic Programming", "Graph Traversal & BFS/DFS", "Time & Space Complexity"]
+        for dt in default_topics:
+            topic_scores[dt] = [overall_score]
+
+    # Calculate aggregate scores per topic
+    topic_summary = []
+    for t_name, scores in topic_scores.items():
+        avg_score = round(sum(scores) / len(scores))
+        topic_summary.append({
+            "topic": t_name,
+            "score": avg_score,
+            "count": len(scores),
+            "missing": topic_missing.get(t_name, []),
+        })
+
+    # Sort topics by score ascending (lowest score first)
+    topic_summary.sort(key=lambda x: x["score"])
+
+    # 7. Compute Strengths (Authentic, not fabricated)
+    strengths = []
+    # Topics with score >= 70
+    for ts in sorted(topic_summary, key=lambda x: x["score"], reverse=True):
+        if ts["score"] >= 70:
+            strengths.append(f"{ts['topic']} (Demonstrated high accuracy • {ts['score']}%)")
+
+    # Add evaluated strengths from report_data if valid
+    raw_strengths = report_data.get("strengths", [])
+    for rs in raw_strengths:
+        rs_clean = str(rs).strip()
+        if rs_clean and not any(neg in rs_clean.lower() for neg in ["no technical competencies", "non-responsive", "failed", "gibberish"]):
+            if rs_clean not in strengths and len(strengths) < 4:
+                strengths.append(rs_clean)
+
+    if not strengths:
+        strengths = ["Not enough interview data yet."]
+
+    # 8. Compute Improvement Areas
+    improvement_areas = []
+    weak_topics = [ts for ts in topic_summary if ts["score"] < 75]
+    if not weak_topics and topic_summary:
+        weak_topics = topic_summary[:2]  # lowest scoring even if passing
+
+    for wt in weak_topics[:4]:
+        score_val = wt["score"]
+        t_name = wt["topic"]
+
+        if score_val < 40:
+            current_perf = "Weak"
+            priority = "High Priority"
+        elif score_val < 65:
+            current_perf = "Needs Improvement"
+            priority = "High Priority"
+        else:
+            current_perf = "Needs Practice"
+            priority = "Medium Priority"
+
+        # Generate honest, concise reason from evaluated missing concepts or feedback
+        reason = "Gaps identified in core implementation and constraint verification."
+        if wt["missing"]:
+            # Pick first concise concept
+            clean_missing = [m for m in wt["missing"] if len(m) > 10 and not m.startswith("Input detected")]
+            if clean_missing:
+                first_m = clean_missing[0]
+                if len(first_m) > 60:
+                    first_m = first_m[:57] + "..."
+                reason = first_m
+            elif "dynamic programming" in t_name.lower():
+                reason = "Difficulty handling state transitions & optimal sub-problems"
+            elif "memory" in t_name.lower() or "pointer" in t_name.lower():
+                reason = "Incomplete lifecycle management and ownership semantics"
+            elif "complexity" in t_name.lower():
+                reason = "Incomplete Big-O asymptotic runtime & space proofs"
+            elif "graph" in t_name.lower():
+                reason = "Struggled with boundary conditions and cycle detection"
+            elif "tree" in t_name.lower():
+                reason = "Difficulty with tree recursion and subtree balance tracking"
+        else:
+            if "dynamic programming" in t_name.lower():
+                reason = "Difficulty handling state transitions & optimal sub-problems"
+            elif "memory" in t_name.lower():
+                reason = "Ownership transfer and deterministic cleanup caveats"
+
+        improvement_areas.append(
+            schemas.ImprovementAreaItem(
+                topic=t_name,
+                score=score_val,
+                current_performance=current_perf,
+                reason=reason,
+                priority=priority,
+            )
+        )
+
+    # 9. Recommended Topics (STRICT DOMAIN ENFORCEMENT)
+    lower_dom = domain.lower()
+    recommended_topics = []
+
+    # First add candidate's weak topics that match domain
+    for ia in improvement_areas:
+        clean_t = ia.topic.replace(" & BFS/DFS", "").replace(" & RAII", "").replace(" & Const Correctness", "")
+        if clean_t not in recommended_topics:
+            recommended_topics.append(clean_t)
+
+    # Fill strictly matching the targeted domain
+    domain_topic_bank = []
+    if "c++" in lower_dom:
+        domain_topic_bank = [
+            "Dynamic Programming",
+            "Graph Traversal",
+            "STL Containers",
+            "Time & Space Complexity",
+            "Smart Pointers & RAII",
+            "Object-Oriented Polymorphism & Virtual Tables",
+        ]
+    elif "python" in lower_dom:
+        domain_topic_bank = [
+            "Python Internals & GIL",
+            "Generators & Coroutines",
+            "Asyncio Event Loops",
+            "Time & Space Complexity",
+            "Data Structures in Python",
+        ]
+    elif "react" in lower_dom:
+        domain_topic_bank = [
+            "React Fiber & Virtual DOM",
+            "Hook Closures & Lifecycle",
+            "Core Web Vitals Optimization",
+            "State Architecture",
+            "Time & Space Complexity",
+        ]
+    elif "java" in lower_dom:
+        domain_topic_bank = [
+            "JVM Memory & Garbage Collection",
+            "Java Concurrency & Thread Synchronization",
+            "Collections Framework",
+            "Dynamic Programming",
+            "Graph Algorithms",
+        ]
+    elif "system design" in lower_dom:
+        domain_topic_bank = [
+            "Consistent Hashing & Data Sharding",
+            "Distributed Caching & Redis",
+            "Fault Tolerance & Circuit Breakers",
+            "High-Throughput Message Queues",
+            "CAP Theorem Trade-offs",
+        ]
+    else:
+        domain_topic_bank = [
+            "Dynamic Programming",
+            "Graph Traversal",
+            "Arrays & Sliding Window",
+            "Time & Space Complexity",
+            "System Architecture",
+        ]
+
+    for dt in domain_topic_bank:
+        if dt not in recommended_topics and len(recommended_topics) < 5:
+            recommended_topics.append(dt)
+
+    recommended_topics = recommended_topics[:5]
+
+    # 10. Recommended Resources (Matched 1-2 to improvement topics)
+    recommended_resources = []
+    topics_to_resource = [ia.topic for ia in improvement_areas]
+    if not topics_to_resource:
+        topics_to_resource = recommended_topics[:2]
+
+    for top in topics_to_resource[:3]:
+        matched_pool = None
+        # Exact or partial match in CANONICAL_TOPIC_RESOURCES
+        for k, v in CANONICAL_TOPIC_RESOURCES.items():
+            if k.lower() in top.lower() or top.lower() in k.lower():
+                matched_pool = v
+                break
+
+        if not matched_pool:
+            if "c++" in lower_dom:
+                matched_pool = CANONICAL_TOPIC_RESOURCES.get("C++ Memory Management & RAII")
+            elif "graph" in top.lower():
+                matched_pool = CANONICAL_TOPIC_RESOURCES.get("Graph Traversal & BFS/DFS")
+            elif "tree" in top.lower():
+                matched_pool = CANONICAL_TOPIC_RESOURCES.get("Trees & Binary Search Trees")
+            elif "dp" in top.lower() or "dynamic" in top.lower():
+                matched_pool = CANONICAL_TOPIC_RESOURCES.get("Dynamic Programming")
+            else:
+                matched_pool = CANONICAL_TOPIC_RESOURCES.get("Arrays & Sliding Window")
+
+        if matched_pool:
+            for r in matched_pool[:2]:
+                recommended_resources.append(
+                    schemas.RecommendedResourceItem(
+                        topic=top,
+                        name=r["name"],
+                        difficulty=r.get("difficulty", "Medium"),
+                        url=r.get("url"),
+                        type=r.get("type", "Practice Problem"),
+                    )
+                )
+
+    # 11. Personalized Learning Roadmap ("Your Next Steps")
+    top_weak = improvement_areas[0].topic if improvement_areas else (recommended_topics[0] if recommended_topics else "Core Fundamentals")
+    roadmap = [
+        schemas.RoadmapStep(
+            step_number=1,
+            title="Fix Weak Areas",
+            description=f"Deep-dive into {top_weak} and resolve identified conceptual bottlenecks.",
+        ),
+        schemas.RoadmapStep(
+            step_number=2,
+            title="Targeted Practice",
+            description=f"Solve 2-3 focused practice problems for {top_weak} at {difficulty} difficulty.",
+        ),
+        schemas.RoadmapStep(
+            step_number=3,
+            title="Reattempt Mock Interview",
+            description=f"Take another mock interview for {company} ({domain} • {difficulty}) to validate your progress.",
+        ),
+    ]
+
+    return schemas.InterviewAnalysisResponse(
+        has_interview=True,
+        has_data=True,
+        interview_id=interview.id,
+        date=interview.date or datetime.now().strftime("%d %b %Y"),
+        target_choices=target_choices,
+        performance=performance,
+        strengths=strengths,
+        improvement_areas=improvement_areas,
+        recommended_topics=recommended_topics,
+        recommended_resources=recommended_resources,
+        roadmap=roadmap,
+    )
+
 

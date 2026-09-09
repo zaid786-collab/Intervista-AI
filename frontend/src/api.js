@@ -1,20 +1,26 @@
 // Central place for all calls to the Intervista AI backend.
 // Supports automatic fallback across 127.0.0.1, localhost, and Vite proxy.
 
-let activeBaseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+let activeBaseUrl =
+  (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL) ||
+  "http://127.0.0.1:8000";
 
 const TOKEN_KEY = "intervista-token";
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  return typeof localStorage !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
 }
 
 export function setToken(token) {
-  localStorage.setItem(TOKEN_KEY, token);
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
 }
 
 export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem(TOKEN_KEY);
+  }
 }
 
 async function request(path, { method = "GET", body, auth = false } = {}) {
@@ -63,6 +69,12 @@ async function request(path, { method = "GET", body, auth = false } = {}) {
   const data = response.status === 204 ? null : await response.json().catch(() => null);
 
   if (!response.ok) {
+    if (response.status === 401 && auth) {
+      clearToken();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("intervista:unauthorized"));
+      }
+    }
     const message = data?.detail || `Request failed with status ${response.status}. Please check your credentials.`;
     throw new Error(typeof message === "string" ? message : "Request failed.");
   }
@@ -90,6 +102,18 @@ export function verifyEmail({ email, code }) {
 
 export function resendOtp(email) {
   return request("/api/auth/resend-otp", { method: "POST", body: { email } });
+}
+
+export function getOAuthUrl(provider, redirectUri) {
+  const query = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : "";
+  return request(`/api/auth/oauth/${provider}/url${query}`);
+}
+
+export function callbackOAuth(provider, payload) {
+  return request(`/api/auth/oauth/${provider}/callback`, {
+    method: "POST",
+    body: payload,
+  });
 }
 
 export function fetchCurrentUser() {
@@ -304,6 +328,121 @@ export async function fetchDashboardData() {
   }
   return getLocalDashboardData();
 }
+
+// ---------- Interview Performance Analysis ----------
+
+export async function fetchAnalysisData(interviewId) {
+  const query = interviewId ? `?interview_id=${interviewId}` : "";
+  try {
+    const data = await request(`/api/interviews/analysis${query}`, { auth: true });
+    if (data) {
+      return data;
+    }
+  } catch (err) {
+    console.warn("Backend /api/interviews/analysis error, checking local session data:", err.message);
+  }
+
+  // Fallback to local session storage if backend unreachable
+  const localDashboard = getLocalDashboardData();
+  const completed = (localDashboard.recent_interviews || []).filter((i) => i.status === "Completed");
+  if (completed.length === 0) {
+    return {
+      has_interview: false,
+      has_data: false,
+      message: "No analysis available yet. Complete your first interview to unlock personalized performance analysis and learning recommendations.",
+    };
+  }
+
+  const latest = completed[0];
+  const scoreNum = latest.score_num || parseInt(String(latest.score).replace("%", ""), 10) || 0;
+  const role = latest.role || "Software Engineer";
+  const company = latest.company || "Google";
+  const domain = latest.domain || (role.toLowerCase().includes("c++") ? "C++" : role.toLowerCase().includes("frontend") ? "React" : "General Software Engineering");
+  const difficulty = latest.difficulty || "Medium";
+  const interviewType = latest.interview_type || "Technical";
+
+  return {
+    has_interview: true,
+    has_data: true,
+    interview_id: latest.id,
+    date: latest.date || "Recent",
+    target_choices: {
+      role,
+      company,
+      difficulty,
+      domain,
+      interview_type: interviewType,
+      tag_string: `${role} • ${domain} • ${difficulty} • ${interviewType}`,
+    },
+    performance: {
+      overall_score: scoreNum,
+      technical_score: latest.technical_score || scoreNum,
+      communication_score: latest.communication_score || scoreNum,
+      problem_solving_score: latest.problem_solving_score || scoreNum,
+      grade: latest.grade || (scoreNum >= 80 ? "A (Strong Performance)" : scoreNum >= 50 ? "B (Competent)" : "Needs Practice"),
+      total_questions: 10,
+      correct_count: Math.round(scoreNum / 10),
+      partial_count: scoreNum >= 50 ? 1 : 0,
+      incorrect_count: Math.max(0, 10 - Math.round(scoreNum / 10)),
+      skipped_count: 0,
+      completion_rate: 100,
+    },
+    strengths: latest.strengths && latest.strengths.length > 0 ? latest.strengths : scoreNum >= 60 ? [`Solid technical foundations in ${domain}`, "Demonstrated problem-solving approach"] : ["Not enough interview data yet."],
+    improvement_areas: [
+      {
+        topic: domain.includes("C++") ? "C++ Memory Management & RAII" : "Dynamic Programming",
+        score: Math.max(scoreNum - 15, 35),
+        current_performance: scoreNum >= 70 ? "Needs Practice" : "Weak",
+        reason: "Boundary conditions and complex edge-case handling under time constraints.",
+        priority: scoreNum >= 70 ? "Medium Priority" : "High Priority",
+      },
+      {
+        topic: domain.includes("C++") ? "STL Containers & Algorithms" : "Graph Traversal & BFS/DFS",
+        score: Math.max(scoreNum - 10, 42),
+        current_performance: scoreNum >= 70 ? "Needs Practice" : "Needs Improvement",
+        reason: "Asymptotic Big-O runtime optimization and state preservation.",
+        priority: "Medium Priority",
+      },
+    ],
+    recommended_topics: domain.includes("C++")
+      ? ["Dynamic Programming", "Graph Traversal", "STL Containers", "Time & Space Complexity", "Smart Pointers & RAII"]
+      : ["Dynamic Programming", "Graph Traversal", "Arrays & Sliding Window", "Time & Space Complexity", "System Architecture"],
+    recommended_resources: [
+      {
+        topic: domain.includes("C++") ? "C++ Memory Management & RAII" : "Dynamic Programming",
+        name: domain.includes("C++") ? "C++ Smart Pointers & RAII Mastery" : "Climbing Stairs (DP Fundamentals)",
+        difficulty: "Easy",
+        url: "https://leetcode.com/problems/climbing-stairs/",
+        type: "Practice Problem",
+      },
+      {
+        topic: domain.includes("C++") ? "STL Containers & Algorithms" : "Graph Traversal & BFS/DFS",
+        name: domain.includes("C++") ? "Top K Frequent Elements (std::priority_queue)" : "Number of Islands (BFS/DFS)",
+        difficulty: "Medium",
+        url: "https://leetcode.com/problems/number-of-islands/",
+        type: "Practice Problem",
+      },
+    ],
+    roadmap: [
+      {
+        step_number: 1,
+        title: "Fix Weak Areas",
+        description: `Focus on highest-priority improvement topics for ${domain}.`,
+      },
+      {
+        step_number: 2,
+        title: "Targeted Practice",
+        description: `Solve 2-3 focused practice problems at ${difficulty} difficulty.`,
+      },
+      {
+        step_number: 3,
+        title: "Reattempt Mock Interview",
+        description: `Take another interview for ${company} (${domain} • ${difficulty}) to validate your progress.`,
+      },
+    ],
+  };
+}
+
 
 // ---------- Resources ----------
 

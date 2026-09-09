@@ -50,6 +50,7 @@ class UserOut(BaseModel):
     bio: Optional[str] = None
     skills: Optional[str] = None
     avatar: Optional[str] = None
+    auth_provider: Optional[str] = "local"
     subscription_plan: Optional[str] = "free"
     subscription_cycle: Optional[str] = "monthly"
     subscription_expires_at: Optional[datetime] = None
@@ -57,6 +58,18 @@ class UserOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class OAuthUrlResponse(BaseModel):
+    url: str
+    provider: str
+
+
+class OAuthCallbackRequest(BaseModel):
+    code: Optional[str] = None
+    redirect_uri: Optional[str] = None
+    credential: Optional[str] = None
+    state: Optional[str] = None
 
 
 class UserProfileUpdate(BaseModel):
@@ -318,7 +331,24 @@ class StartInterviewResponse(BaseModel):
 class CandidateAnswer(BaseModel):
     question_id: int
     question: str
-    answer: str
+    answer: Optional[str] = ""
+    status: Optional[str] = "SUBMITTED"  # SUBMITTED, SKIPPED, NO_ANSWER
+    test_results: Optional[dict] = None
+
+
+class SaveAnswerRequest(BaseModel):
+    session_id: Optional[str] = None
+    question_id: int
+    question: str
+    candidate_answer: Optional[str] = ""
+    status: Optional[str] = "SUBMITTED"  # SUBMITTED, SKIPPED, NO_ANSWER
+
+
+class SaveAnswerResponse(BaseModel):
+    success: bool
+    question_id: int
+    status: str
+    message: str
 
 
 class SubmitInterviewRequest(BaseModel):
@@ -337,12 +367,19 @@ class SubmitInterviewRequest(BaseModel):
 class QuestionFeedback(BaseModel):
     question_id: int
     question: str
+    candidate_answer: Optional[str] = ""
+    status: Optional[str] = "CORRECT"  # CORRECT, PARTIAL, INCORRECT, SKIPPED, IRRELEVANT, NO_ANSWER, EMPTY
     score: int
     feedback: str
     suggested_answer_points: List[str]
     identified_keywords: Optional[List[str]] = []
     technical_accuracy: Optional[int] = 85
     communication_clarity: Optional[int] = 85
+    completeness: Optional[int] = 85
+    technical_depth: Optional[int] = 85
+    relevance: Optional[int] = 85
+    missing_concepts: Optional[List[str]] = []
+    ideal_answer: Optional[str] = None
 
 
 class EvaluateQuestionRequest(BaseModel):
@@ -423,8 +460,15 @@ class SubmitInterviewResponse(BaseModel):
     score: int
     score_percentage: str
     grade: str
+    total_questions: int = 0
+    answered_count: int = 0
+    skipped_count: int = 0
+    correct_count: int = 0
+    partially_correct_count: int = 0
+    incorrect_count: int = 0
     strengths: List[str]
     improvements: List[str]
+    missing_concepts: Optional[List[str]] = []
     detailed_feedback: List[QuestionFeedback]
     overall_summary: str
     technical_score: Optional[int] = 0
@@ -433,6 +477,7 @@ class SubmitInterviewResponse(BaseModel):
     identified_keywords: Optional[List[str]] = []
     warning_count: Optional[int] = 0
     proctoring_summary: Optional[dict] = None
+    analysis: Optional[dict] = None
 
 
 class ScheduleInterviewRequest(BaseModel):
@@ -614,6 +659,68 @@ class FeedbackResponse(BaseModel):
     message: str
     feedback_id: Optional[int] = None
     sent_to_email: bool = False
+
+
+# ---------- Interview Performance Analysis Schemas ----------
+
+class TargetChoicesSchema(BaseModel):
+    role: str = "Software Engineer"
+    company: str = "Tech Company"
+    difficulty: str = "Medium"
+    domain: str = "General Software Engineering"
+    interview_type: str = "Technical Interview"
+    tag_string: Optional[str] = None
+
+
+class PerformanceMetricsSchema(BaseModel):
+    overall_score: int
+    technical_score: int
+    communication_score: int
+    problem_solving_score: int
+    grade: str
+    total_questions: int
+    correct_count: int
+    partial_count: int
+    incorrect_count: int
+    skipped_count: int
+    completion_rate: int
+
+
+class ImprovementAreaItem(BaseModel):
+    topic: str
+    score: int
+    current_performance: str
+    reason: str
+    priority: str  # High Priority, Medium Priority
+
+
+class RecommendedResourceItem(BaseModel):
+    topic: str
+    name: str
+    difficulty: str = "Medium"
+    url: Optional[str] = None
+    type: str = "Practice Problem"
+
+
+class RoadmapStep(BaseModel):
+    step_number: int
+    title: str
+    description: str
+
+
+class InterviewAnalysisResponse(BaseModel):
+    has_interview: bool
+    has_data: Optional[bool] = None
+    interview_id: Optional[int] = None
+    date: Optional[str] = None
+    target_choices: Optional[TargetChoicesSchema] = None
+    performance: Optional[PerformanceMetricsSchema] = None
+    strengths: List[str] = []
+    improvement_areas: List[ImprovementAreaItem] = []
+    recommended_topics: List[str] = []
+    recommended_resources: List[RecommendedResourceItem] = []
+    roadmap: List[RoadmapStep] = []
+    message: Optional[str] = None
 
 
 TokenResponse.model_rebuild()

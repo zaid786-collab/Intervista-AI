@@ -10,7 +10,7 @@
  * - Automatically executes interview termination on the 5th confirmed violation
  */
 
-import { getToken } from "../api";
+import { getToken } from "../api.js";
 
 export const PROCTORING_VIOLATION_TYPES = {
   TAB_SWITCH: "TAB_SWITCH",
@@ -25,7 +25,7 @@ export const PROCTORING_VIOLATION_TYPES = {
 export const DEFAULT_PROCTORING_CONFIG = {
   maxWarnings: 5,
   detectTabSwitch: true,
-  detectWindowBlur: true,
+  detectWindowBlur: false, // Window blur is suppressed in favor of authoritative visibilitychange
   requireFullscreen: false, // Default: soft fullscreen warning if user entered fullscreen
   requireScreenShare: true,
   monitorCamera: true,
@@ -119,6 +119,8 @@ export class ProctoringManager {
     if (this.isActive || this.isTerminated) return;
     this.isActive = true;
 
+    console.log("[PROCTORING] Listener initialized");
+
     if (this.config.detectTabSwitch) {
       document.addEventListener("visibilitychange", this.handleVisibilityChange);
     }
@@ -180,17 +182,23 @@ export class ProctoringManager {
   handleVisibilityChange() {
     if (!this.isActive || this.isTerminated || this.isRequestingPermissions) return;
 
+    console.log(`[PROCTORING] Visibility changed: ${document.visibilityState}`);
+
     if (document.visibilityState === "hidden") {
+      console.log("[PROCTORING] TAB_SWITCH detected");
       this.registerViolation({
         type: PROCTORING_VIOLATION_TYPES.TAB_SWITCH,
-        message: "You switched away from the interview tab.",
+        message: "You left the interview window.",
         severity: "HIGH",
       });
+    } else if (document.visibilityState === "visible") {
+      console.log("[PROCTORING] User returned to interview tab (interview continues without additional warning)");
     }
   }
 
   handleWindowBlur() {
     if (!this.isActive || this.isTerminated || this.isRequestingPermissions) return;
+    if (!this.config.detectWindowBlur) return;
 
     // Small delay to allow visibilitychange to fire first if it's a tab switch
     setTimeout(() => {
@@ -204,7 +212,7 @@ export class ProctoringManager {
         message: "Interview window lost focus. Please remain focused on the interview screen.",
         severity: "MEDIUM",
       });
-    }, 150);
+    }, 200);
   }
 
   handleWindowFocus() {
@@ -330,16 +338,18 @@ export class ProctoringManager {
    * Central Violation Registrar
    */
   async registerViolation({ type, message, severity = "HIGH" }) {
-    if (this.isTerminated) return;
+    if (this.isTerminated || !this.isActive) return;
 
-    // Deduplication check
+    // Deduplication check to prevent duplicate cascades
     if (this.isDebounced(type)) return;
 
     const now = Date.now();
     this.lastIncidentTime = now;
     this.lastIncidentType = type;
 
-    // Optimistic local increment
+    console.log("[PROCTORING] Registering violation");
+
+    // Optimistic, authoritative local increment
     this.warningCount += 1;
     const currentWarning = this.warningCount;
 
@@ -353,9 +363,32 @@ export class ProctoringManager {
     this.violations.push(violation);
     this.persistSessionState();
 
-    console.log(`[PROCTORING] Registering violation: Warning ${currentWarning}/${this.config.maxWarnings} - ${type}`);
+    console.log(`[PROCTORING] Warning count: ${currentWarning}/${this.config.maxWarnings}`);
 
-    // Sync authoritatively with Backend
+    // Check if 5th warning was reached -> IMMEDIATE TERMINATION
+    if (currentWarning >= this.config.maxWarnings) {
+      console.log("[PROCTORING] MAX WARNINGS REACHED");
+      console.log("[PROCTORING] TERMINATING INTERVIEW");
+      this.terminateInterview();
+    } else {
+      console.log("[PROCTORING] Warning UI displayed");
+      this.onWarning({
+        warningNumber: currentWarning,
+        maxWarnings: this.config.maxWarnings,
+        type,
+        message,
+        violations: this.violations,
+      });
+    }
+
+    // Synchronize authoritatively with Backend in background without blocking UI
+    this.syncViolationWithBackend(violation, currentWarning);
+  }
+
+  /**
+   * Asynchronously synchronizes violation with backend
+   */
+  async syncViolationWithBackend(violation, currentWarning) {
     let serverData = null;
     try {
       const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
@@ -375,9 +408,9 @@ export class ProctoringManager {
               company: this.company,
               role: this.role,
               difficulty: this.difficulty,
-              violation_type: type,
-              message,
-              severity,
+              violation_type: violation.type,
+              message: violation.message,
+              severity: violation.severity,
               timestamp: violation.timestamp,
             }),
           });
@@ -392,33 +425,16 @@ export class ProctoringManager {
       console.warn("[PROCTORING] Backend violation sync error:", err);
     }
 
-    // Harmonize authoritative warning count from backend if available
-    if (serverData && typeof serverData.warning_count === "number") {
-      this.warningCount = serverData.warning_count;
-      if (serverData.violations && serverData.violations.length > 0) {
-        this.violations = serverData.violations.map(v => ({
-          type: v.type,
-          timestamp: v.timestamp,
-          warningNumber: v.warning_number,
-          message: v.message,
-          severity: v.severity,
-        }));
+    if (serverData) {
+      // Reconcile if server reports a higher count or if server terminated
+      if (typeof serverData.warning_count === "number" && serverData.warning_count > this.warningCount) {
+        this.warningCount = serverData.warning_count;
+        this.persistSessionState();
       }
-    }
 
-    const effectiveWarning = this.warningCount;
-    this.persistSessionState();
-
-    if (effectiveWarning >= this.config.maxWarnings || (serverData && serverData.terminated)) {
-      this.terminateInterview(serverData);
-    } else {
-      this.onWarning({
-        warningNumber: effectiveWarning,
-        maxWarnings: this.config.maxWarnings,
-        type,
-        message,
-        violations: this.violations,
-      });
+      if ((serverData.terminated || this.warningCount >= this.config.maxWarnings) && !this.isTerminated) {
+        this.terminateInterview(serverData);
+      }
     }
   }
 
@@ -431,13 +447,13 @@ export class ProctoringManager {
     this.stop();
     this.persistSessionState();
 
-    console.log(`[PROCTORING] INTERVIEW PERMANENTLY TERMINATED FOR CHEATING (5/5 Violations Reached)`);
+    console.log("[PROCTORING] Interview termination successful");
 
     this.onTerminate({
-      warningCount: this.warningCount,
+      warningCount: Math.min(this.warningCount, this.config.maxWarnings),
       maxWarnings: this.config.maxWarnings,
-      status: "TERMINATED_FOR_CHEATING",
-      terminationReason: serverData?.termination_reason || "Exceeded maximum allowed proctoring violations (5/5).",
+      status: "TERMINATED_FOR_PROCTORING",
+      terminationReason: serverData?.termination_reason || "Interview terminated due to repeated proctoring violations.",
       violations: this.violations,
       interviewId: serverData?.interview_id || null,
     });

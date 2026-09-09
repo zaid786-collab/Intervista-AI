@@ -18,13 +18,19 @@ function Navbar() {
 
   const closeMenu = () => setIsMenuOpen(false);
 
-  const navLinks = [
+  const authenticatedLinks = [
     { label: "Resources", to: "/resources" },
     { label: "Dashboard", to: "/dashboard" },
     { label: "Companies", to: "/companies" },
-    // { label: "Pricing", to: "/pricing" },
+    { label: "FAQ", to: "/faq" },
+    { label: "Analysis", to: "/analysis" },
+  ];
+
+  const publicLinks = [
     { label: "FAQ", to: "/faq" },
   ];
+
+  const activeNavLinks = user ? authenticatedLinks : publicLinks;
 
   return (
     <nav className="navbar">
@@ -47,7 +53,7 @@ function Navbar() {
 
       <div className={`navMenu ${isMenuOpen ? "open" : ""}`}>
         <ul className="navLinks">
-          {navLinks.map(({ label, to }) => (
+          {activeNavLinks.map(({ label, to }) => (
             <li key={to} className={path === to ? "active-page" : ""}>
               <Link to={to} className="navLinkButton" onClick={closeMenu}>
                 {label}
@@ -65,35 +71,44 @@ function Navbar() {
         </ul>
 
         <div className="navRight">
-          <Link
-            to="/profile"
-            className={path === "/profile" ? "profileBtn active-page" : "profileBtn"}
-            onClick={closeMenu}
-          >
-            Profile
-          </Link>
-
           {user ? (
-            <button type="button" className="loginBtn" onClick={handleLogout}>
-              Log out
-            </button>
+            <>
+              <Link
+                to="/profile"
+                className={path === "/profile" ? "profileBtn active-page" : "profileBtn"}
+                onClick={closeMenu}
+              >
+                Profile
+              </Link>
+              <button type="button" className="loginBtn" onClick={handleLogout}>
+                Log out
+              </button>
+              <Link
+                to="/dashboard"
+                className="startBtn"
+                onClick={closeMenu}
+              >
+                Start Interview
+              </Link>
+            </>
           ) : (
-            <Link
-              to="/login"
-              className={path === "/login" ? "loginBtn active-page" : "loginBtn"}
-              onClick={closeMenu}
-            >
-              Log in
-            </Link>
+            <>
+              <Link
+                to="/login"
+                className={path === "/login" ? "loginBtn active-page" : "loginBtn"}
+                onClick={closeMenu}
+              >
+                Log in
+              </Link>
+              <Link
+                to="/signup"
+                className={path === "/signup" ? "startBtn active-page" : "startBtn"}
+                onClick={closeMenu}
+              >
+                Sign Up
+              </Link>
+            </>
           )}
-
-          <Link
-            to={user ? "/dashboard" : "/signup"}
-            className={path === "/signup" ? "startBtn active-page" : "startBtn"}
-            onClick={closeMenu}
-          >
-            Start Interview
-          </Link>
         </div>
       </div>
     </nav>

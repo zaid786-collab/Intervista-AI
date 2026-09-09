@@ -13,7 +13,12 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(120), nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=True)
+
+    # OAuth & Provider information
+    google_id = Column(String(120), nullable=True, index=True)
+    github_id = Column(String(120), nullable=True, index=True)
+    auth_provider = Column(String(50), default="local", nullable=False)
 
     # The very first user to sign up becomes an admin automatically.
     is_admin = Column(Boolean, default=False, nullable=False)
@@ -103,8 +108,28 @@ class Interview(Base):
     report_data = Column(Text, nullable=True)  # JSON string of detailed feedback & marks
     warning_count = Column(Integer, default=0, nullable=True)
     termination_reason = Column(String(255), nullable=True)
-    proctoring_data = Column(Text, nullable=True)  # JSON string of violations history and audit trail
+    candidate_answers = Column(Text, nullable=True)  # JSON string of immutable candidate responses
+    question_count = Column(Integer, default=0, nullable=True)
+    answered_count = Column(Integer, default=0, nullable=True)
+    skipped_count = Column(Integer, default=0, nullable=True)
+    correct_count = Column(Integer, default=0, nullable=True)
+    partial_count = Column(Integer, default=0, nullable=True)
+    incorrect_count = Column(Integer, default=0, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class InterviewAnswer(Base):
+    __tablename__ = "interview_answers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(100), index=True, nullable=True)
+    interview_id = Column(Integer, index=True, nullable=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    question_id = Column(Integer, nullable=False)
+    question = Column(Text, nullable=False)
+    candidate_answer = Column(Text, nullable=True)
+    status = Column(String(50), default="SUBMITTED", nullable=False)  # SUBMITTED, SKIPPED, NO_ANSWER
+    submitted_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
 class WeeklyPerformance(Base):

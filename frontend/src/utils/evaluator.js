@@ -166,36 +166,100 @@ function findRubricForQuestion(questionText, domain = null, expectedKeyPoints = 
 }
 
 /**
- * Check if the answer is completely non-responsive, empty, or placeholder.
+ * Check if candidate intentionally skipped the question.
  */
-function isNonAnswer(text) {
-  const trimmed = (text || "").trim();
-  if (!trimmed || trimmed.length < 4) return true;
-  const lower = trimmed.toLowerCase();
-  const nonAnswerPhrases = [
-    "idk", "i don't know", "i dont know", "no idea", "skip", "no answer", 
-    "asdf", "test", "testing", "na", "n/a", "none", "nothing", "pass", "help",
-    "no answer provided.", "qwerty", "hello", "hi", "gibberish", "xyz", "abc"
+function isSkippedAnswer(text, status = "") {
+  if (status && status.toUpperCase() === "SKIPPED") return true;
+  const t = (text || "").trim().toLowerCase();
+  return t === "skipped" || t === "[skipped]" || t === "skip";
+}
+
+/**
+ * Check if the answer is completely empty or just whitespace.
+ */
+function isEmptyAnswer(text) {
+  return !(text || "").trim();
+}
+
+/**
+ * Check if the candidate explicitly gave up or stated they do not know.
+ */
+function isNoAnswer(text) {
+  const t = (text || "").trim().toLowerCase();
+  const noAnswerPhrases = [
+    "i don't know", "i dont know", "no idea", "not sure", "i have no idea",
+    "can't answer", "cant answer", "i am not aware", "i don't remember",
+    "idk", "no answer", "pass", "na", "n/a", "none", "nothing", "skip"
   ];
-  if (nonAnswerPhrases.includes(lower)) return true;
-  // Repeated character bursts like aaaaaa, 111111, .....
-  if (/(.)\1{4,}/.test(trimmed)) return true;
-  // Keyboard mash patterns
-  if (/(asdf|qwer|zxcv|hjkl|12345|67890)/i.test(lower) && trimmed.length < 25) return true;
-  const words = trimmed.split(/\s+/).filter(Boolean);
-  if (words.length <= 2 && !["virtual", "cache", "node", "8", "110", "runs", "dom", "o(n)"].some((kw) => lower.includes(kw))) {
+  if (noAnswerPhrases.includes(t)) return true;
+  const noAnswerRegex = /^(i\s+(do\s*not|don'?t)\s*(know|have\s+any\s+idea|remember|recall)|no\s+idea|not\s+sure|i\s+can'?t\s+answer|haven'?t\s+studied|unaware)[\.\!\?]?$/i;
+  return noAnswerRegex.test(t);
+}
+
+/**
+ * Detect keyboard mash, repetitive characters, or meaningless strings.
+ */
+function isMeaninglessOrGibberish(text) {
+  const t = (text || "").trim();
+  if (!t) return true;
+  if (/(.)\1{4,}/.test(t)) return true;
+  if (/(asdf|qwer|zxcv|hjkl|12345|67890)/i.test(t) && t.length < 30) return true;
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length <= 2 && t.length > 8 && !/[aeiouy]/i.test(t)) return true;
+  return false;
+}
+
+/**
+ * Detect keyword stuffing where words are pasted without syntax.
+ */
+function isKeywordStuffing(text) {
+  const words = (text || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length < 8) return false;
+  const technicalKeywords = new Set([
+    "c++", "python", "java", "react", "virtual", "memory", "pointer", "object",
+    "database", "cloud", "docker", "kubernetes", "stack", "heap", "thread",
+    "cache", "redis", "index", "api", "rest", "async", "await", "function",
+    "class", "algorithm", "complexity", "sql", "nosql", "cluster", "shard"
+  ]);
+  const connectorWords = new Set([
+    "is", "are", "the", "a", "an", "because", "due", "to", "in", "order",
+    "which", "that", "when", "where", "how", "used", "allocates", "stores",
+    "manages", "provides", "implements", "allows", "between", "while"
+  ]);
+  const matchedKeywords = words.filter(w => technicalKeywords.has(w)).length;
+  const matchedConnectors = words.filter(w => connectorWords.has(w)).length;
+  if (matchedKeywords >= 4 && matchedConnectors <= 1 && matchedKeywords / words.length > 0.45) {
     return true;
   }
   return false;
 }
 
 /**
+ * Check if the answer is completely non-responsive, empty, or placeholder.
+ */
+function isNonAnswer(text) {
+  return isEmptyAnswer(text) || isNoAnswer(text) || isMeaninglessOrGibberish(text);
+}
+
+/**
  * Checks if the answer is completely off-topic or irrelevant to the question asked.
- * Catches cases like answering 'I like playing football' to a technical question.
  */
 function isIrrelevantToQuestion(questionText, answerText) {
   const lowerQ = (questionText || "").toLowerCase();
   const lowerA = (answerText || "").toLowerCase();
+
+  const offTopicPatterns = [
+    /\b(i\s+like\s+playing|playing\s+cricket|watching\s+movies|weather\s+is\s+very\s+nice)\b/i,
+    /\b(good\s+morning|hello\s+sir|how\s+are\s+you|nice\s+to\s+meet\s+you)\b/i,
+    /\b(i\s+want\s+a\s+job|please\s+hire\s+me|i\s+am\s+hardworking)\b/i,
+    /\b(football|cricket|biryani|pizza|burger|song|movie|sunny\s+day)\b/i
+  ];
+  if (offTopicPatterns.some(p => p.test(lowerA))) {
+    const qTokens = (lowerQ.match(/[a-z0-9_]{3,}/g) || []).filter(w => !["what", "explain", "difference", "between", "does", "with"].includes(w));
+    const aTokens = new Set(lowerA.match(/[a-z0-9_]{3,}/g) || []);
+    const overlap = qTokens.filter(t => aTokens.has(t));
+    if (overlap.length === 0) return true;
+  }
 
   const broadTechnicalTerms = [
     "data structure", "algorithm", "complexity", "runtime", "memory", "cache",
@@ -208,11 +272,8 @@ function isIrrelevantToQuestion(questionText, answerText) {
     "graphql", "websocket", "grpc", "queue", "event", "pubsub", "kafka", "redis",
     "load balance", "proxy", "gateway", "ci/cd", "pipeline", "cluster", "distributed",
     "partition", "shard", "replication", "failover", "dns", "tcp", "udp", "ssl",
-    "tls", "cors", "cookie", "jwt", "oauth",
-    // Behavioral keywords
-    "star", "situation", "task", "action", "result", "leadership", "mentor",
-    "conflict", "resolution", "team", "project", "deadline", "stakeholder",
-    "communication", "ownership", "initiative", "collaborat", "feedback"
+    "tls", "cors", "cookie", "jwt", "oauth", "pointer", "stack", "heap", "raii",
+    "star", "situation", "task", "action", "result", "leadership", "mentor"
   ];
 
   const stopWords = new Set([
@@ -492,28 +553,133 @@ export function evaluateSingleQuestion(questionObj, company = "Google", role = "
   const qId = questionObj.question_id || questionObj.id || 1;
   const qText = questionObj.question || "";
   const ansText = (questionObj.answer || "").trim();
+  const rawStatus = (questionObj.status || "").toUpperCase();
   const lowerAns = ansText.toLowerCase();
   const words = ansText.split(/\s+/).filter(Boolean);
   const wordCount = words.length;
 
-  // 1. Non-answer / Empty check -> Strict 0 - 5%
-  if (isNonAnswer(ansText)) {
+  // 0. Skipped check -> Strict 0/100
+  if (isSkippedAnswer(ansText, rawStatus)) {
     return {
       question_id: qId,
       question: qText,
-      score: 5,
-      status: "incorrect",
-      verdict: "Non-Responsive • 5/100",
+      candidate_answer: "",
+      score: 0,
+      status: "SKIPPED",
+      verdict: "Skipped • 0/100",
+      relevance: 0,
+      correctness: 0,
+      completeness: 0,
+      technical_depth: 0,
       technical_accuracy: 0,
-      communication_clarity: 10,
-      problem_solving: 5,
-      feedback: "No substantive response provided. Your input was detected as a placeholder, non-answer, or gibberish. Please provide a relevant technical explanation.",
+      communication_clarity: 0,
+      problem_solving: 0,
+      feedback: "Question was skipped by candidate.",
+      strengths: [],
+      weaknesses: ["Question was not attempted."],
+      missing_concepts: [],
       identified_keywords: [],
       suggested_answer_points: [
-        "Address the core problem requirements and constraints",
-        "Explain step-by-step algorithms and architecture mechanisms",
-        "Detail asymptotic Big-O runtime and failure modes",
+        "Review foundational concepts for this topic",
+        "Attempt all questions to maximize partial credit opportunities"
       ],
+    };
+  }
+
+  // 1. Non-answer / Empty / No-Answer check -> Strict 0/100
+  if (isEmptyAnswer(ansText)) {
+    return {
+      question_id: qId,
+      question: qText,
+      candidate_answer: ansText,
+      score: 0,
+      status: "EMPTY",
+      verdict: "Empty Response • 0/100",
+      relevance: 0,
+      correctness: 0,
+      completeness: 0,
+      technical_depth: 0,
+      technical_accuracy: 0,
+      communication_clarity: 0,
+      problem_solving: 0,
+      feedback: "Empty response. No answer was provided.",
+      strengths: [],
+      weaknesses: ["No response submitted."],
+      missing_concepts: [],
+      identified_keywords: [],
+      suggested_answer_points: ["Provide an explanation addressing the problem requirements."],
+    };
+  }
+
+  if (isNoAnswer(ansText)) {
+    return {
+      question_id: qId,
+      question: qText,
+      candidate_answer: ansText,
+      score: 0,
+      status: "NO_ANSWER",
+      verdict: "No Answer • 0/100",
+      relevance: 0,
+      correctness: 0,
+      completeness: 0,
+      technical_depth: 0,
+      technical_accuracy: 0,
+      communication_clarity: 0,
+      problem_solving: 0,
+      feedback: "Candidate indicated lack of knowledge. Zero credit awarded.",
+      strengths: [],
+      weaknesses: ["Candidate explicitly stated they do not know the answer."],
+      missing_concepts: [],
+      identified_keywords: [],
+      suggested_answer_points: ["Review fundamental topic literature."],
+    };
+  }
+
+  if (isMeaninglessOrGibberish(ansText)) {
+    return {
+      question_id: qId,
+      question: qText,
+      candidate_answer: ansText,
+      score: 0,
+      status: "IRRELEVANT",
+      verdict: "Meaningless Response • 0/100",
+      relevance: 0,
+      correctness: 0,
+      completeness: 0,
+      technical_depth: 0,
+      technical_accuracy: 0,
+      communication_clarity: 0,
+      problem_solving: 0,
+      feedback: "Input detected as gibberish, placeholder, or keyboard mash. Zero credit awarded.",
+      strengths: [],
+      weaknesses: ["Response lacks coherent technical or conceptual meaning."],
+      missing_concepts: [],
+      identified_keywords: [],
+      suggested_answer_points: ["Provide coherent explanations addressing the technical constraints."],
+    };
+  }
+
+  if (isKeywordStuffing(ansText)) {
+    return {
+      question_id: qId,
+      question: qText,
+      candidate_answer: ansText,
+      score: 0,
+      status: "IRRELEVANT",
+      verdict: "Keyword Stuffing • 0/100",
+      relevance: 0,
+      correctness: 0,
+      completeness: 0,
+      technical_depth: 0,
+      technical_accuracy: 0,
+      communication_clarity: 0,
+      problem_solving: 0,
+      feedback: "Disconnected technical keywords without grammatical reasoning detected. Zero credit awarded.",
+      strengths: [],
+      weaknesses: ["Keywords used without logical reasoning or context."],
+      missing_concepts: [],
+      identified_keywords: [],
+      suggested_answer_points: ["Construct cohesive sentences explaining mechanism and trade-offs."],
     };
   }
 
@@ -523,13 +689,21 @@ export function evaluateSingleQuestion(questionObj, company = "Google", role = "
     return {
       question_id: qId,
       question: qText,
+      candidate_answer: ansText,
       score: aptEval.score,
       status: aptEval.status,
       verdict: aptEval.verdict,
+      relevance: aptEval.technical_accuracy,
+      correctness: aptEval.technical_accuracy,
+      completeness: aptEval.technical_accuracy,
+      technical_depth: aptEval.problem_solving,
       technical_accuracy: aptEval.technical_accuracy,
       communication_clarity: aptEval.communication_clarity,
       problem_solving: aptEval.problem_solving,
       feedback: aptEval.feedback,
+      strengths: aptEval.score >= 70 ? ["Correct mathematical deduction"] : [],
+      weaknesses: aptEval.score < 70 ? ["Inaccurate mathematical computation"] : [],
+      missing_concepts: [],
       identified_keywords: aptEval.keywords || [],
       suggested_answer_points: aptEval.suggested_answer_points || [],
     };
@@ -542,7 +716,7 @@ export function evaluateSingleQuestion(questionObj, company = "Google", role = "
     const baseScore = Math.round(passedRatio * 80);
     const hasComplexity = ["o(", "o (", "complexity", "big-o", "big o", "runtime"].some((c) => lowerAns.includes(c));
     const finalScore = Math.min(baseScore + (hasComplexity ? 15 : 0) + 5, 100);
-    const status = finalScore >= 75 ? "correct" : finalScore >= 40 ? "partial" : "incorrect";
+    const status = finalScore >= 75 ? "CORRECT" : finalScore >= 40 ? "PARTIAL" : "INCORRECT";
     const verdict = `${passedRatio === 1 ? "Accepted" : "Partially Accepted"} • ${finalScore}/100`;
     let feedbackMsg = `Automated tests: ${testResults.passedCount}/${testResults.totalCount} passed (${testResults.executionTimeMs || 10}ms). `;
     if (passedRatio === 1) {
@@ -554,13 +728,21 @@ export function evaluateSingleQuestion(questionObj, company = "Google", role = "
     return {
       question_id: qId,
       question: qText,
+      candidate_answer: ansText,
       score: finalScore,
       status,
       verdict,
+      relevance: Math.round(passedRatio * 100),
+      correctness: Math.round(passedRatio * 100),
+      completeness: Math.round(passedRatio * 100),
+      technical_depth: finalScore,
       technical_accuracy: Math.round(passedRatio * 100),
       communication_clarity: 80,
       problem_solving: finalScore,
       feedback: feedbackMsg,
+      strengths: passedRatio > 0.5 ? ["Passed core automated test cases"] : [],
+      weaknesses: passedRatio < 1.0 ? ["Failed boundary or edge test cases"] : [],
+      missing_concepts: [],
       identified_keywords: ["automated test suite", "execution runner"],
       suggested_answer_points: [
         `Ensure correct return output for all input bounds (${testResults.passedCount}/${testResults.totalCount} passed)`,
@@ -572,18 +754,26 @@ export function evaluateSingleQuestion(questionObj, company = "Google", role = "
   // 4. Keyword & Concept Detection (Rounds 3 & 4 or general technical)
   const rubric = findRubricForQuestion(qText, questionObj.domain || role, questionObj.expected_key_points || questionObj.expectedKeyPoints);
 
-  // 4a. Explicit Relevance Check — catch completely off-topic answers
+  // 4a. Explicit Relevance Check — catch completely off-topic answers -> STRICT 0/100
   if (isIrrelevantToQuestion(qText, ansText)) {
     return {
       question_id: qId,
       question: qText,
-      score: 5,
-      status: "incorrect",
-      verdict: "Off-Topic • 5/100",
+      candidate_answer: ansText,
+      score: 0,
+      status: "IRRELEVANT",
+      verdict: "Off-Topic • 0/100",
+      relevance: 0,
+      correctness: 0,
+      completeness: 0,
+      technical_depth: 0,
       technical_accuracy: 0,
-      communication_clarity: 10,
-      problem_solving: 5,
-      feedback: "Answer is completely off-topic and unrelated to the question asked. No relevant technical concepts detected.",
+      communication_clarity: 0,
+      problem_solving: 0,
+      feedback: "Answer is completely off-topic and unrelated to the question asked. Zero technical relevance detected.",
+      strengths: [],
+      weaknesses: ["Answer is completely irrelevant to the question."],
+      missing_concepts: rubric ? rubric.coreConcepts : [],
       identified_keywords: [],
       suggested_answer_points: rubric ? rubric.coreConcepts : [
         "Address the core problem requirements and constraints",
@@ -608,54 +798,70 @@ export function evaluateSingleQuestion(questionObj, company = "Google", role = "
   let probScore = 0;
 
   if (matchedKeywords.length === 0) {
-    techScore = Math.min(15 + wordCount * 0.4, 28);
-    commScore = Math.min(25 + wordCount * 0.5, 45);
-    probScore = Math.min(15 + (hasComplexity ? 15 : 0), 30);
+    techScore = Math.min(10 + wordCount * 0.3, 20);
+    commScore = Math.min(15 + wordCount * 0.4, 30);
+    probScore = Math.min(10 + (hasComplexity ? 10 : 0), 20);
   } else if (matchedKeywords.length === 1) {
-    techScore = Math.min(30 + wordCount * 0.6, 50);
-    commScore = Math.min(40 + (hasStructure ? 15 : 0) + wordCount * 0.4, 60);
-    probScore = Math.min(30 + (hasComplexity ? 20 : 0) + (hasTradeoffs ? 15 : 0), 55);
+    techScore = Math.min(25 + wordCount * 0.5, 45);
+    commScore = Math.min(35 + (hasStructure ? 15 : 0) + wordCount * 0.4, 55);
+    probScore = Math.min(25 + (hasComplexity ? 15 : 0) + (hasTradeoffs ? 10 : 0), 45);
   } else if (matchedKeywords.length >= 2 && matchedKeywords.length <= 3) {
-    techScore = Math.min(50 + matchedKeywords.length * 8 + (wordCount >= 30 ? 10 : 0), 75);
-    commScore = Math.min(50 + (hasStructure ? 15 : 5) + (wordCount >= 40 ? 15 : 5), 80);
-    probScore = Math.min(45 + (hasComplexity ? 20 : 5) + (hasTradeoffs ? 15 : 5), 78);
+    techScore = Math.min(45 + matchedKeywords.length * 8 + (wordCount >= 30 ? 10 : 0), 75);
+    commScore = Math.min(45 + (hasStructure ? 15 : 5) + (wordCount >= 40 ? 15 : 5), 80);
+    probScore = Math.min(40 + (hasComplexity ? 20 : 5) + (hasTradeoffs ? 15 : 5), 75);
   } else {
-    techScore = Math.min(70 + matchedKeywords.length * 6 + (hasTradeoffs ? 10 : 0) + (hasCodeOrTechnical ? 8 : 0), 98);
-    commScore = Math.min(65 + (hasStructure ? 15 : 5) + (wordCount >= 50 ? 15 : 5), 96);
-    probScore = Math.min(60 + (hasComplexity ? 20 : 5) + (hasTradeoffs ? 18 : 5), 96);
+    techScore = Math.min(65 + matchedKeywords.length * 6 + (hasTradeoffs ? 10 : 0) + (hasCodeOrTechnical ? 8 : 0), 98);
+    commScore = Math.min(60 + (hasStructure ? 15 : 5) + (wordCount >= 50 ? 15 : 5), 96);
+    probScore = Math.min(55 + (hasComplexity ? 20 : 5) + (hasTradeoffs ? 18 : 5), 96);
   }
 
   if (wordCount < 12) {
-    techScore = Math.max(techScore - 25, 10);
-    commScore = Math.max(commScore - 20, 15);
-    probScore = Math.max(probScore - 20, 10);
+    techScore = Math.max(techScore - 30, 0);
+    commScore = Math.max(commScore - 25, 0);
+    probScore = Math.max(probScore - 25, 0);
   }
 
-  const finalQScore = Math.round(0.50 * techScore + 0.30 * commScore + 0.20 * probScore);
-  const status = finalQScore >= 70 ? "correct" : finalQScore >= 40 ? "partial" : "incorrect";
-  const verdict = `${finalQScore >= 80 ? "Strong Answer" : finalQScore >= 60 ? "Good Attempt" : "Needs Work"} • ${finalQScore}/100`;
+  let finalQScore = Math.round(0.30 * techScore + 0.25 * (matchedKeywords.length > 0 ? Math.min(matchedKeywords.length * 25, 100) : 10) + 0.20 * probScore + 0.15 * (hasComplexity || hasTradeoffs ? 70 : 30) + 0.10 * commScore);
+  
+  // Strict relevance override gate
+  const relevanceScore = matchedKeywords.length > 0 ? Math.min(matchedKeywords.length * 30, 100) : (wordCount > 10 ? 15 : 0);
+  if (relevanceScore < 20 && matchedKeywords.length === 0) {
+    finalQScore = 0;
+  }
+  finalQScore = Math.max(0, Math.min(100, finalQScore));
+
+  const status = finalQScore >= 70 ? "CORRECT" : finalQScore >= 35 ? "PARTIAL" : "INCORRECT";
+  const verdict = `${finalQScore >= 80 ? "Strong Answer" : finalQScore >= 60 ? "Good Attempt" : finalQScore > 0 ? "Needs Work" : "Zero Credit"} • ${finalQScore}/100`;
 
   let feedbackMsg = "";
   if (finalQScore >= 80) {
     feedbackMsg = `Outstanding technical execution! Covered ${matchedKeywords.length} core concepts (${matchedKeywords.slice(0, 4).join(", ") || "optimal algorithms"}). Strong trade-off evaluation.`;
   } else if (finalQScore >= 60) {
     feedbackMsg = `Solid grasp of principles (${matchedKeywords.join(", ") || "fundamentals"}). Add explicit Big-O runtime and failure recovery modes.`;
-  } else if (finalQScore >= 40) {
+  } else if (finalQScore >= 35) {
     feedbackMsg = "Basic conceptual awareness. Lacks architectural depth, concrete examples, or complexity trade-offs.";
   } else {
-    feedbackMsg = "Answer lacked required technical depth or was off-topic. Review the model points below.";
+    feedbackMsg = "Answer lacked required technical depth, contained inaccurate claims, or was irrelevant.";
   }
 
   return {
     question_id: qId,
     question: qText,
+    candidate_answer: ansText,
     score: finalQScore,
     status,
     verdict,
+    relevance: relevanceScore,
+    correctness: Math.round(techScore),
+    completeness: Math.round(probScore),
+    technical_depth: Math.round(techScore * 0.9),
     technical_accuracy: Math.round(techScore),
     communication_clarity: Math.round(commScore),
     problem_solving: Math.round(probScore),
     feedback: feedbackMsg.trim(),
+    strengths: finalQScore >= 60 ? [`Good coverage of ${matchedKeywords.slice(0, 3).join(", ")}`] : [],
+    weaknesses: finalQScore < 70 ? (rubric ? rubric.coreConcepts.slice(0, 2) : ["Incomplete technical coverage"]) : [],
+    missing_concepts: finalQScore < 70 && rubric ? rubric.coreConcepts.filter(c => !lowerAns.includes(c.toLowerCase().slice(0, 5))) : [],
     identified_keywords: matchedKeywords.slice(0, 6),
     suggested_answer_points: rubric ? rubric.coreConcepts : [
       "State core problem constraints and assumptions upfront",
@@ -689,43 +895,58 @@ export async function evaluateQuestionAPI(payload) {
 }
 
 /**
- * Execute Gemini Live LLM Evaluation via REST.
+ * Execute Gemini Live LLM Evaluation via REST with strict zero-credit rules.
  */
 export async function evaluateWithGeminiAPI(company, role, difficulty, answers, apiKey) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   let qaText = "";
   answers.forEach((a, idx) => {
-    qaText += `\n--- Question ${idx + 1} (ID: ${a.question_id}) ---\n`;
+    qaText += `\n--- Question ${idx + 1} (ID: ${a.question_id || idx + 1}) ---\n`;
     qaText += `Question: ${a.question}\n`;
-    qaText += `Candidate Answer: ${a.answer}\n`;
+    qaText += `Candidate Answer: ${a.answer || a.candidate_answer || "[NO ANSWER]"}\n`;
+    qaText += `Status: ${a.status || "COMPLETED"}\n`;
   });
 
   const systemInstruction = 
-    `You are a Staff Technical Interviewer evaluating a candidate for ${company}'s ${role} role (${difficulty} difficulty).\n` +
-    `Grade each answer strictly on a 0-100 scale based on factual technical correctness, communication clarity, and problem-solving depth.\n` +
-    `If the candidate gave no answer, wrote gibberish, or said "I don't know", give a score of 0-5.\n` +
-    `Return ONLY a raw JSON object with this exact schema:\n` +
+    `You are a strict professional Staff Technical Interviewer evaluating a candidate for ${company}'s ${role} role (${difficulty} difficulty).\n` +
+    `Grade strictly on demonstrated knowledge:\n` +
+    `- Relevance (25%)\n- Technical Correctness (30%)\n- Completeness (20%)\n- Depth/Reasoning (15%)\n- Communication (10%)\n` +
+    `ZERO CREDIT RULES:\n` +
+    `- If candidate skipped the question, score MUST BE 0.\n` +
+    `- If answer is empty or whitespace, score MUST BE 0.\n` +
+    `- If candidate says "I don't know" or equivalents, score MUST BE 0.\n` +
+    `- If answer is off-topic, random, or irrelevant to the technical question, score MUST BE 0.\n` +
+    `- If answer is keyword stuffing without sentences, score MUST BE 0.\n` +
+    `- If answer is technically contradictory or completely false, score MUST BE 0.\n` +
+    `NEVER give 5/100 to an irrelevant or empty answer.\n` +
+    `Return ONLY raw JSON:\n` +
     `{\n` +
-    `  "overall_score": 82,\n` +
-    `  "technical_score": 85,\n` +
+    `  "overall_score": 75,\n` +
+    `  "technical_score": 75,\n` +
     `  "communication_score": 80,\n` +
-    `  "problem_solving_score": 78,\n` +
-    `  "grade": "A (Strong Performance)",\n` +
-    `  "overall_summary": "Executive summary...",\n` +
-    `  "strengths": ["Strength 1", "Strength 2", "Strength 3"],\n` +
-    `  "improvements": ["Improvement 1", "Improvement 2", "Improvement 3"],\n` +
-    `  "identified_keywords": ["keyword1", "keyword2"],\n` +
+    `  "problem_solving_score": 70,\n` +
+    `  "grade": "B (Solid)",\n` +
+    `  "overall_summary": "Summary...",\n` +
+    `  "strengths": ["Strength 1"],\n` +
+    `  "improvements": ["Improvement 1"],\n` +
     `  "detailed_feedback": [\n` +
     `    {\n` +
     `      "question_id": 1,\n` +
     `      "question": "Question text",\n` +
-    `      "score": 85,\n` +
-    `      "technical_accuracy": 88,\n` +
-    `      "communication_clarity": 82,\n` +
-    `      "feedback": "Honest critique...",\n` +
-    `      "suggested_answer_points": ["Point 1", "Point 2"],\n` +
-    `      "identified_keywords": ["kw1", "kw2"]\n` +
+    `      "candidate_answer": "...",\n` +
+    `      "score": 0,\n` +
+    `      "status": "IRRELEVANT",\n` +
+    `      "relevance": 0,\n` +
+    `      "correctness": 0,\n` +
+    `      "completeness": 0,\n` +
+    `      "technical_depth": 0,\n` +
+    `      "communication": 0,\n` +
+    `      "feedback": "...",\n` +
+    `      "strengths": [],\n` +
+    `      "weaknesses": ["Irrelevant response"],\n` +
+    `      "missing_concepts": ["Concept 1"],\n` +
+    `      "suggested_answer_points": ["Point 1"]\n` +
     `    }\n` +
     `  ]\n` +
     `}`;
@@ -739,7 +960,7 @@ export async function evaluateWithGeminiAPI(company, role, difficulty, answers, 
       }
     ],
     generationConfig: {
-      temperature: 0.2,
+      temperature: 0.1,
       responseMimeType: "application/json",
     }
   };
@@ -768,30 +989,50 @@ export async function evaluateWithGeminiAPI(company, role, difficulty, answers, 
 }
 
 /**
- * Offline / Default Question-Specific NLP Evaluation.
+ * Offline / Default Question-Specific NLP Evaluation with strict math and statistics.
  */
 export function evaluateWithLocalRubric(company, role, difficulty, answers, interviewType = "Technical Interview", domain = "General") {
   const detailed = answers.map((a) => evaluateSingleQuestion(a, company, role, difficulty, a.domain || domain));
 
-  const totalScore = detailed.reduce((acc, curr) => acc + curr.score, 0);
-  const avgScore = Math.round(totalScore / Math.max(detailed.length, 1));
+  const totalQuestions = Math.max(detailed.length, 1);
+  const totalScore = detailed.reduce((acc, curr) => acc + (curr.score || 0), 0);
+  const finalScore = Math.round((totalScore / (totalQuestions * 100)) * 100);
 
-  const totalTech = detailed.reduce((acc, curr) => acc + (curr.technical_accuracy || curr.score), 0);
-  const avgTech = Math.round(totalTech / Math.max(detailed.length, 1));
+  let skippedCount = 0;
+  let correctCount = 0;
+  let partialCount = 0;
+  let incorrectCount = 0;
 
-  const totalComm = detailed.reduce((acc, curr) => acc + (curr.communication_clarity || curr.score), 0);
-  const avgComm = Math.round(totalComm / Math.max(detailed.length, 1));
+  detailed.forEach((d) => {
+    const st = (d.status || "").toUpperCase();
+    if (st === "SKIPPED" || d.score === 0 && (d.candidate_answer === "" || d.candidate_answer == null)) {
+      skippedCount += 1;
+    } else if (d.score >= 70) {
+      correctCount += 1;
+    } else if (d.score >= 35) {
+      partialCount += 1;
+    } else {
+      incorrectCount += 1;
+    }
+  });
 
-  const totalProb = detailed.reduce((acc, curr) => acc + (curr.problem_solving || curr.score), 0);
-  const avgProb = Math.round(totalProb / Math.max(detailed.length, 1));
+  const answeredCount = totalQuestions - skippedCount;
 
-  let grade = "C (Needs Significant Practice)";
-  if (avgScore >= 90) grade = "A+ (Strong Hire • Outstanding)";
-  else if (avgScore >= 80) grade = "A (Hire • Strong Performance)";
-  else if (avgScore >= 70) grade = "B+ (Leaning Hire • Solid)";
-  else if (avgScore >= 55) grade = "B- (Borderline • Moderate)";
-  else if (avgScore >= 35) grade = "C (Needs Practice)";
-  else grade = "F (Incomplete / Unsatisfactory)";
+  const totalTech = detailed.reduce((acc, curr) => acc + (curr.technical_accuracy || curr.correctness || curr.score || 0), 0);
+  const avgTech = Math.round(totalTech / totalQuestions);
+
+  const totalComm = detailed.reduce((acc, curr) => acc + (curr.communication_clarity || curr.communication || curr.score || 0), 0);
+  const avgComm = Math.round(totalComm / totalQuestions);
+
+  const totalProb = detailed.reduce((acc, curr) => acc + (curr.problem_solving || curr.completeness || curr.score || 0), 0);
+  const avgProb = Math.round(totalProb / totalQuestions);
+
+  let grade = "F (Incomplete / Unsatisfactory)";
+  if (finalScore >= 90) grade = "A+ (Strong Hire • Outstanding)";
+  else if (finalScore >= 80) grade = "A (Hire • Strong Performance)";
+  else if (finalScore >= 70) grade = "B+ (Leaning Hire • Solid)";
+  else if (finalScore >= 55) grade = "B- (Borderline • Moderate)";
+  else if (finalScore >= 35) grade = "C (Needs Practice)";
 
   const allKeywords = new Set();
   detailed.forEach((d) => {
@@ -803,21 +1044,21 @@ export function evaluateWithLocalRubric(company, role, difficulty, answers, inte
   const strengths = [];
   const improvements = [];
 
-  if (avgScore >= 70) {
-    strengths.push(`Solid foundational knowledge for ${company}'s ${role} position.`);
-    strengths.push(`Demonstrated understanding of core technical concepts across ${allKeywords.size} key terms.`);
-    strengths.push("Responses demonstrated structured architectural thinking.");
-  } else if (avgScore >= 40) {
-    strengths.push("Basic awareness of system design terminologies.");
-    strengths.push("Attempted explanations across major question categories.");
-  } else {
-    strengths.push("Completed interview attempt and identified study areas.");
-  }
+  detailed.forEach((d) => {
+    if (d.strengths && d.strengths.length > 0) {
+      d.strengths.forEach((s) => { if (!strengths.includes(s)) strengths.push(s); });
+    }
+    if (d.weaknesses && d.weaknesses.length > 0) {
+      d.weaknesses.forEach((w) => { if (!improvements.includes(w)) improvements.push(w); });
+    }
+  });
 
-  if (avgScore < 85) {
-    improvements.push("Explicitly state Big-O runtime and auxiliary space complexity in your initial thought process.");
-    improvements.push("Elaborate on production failure modes, concurrency race conditions, and caching/indexing trade-offs.");
-    improvements.push("Provide concrete code snippets or step-by-step algorithms rather than high-level definitions.");
+  if (strengths.length === 0) {
+    if (finalScore >= 60) strengths.push("Basic foundational knowledge demonstrated in attempted questions.");
+    else strengths.push("Completed interview session.");
+  }
+  if (improvements.length === 0) {
+    improvements.push("Provide concrete architectural depth and step-by-step algorithms.");
   }
 
   // Calculate round-by-round sub-scores dynamically based on question metadata or groups
@@ -844,23 +1085,61 @@ export function evaluateWithLocalRubric(company, role, difficulty, answers, inte
     };
   });
 
-  const overallSummary = `Candidate completed ${detailed.length} questions with an overall score of ${avgScore}% (${grade}) for ${company}'s ${role} interview (${domain} • ${interviewType}). Technical Depth: ${avgTech}%, Communication: ${avgComm}%, Problem Solving: ${avgProb}%.`;
+  const overallSummary = `Candidate answered ${answeredCount} of ${totalQuestions} questions (Skipped: ${skippedCount}) with a final score of ${finalScore}% (${grade}) for ${company}'s ${role} interview. Correct: ${correctCount}, Partially Correct: ${partialCount}, Incorrect: ${incorrectCount}.`;
 
   return {
     interview_id: Date.now(),
-    score: avgScore,
-    score_percentage: `${avgScore}%`,
+    score: finalScore,
+    score_percentage: `${finalScore}%`,
     grade,
     technical_score: avgTech,
     communication_score: avgComm,
     problem_solving_score: avgProb,
+    question_count: totalQuestions,
+    answered_count: answeredCount,
+    skipped_count: skippedCount,
+    correct_count: correctCount,
+    partial_count: partialCount,
+    partially_correct_count: partialCount,
+    incorrect_count: incorrectCount,
     rounds_breakdown: roundsBreakdown,
     identified_keywords: Array.from(allKeywords),
-    strengths,
-    improvements,
+    strengths: strengths.slice(0, 5),
+    improvements: improvements.slice(0, 5),
     detailed_feedback: detailed,
     overall_summary: overallSummary,
     evaluation_engine: "Intervista Neural Semantic Rubric Engine",
+    analysis: {
+      overallPerformance: {
+        score: finalScore,
+        performanceLevel: grade,
+        completionRate: `${Math.round((answeredCount / totalQuestions) * 100)}%`,
+      },
+      technicalPerformance: {
+        knowledge: `${avgTech}%`,
+        problemSolving: `${avgProb}%`,
+        conceptualUnderstanding: `${Math.round((avgTech + avgProb) / 2)}%`,
+        depth: avgTech >= 70 ? "High" : avgTech >= 40 ? "Moderate" : "Low",
+      },
+      communication: {
+        clarity: `${avgComm}%`,
+        structure: avgComm >= 70 ? "Structured" : "Developing",
+        conciseness: "Adequate",
+      },
+      strengths: strengths.slice(0, 5),
+      weaknesses: improvements.slice(0, 5),
+      missingConcepts: detailed.flatMap(d => d.missing_concepts || []).slice(0, 6),
+      questionBreakdown: detailed.map((d, i) => ({
+        questionNumber: i + 1,
+        question: d.question,
+        candidateAnswer: d.candidate_answer,
+        status: d.status,
+        score: d.score,
+        feedback: d.feedback,
+        missingConcepts: d.missing_concepts || [],
+        idealAnswer: (d.suggested_answer_points || []).join("; "),
+      })),
+    }
   };
 }
 

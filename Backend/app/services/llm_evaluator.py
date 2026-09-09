@@ -170,92 +170,405 @@ def find_rubric_for_question(
         return QUESTION_RUBRICS["hr_star"]
     return None
 
-def is_non_answer(text: str) -> bool:
-    trimmed = text.strip()
+# =====================================================================
+# DETERMINISTIC ZERO-CREDIT GATE (Strict Technical Interviewer Standard)
+# =====================================================================
+
+OFF_TOPIC_TERMS = {
+    # Sports & Games
+    "cricket", "football", "soccer", "tennis", "badminton", "basketball", "baseball", "rugby", "hockey",
+    "bat", "ball", "wicket", "bowler", "batsman", "stadium", "fifa", "ipl", "messi", "ronaldo", "virat",
+    "video game", "playstation", "xbox", "pubg", "fortnite", "gaming", "streamer", "streamers",
+    # Entertainment, Movies & Music
+    "movie", "movies", "cinema", "actor", "actress", "netflix", "hollywood", "bollywood", "song", "songs",
+    "singer", "dancing", "concert", "theater", "theatre", "popcorn", "series", "anime", "manga",
+    # Weather & Nature
+    "weather", "sunny", "rain", "raining", "rainy", "breeze", "monsoon", "summer", "winter", "hot outside",
+    "cold outside", "climate", "sky", "beautiful day", "nice today",
+    # Food, Meals & Dining
+    "pizza", "burger", "biryani", "lunch", "dinner", "breakfast", "snack", "tasty", "delicious",
+    "eating", "ate", "cook", "cooking", "recipe", "coffee", "tea", "chai",
+    # Personal Leisure & Casual Chit-Chat
+    "sleeping", "sleepy", "tired", "lazy", "bored", "party", "partying", "club", "hangout",
+    "girlfriend", "boyfriend", "shopping", "clothes", "car", "driving", "pet", "dog", "cat",
+}
+
+NO_ANSWER_PATTERNS = [
+    r"^(i\s*(do\s*not|don'?t)\s*know\b)",
+    r"^(no\s*idea\b)",
+    r"^(not\s*sure\b)",
+    r"^(i\s*(am\s*not|'m\s*not)\s*sure\b)",
+    r"^(i\s*have\s*no\s*idea\b)",
+    r"^(can'?t\s*answer\b)",
+    r"^(cannot\s*answer\b)",
+    r"^(i\s*am\s*not\s*aware\b)",
+    r"^(i\s*(do\s*not|don'?t)\s*remember\b)",
+    r"^(don'?t\s*remember\b)",
+    r"^(no\s*clue\b)",
+    r"^(i\s*have\s*no\s*clue\b)",
+    r"^(haven'?t\s*(studied|learned|read|heard)\b)",
+    r"^(skip\b)",
+    r"^(pass\b)",
+    r"^(no\s*answer\b)",
+    r"^(na|n/a|none|nothing)\b",
+]
+
+def is_skipped_answer(text: str, status: Optional[str] = None) -> bool:
+    """Checks if question was skipped explicitly by candidate."""
+    if status and str(status).upper() in ("SKIPPED", "SKIP"):
+        return True
+    trimmed = str(text or "").strip().lower()
+    return trimmed in ("skip", "skipped", "i skip", "skip question", "skip this question")
+
+def is_empty_answer(text: str) -> bool:
+    """Checks if answer is empty or whitespace only."""
+    return len(str(text or "").strip()) == 0
+
+def is_no_answer(text: str) -> bool:
+    """Checks for explicit 'I don't know', 'Not sure', 'No idea' responses."""
+    trimmed = str(text or "").strip().lower()
+    if not trimmed:
+        return True
+    clean = re.sub(r'[^\w\s\']', ' ', trimmed).strip()
+    for pat in NO_ANSWER_PATTERNS:
+        if re.search(pat, clean):
+            return True
+    if clean in ("idk", "dont know", "dont know the answer", "no idea", "not sure", "cant answer", "no answer provided"):
+        return True
+    return False
+
+def is_meaningless_or_gibberish(text: str) -> bool:
+    """Checks for repeated characters, keyboard mashes, or gibberish words."""
+    trimmed = str(text or "").strip()
     if not trimmed or len(trimmed) < 4:
         return True
     lower = trimmed.lower()
+    
     non_answers = [
-        "idk", "i don't know", "i dont know", "no idea", "skip", "no answer",
         "asdf", "test", "testing", "na", "n/a", "none", "nothing", "pass", "help",
-        "no answer provided.", "qwerty", "hello", "hi", "gibberish", "xyz", "abc"
+        "no answer provided.", "qwerty", "hello", "hi", "gibberish", "xyz", "abc", "foo", "bar"
     ]
     if lower in non_answers:
         return True
+        
     # Repeated characters (e.g. aaaaaa, 111111)
-    if re.search(r'(.)\1{4,}', text):
+    if re.search(r'(.)\1{4,}', trimmed):
         return True
+        
     # Keyboard mash patterns
-    if re.search(r'(asdf|qwer|zxcv|hjkl|12345|67890)', lower) and len(trimmed) < 25:
+    if re.search(r'(asdf|qwer|zxcv|hjkl|12345|67890)', lower) and len(trimmed) < 35:
         return True
-    words = trimmed.split()
-    if len(words) <= 2 and not any(kw in lower for kw in ["virtual", "cache", "node", "8", "110", "runs", "dom", "o(n)"]):
-        return True
+        
+    # Check for unpronounceable consonant clusters without vowels
+    words = re.findall(r'\b[a-z]{4,}\b', lower)
+    if words and len(words) <= 4:
+        vowel_count = sum(c in 'aeiou' for c in lower)
+        if vowel_count == 0 or (len(lower) > 8 and vowel_count / len(lower) < 0.12):
+            return True
+            
     return False
 
-
-def is_irrelevant_to_question(question: str, answer: str) -> bool:
+def is_keyword_stuffing(question: str, answer: str) -> bool:
     """
-    Detects whether the answer is completely off-topic relative to the question.
-    Returns True if the answer has no topical overlap with the question whatsoever.
-    This catches cases like 'I like playing football' for a distributed systems question.
+    Detects if the candidate simply pasted an ungrammatical list of buzzwords
+    with no explanatory sentences, verbs, or syntactic structure.
+    e.g. 'C++ virtual function memory pointer object database Python Java React cloud.'
     """
-    lower_q = question.lower()
-    lower_a = answer.lower()
-
-    # Broad technical vocabulary that ANY technical interview answer should contain
-    # if the candidate is genuinely attempting the question
-    broad_technical_terms = [
-        "algorithm", "data structure", "function", "variable", "array", "list", "hash",
-        "tree", "graph", "node", "queue", "stack", "map", "set", "pointer", "memory",
-        "cache", "database", "sql", "api", "server", "client", "request", "response",
-        "http", "tcp", "network", "protocol", "thread", "process", "lock", "mutex",
-        "latency", "throughput", "bandwidth", "scalab", "performance", "optimiz",
-        "complex", "o(n)", "o(1)", "o(log", "big-o", "time", "space", "sort", "search",
-        "binary", "linear", "dynamic", "greedy", "recursion", "recursi", "iteration",
-        "loop", "condition", "return", "class", "object", "inherit", "polymorphi",
-        "abstraction", "encapsulat", "interface", "pattern", "design", "architect",
-        "system", "component", "module", "service", "microservice", "container",
-        "deploy", "cloud", "docker", "kubernet", "load balanc", "replica", "shard",
-        "partition", "consistent", "distribut", "consensus", "raft", "paxos",
-        "websocket", "event", "callback", "promise", "async", "await", "stream",
-        "buffer", "queue", "pub", "sub", "message", "broker", "kafka", "redis",
-        "index", "query", "join", "table", "row", "column", "schema", "model",
-        "test", "debug", "error", "exception", "log", "monitor", "metric",
-        "security", "auth", "token", "encrypt", "certificate", "tls", "ssl",
-        "react", "vue", "angular", "dom", "render", "component", "state", "hook",
-        "css", "html", "javascript", "python", "java", "golang", "rust", "c++",
-        "code", "implement", "solution", "approach", "method", "technique",
-        "trade-off", "tradeoff", "advantage", "disadvantage", "bottleneck",
-        "constraint", "requirement", "edge case", "boundary", "null", "undefined",
-        "machine learning", "neural", "model", "training", "inference", "embedding",
-        "vector", "tensor", "gpu", "cpu", "pipeline", "batch", "epoch",
-        "star", "situation", "task", "action", "result", "leadership", "mentor",
-        "conflict", "resolution", "team", "project", "deadline", "stakeholder",
-        "communication", "ownership", "initiative", "collaborat", "feedback",
+    trimmed = str(answer or "").strip()
+    words = re.findall(r'\b[a-zA-Z0-9_\+\#\.\-]+\b', trimmed)
+    if len(words) < 5:
+        return False
+        
+    # Check for basic connecting verbs or explanatory grammar
+    verb_patterns = [
+        r'\b(is|are|was|were|be|been|being|has|have|had|do|does|did)\b',
+        r'\b(use|uses|used|using|allow|allows|allowed|allowing|enable|enables|enabled)\b',
+        r'\b(provide|provides|provided|work|works|worked|working|refer|refers|referred)\b',
+        r'\b(mean|means|meant|help|helps|helped|implement|implements|implemented)\b',
+        r'\b(handle|handles|handled|store|stores|stored|manage|manages|managed)\b',
+        r'\b(execute|executes|executed|allocate|allocates|allocated|destroy|destroys)\b',
+        r'\b(because|since|when|which|that|by|so|in order to|due to|whereas|while)\b',
     ]
-
-    # Also extract significant words from the question itself (4+ chars, excluding common words)
-    stop_words = {"what", "when", "where", "which", "that", "this", "with", "from", "your", "have",
-                  "been", "does", "will", "would", "could", "should", "about", "their", "there",
-                  "than", "then", "into", "also", "each", "other", "some", "more", "most",
-                  "very", "just", "like", "make", "many", "only", "over", "such", "take",
-                  "they", "these", "much", "well", "here"}
-    q_words = set(w for w in re.findall(r'[a-z]{4,}', lower_q) if w not in stop_words)
-
-    # Check 1: Does the answer contain ANY broad technical term?
-    has_any_technical = any(term in lower_a for term in broad_technical_terms)
-
-    # Check 2: Does the answer share ANY significant words with the question?
-    a_words = set(re.findall(r'[a-z]{4,}', lower_a))
-    shared_words = q_words & a_words
-    has_question_overlap = len(shared_words) >= 1
-
-    # If the answer has neither technical terms NOR question overlap, it's irrelevant
-    if not has_any_technical and not has_question_overlap:
+    has_grammar = any(re.search(pat, trimmed, re.IGNORECASE) for pat in verb_patterns)
+    if not has_grammar:
         return True
-
+        
     return False
+
+def is_clearly_irrelevant(
+    question: str,
+    answer: str,
+    domain: Optional[str] = None,
+    expected_concepts: Optional[List[str]] = None,
+) -> bool:
+    """
+    Detects if the candidate's answer is completely off-topic relative to the question.
+    Catches:
+    - Sports, movies, weather, food, personal chatter ('I like playing cricket and watching movies')
+    - Total absence of topical relevance to question
+    """
+    lower_q = str(question or "").lower()
+    lower_a = str(answer or "").lower()
+    
+    # 1. Check for off-topic non-technical terms using whole word boundaries
+    words_in_a = set(re.findall(r'\b[a-z]{3,}\b', lower_a))
+    off_topic_matches = [term for term in OFF_TOPIC_TERMS if (
+        (len(term.split()) > 1 and term in lower_a) or
+        (len(term.split()) == 1 and term in words_in_a)
+    )]
+    if off_topic_matches:
+        # Check if candidate is genuinely answering or just discussing their personal life / hobbies
+        technical_terms = [
+            "algorithm", "function", "variable", "pointer", "memory", "virtual", "class", "object",
+            "database", "cache", "thread", "process", "network", "server", "o(n)", "complexity",
+            "ownership", "destructor", "unique_ptr", "shared_ptr", "raii", "reference", "heap", "stack"
+        ]
+        has_real_tech = any(tt in lower_a for tt in technical_terms)
+        if not has_real_tech:
+            return True
+        # Even if they sneaked 1 tech word into an off-topic sentence ("I like cricket and databases")
+        off_topic_phrases = ["i like", "playing", "watching", "nice today", "weather is", "food", "movie", "cricket", "football", "sunny day"]
+        if any(p in lower_a for p in off_topic_phrases) and not any(q_term in lower_a for q_term in ["pointer", "unique_ptr", "shared_ptr", "polymorphism", "virtual", "stack", "heap"]):
+            return True
+
+    # 2. Extract significant words from question (excluding common stop words)
+    stop_words = {
+        "what", "when", "where", "which", "that", "this", "with", "from", "your", "have",
+        "been", "does", "will", "would", "could", "should", "about", "their", "there",
+        "than", "then", "into", "also", "each", "other", "some", "more", "most", "very",
+        "just", "like", "make", "many", "only", "over", "such", "take", "they", "these",
+        "much", "well", "here", "explain", "describe", "discuss", "difference", "between",
+        "how", "why", "given", "using", "implement", "calculate", "design"
+    }
+    q_words = set(w for w in re.findall(r'[a-z]{3,}', lower_q) if w not in stop_words)
+    a_words = set(re.findall(r'[a-z]{3,}', lower_a))
+    
+    # Check expected concepts if provided
+    expected_words = set()
+    if expected_concepts:
+        for ec in expected_concepts:
+            expected_words.update(re.findall(r'[a-z]{3,}', ec.lower()))
+    
+    # Domain concepts
+    domain_words = set(re.findall(r'[a-z]{3,}', (domain or "").lower()))
+    
+    target_words = q_words | expected_words | domain_words
+    overlap = target_words & a_words
+    
+    # If there is ZERO overlap with question concepts, expected concepts, or domain:
+    if len(overlap) == 0:
+        return True
+        
+    return False
+
+def is_technically_contradicted(question: str, answer: str) -> bool:
+    """
+    Detects obvious technical contradictions where candidate asserts the exact opposite of reality.
+    e.g. 'A pointer is a function used to create database tables.'
+    """
+    lower_q = str(question or "").lower()
+    lower_a = str(answer or "").lower()
+    
+    contradictions = [
+        (r'\bpointer\b', [r'\bis a function\b', r'\bcreate database\b', r'\bdatabase table\b', r'\bsql query\b']),
+        (r'\bpolymorphism\b', [r'\bvariable cannot change\b', r'\bdisallows inheritance\b', r'\bprevents overriding\b']),
+        (r'\bstack\b', [r'\bdynamically sized on heap\b', r'\bslower than heap\b', r'\binfinite memory\b']),
+        (r'\bvirtual function\b', [r'\bcannot be overridden\b', r'\bcompile-time only\b', r'\bis a database\b']),
+        (r'\bunique_ptr\b', [r'\bunique_ptr has shared ownership\b', r'\bunique_ptr allows shared ownership\b', r'\bunique_ptr is shared ownership\b']),
+        (r'\bgil\b', [r'\bmulti-core cpu parallelism for threads\b', r'\baccelerates cpu threads\b']),
+    ]
+    
+    for concept_regex, bad_regexes in contradictions:
+        if re.search(concept_regex, lower_q):
+            if any(re.search(bp, lower_a) for bp in bad_regexes):
+                return True
+                
+    return False
+
+def evaluate_zero_credit_gate(
+    question: str,
+    answer: str,
+    status: Optional[str] = None,
+    expected_concepts: Optional[List[str]] = None,
+    domain: Optional[str] = None,
+    question_id: int = 1,
+) -> Optional[Dict[str, Any]]:
+    """
+    Mandatory pre-evaluation gate.
+    If triggered, returns a 0/100 evaluation dictionary immediately.
+    Guarantees no positive credit (0/100) for:
+    - Skipped questions
+    - Empty / whitespace answers
+    - 'I don't know' / 'Not sure' answers
+    - Meaningless / gibberish answers
+    - Keyword stuffing with no sentence structure
+    - Clearly off-topic / irrelevant answers
+    - Technically contradicted claims
+    """
+    trimmed = str(answer or "").strip()
+    
+    # 1. Skipped
+    if is_skipped_answer(trimmed, status):
+        return {
+            "question_id": question_id,
+            "question": question,
+            "candidate_answer": "",
+            "status": "SKIPPED",
+            "score": 0,
+            "relevance": 0,
+            "technical_accuracy": 0,
+            "completeness": 0,
+            "technical_depth": 0,
+            "communication_clarity": 0,
+            "verdict": "Skipped • 0/100",
+            "feedback": "Question was skipped by candidate. Zero credit assigned.",
+            "strengths": [],
+            "weaknesses": ["Question was skipped entirely."],
+            "missing_concepts": expected_concepts or ["Response to this question"],
+            "suggested_answer_points": expected_concepts or ["Address question requirements and theoretical principles."],
+            "identified_keywords": [],
+            "ideal_answer": "Provide a complete technical explanation covering core concepts and trade-offs.",
+        }
+        
+    # 2. Empty
+    if is_empty_answer(trimmed):
+        return {
+            "question_id": question_id,
+            "question": question,
+            "candidate_answer": "",
+            "status": "EMPTY",
+            "score": 0,
+            "relevance": 0,
+            "technical_accuracy": 0,
+            "completeness": 0,
+            "technical_depth": 0,
+            "communication_clarity": 0,
+            "verdict": "Empty Answer • 0/100",
+            "feedback": "Empty response provided. Zero credit assigned.",
+            "strengths": [],
+            "weaknesses": ["No response submitted."],
+            "missing_concepts": expected_concepts or ["Core concepts required for this question"],
+            "suggested_answer_points": expected_concepts or ["Explain core mechanism and provide implementation details."],
+            "identified_keywords": [],
+            "ideal_answer": "Provide a substantive, structured answer addressing the prompt.",
+        }
+        
+    # 3. 'I don't know' / Non-answer
+    if is_no_answer(trimmed):
+        return {
+            "question_id": question_id,
+            "question": question,
+            "candidate_answer": trimmed,
+            "status": "NO_ANSWER",
+            "score": 0,
+            "relevance": 0,
+            "technical_accuracy": 0,
+            "completeness": 0,
+            "technical_depth": 0,
+            "communication_clarity": 0,
+            "verdict": "No Answer • 0/100",
+            "feedback": f"Candidate indicated lack of knowledge ('{trimmed}'). No substantive technical reasoning provided.",
+            "strengths": [],
+            "weaknesses": ["Candidate stated they do not know or are unsure of the concept."],
+            "missing_concepts": expected_concepts or ["Fundamental understanding of this topic"],
+            "suggested_answer_points": expected_concepts or ["Review the core principles and review documentation."],
+            "identified_keywords": [],
+            "ideal_answer": "Articulate the theoretical mechanisms, architectural choices, and asymptotic bounds.",
+        }
+        
+    # 4. Gibberish / Meaningless
+    if is_meaningless_or_gibberish(trimmed):
+        return {
+            "question_id": question_id,
+            "question": question,
+            "candidate_answer": trimmed,
+            "status": "IRRELEVANT",
+            "score": 0,
+            "relevance": 0,
+            "technical_accuracy": 0,
+            "completeness": 0,
+            "technical_depth": 0,
+            "communication_clarity": 0,
+            "verdict": "Gibberish / Meaningless • 0/100",
+            "feedback": "Input detected as gibberish, placeholder, or keyboard mash. Zero credit assigned.",
+            "strengths": [],
+            "weaknesses": ["Response was non-responsive noise with no technical meaning."],
+            "missing_concepts": expected_concepts or ["Coherent explanation of the topic"],
+            "suggested_answer_points": expected_concepts or ["Provide a clear, grammatically sound technical explanation."],
+            "identified_keywords": [],
+            "ideal_answer": "Formulate a well-reasoned, coherent explanation in clear technical English.",
+        }
+        
+    # 5. Keyword Stuffing
+    if is_keyword_stuffing(question, trimmed):
+        return {
+            "question_id": question_id,
+            "question": question,
+            "candidate_answer": trimmed,
+            "status": "IRRELEVANT",
+            "score": 0,
+            "relevance": 0,
+            "technical_accuracy": 0,
+            "completeness": 0,
+            "technical_depth": 0,
+            "communication_clarity": 0,
+            "verdict": "Keyword Stuffing • 0/100",
+            "feedback": "Response is an unconnected list of buzzwords with no sentence structure, verbs, or logical reasoning. Technical interview evaluation requires demonstrated understanding, not keyword matching.",
+            "strengths": [],
+            "weaknesses": ["Candidate strung keywords together without coherent explanatory sentences."],
+            "missing_concepts": expected_concepts or ["Structured conceptual articulation"],
+            "suggested_answer_points": expected_concepts or ["Explain how the concepts interact using complete, structured sentences."],
+            "identified_keywords": [],
+            "ideal_answer": "Connect concepts logically with explanations of mechanisms and trade-offs.",
+        }
+        
+    # 6. Clearly Irrelevant / Off-topic
+    if is_clearly_irrelevant(question, trimmed, domain=domain, expected_concepts=expected_concepts):
+        return {
+            "question_id": question_id,
+            "question": question,
+            "candidate_answer": trimmed,
+            "status": "IRRELEVANT",
+            "score": 0,
+            "relevance": 0,
+            "technical_accuracy": 0,
+            "completeness": 0,
+            "technical_depth": 0,
+            "communication_clarity": 0,
+            "verdict": "Off-Topic / Irrelevant • 0/100",
+            "feedback": "Response is completely off-topic and unrelated to the question asked. Candidate discussed unrelated everyday topics instead of addressing the technical question.",
+            "strengths": [],
+            "weaknesses": ["Response does not address the question asked."],
+            "missing_concepts": expected_concepts or ["Direct engagement with the technical question"],
+            "suggested_answer_points": expected_concepts or ["Read the prompt carefully and address the specific engineering problem."],
+            "identified_keywords": [],
+            "ideal_answer": "Focus entirely on the technical problem posed in the question.",
+        }
+        
+    # 7. Technically Contradicted
+    if is_technically_contradicted(question, trimmed):
+        return {
+            "question_id": question_id,
+            "question": question,
+            "candidate_answer": trimmed,
+            "status": "INCORRECT",
+            "score": 0,
+            "relevance": 10,
+            "technical_accuracy": 0,
+            "completeness": 0,
+            "technical_depth": 0,
+            "communication_clarity": 10,
+            "verdict": "Factually Contradicted • 0/100",
+            "feedback": "Response directly contradicts fundamental technical principles (e.g. defining pointers as database functions or mischaracterizing core semantics).",
+            "strengths": [],
+            "weaknesses": ["Fundamentally incorrect claim made about core technical concepts."],
+            "missing_concepts": expected_concepts or ["Accurate conceptual definition"],
+            "suggested_answer_points": expected_concepts or ["State the verified definition and operational model of the concept."],
+            "identified_keywords": [],
+            "ideal_answer": "Provide a factually correct definition and explain its operational role.",
+        }
+        
+    return None
 
 def evaluate_aptitude_answer(q_text: str, answer_text: str) -> Optional[Dict[str, Any]]:
     """Evaluates mathematical and quantitative reasoning in Round 1 Aptitude questions."""
@@ -496,9 +809,9 @@ def evaluate_aptitude_answer(q_text: str, answer_text: str) -> Optional[Dict[str
     return None
 
 def evaluate_single_question(
-    question_id: int,
-    question: str,
-    answer: str,
+    question_id_or_dict: Any = None,
+    question: Optional[str] = None,
+    answer: Optional[str] = None,
     category: Optional[str] = None,
     round_number: Optional[int] = 1,
     company: Optional[str] = "Google",
@@ -508,89 +821,129 @@ def evaluate_single_question(
     domain: Optional[str] = "General Software Engineering",
     expected_key_points: Optional[List[str]] = None,
     test_results: Optional[dict] = None,
+    status: Optional[str] = None,
+    question_id: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Evaluates a single question answer with instant feedback."""
-    trimmed_ans = str(answer or "").strip()
+    """Evaluates a single question answer with strict zero-credit gating and honest rubric analysis."""
+    # Allow calling with a single dict: evaluate_single_question(q_dict, company, role, difficulty, domain)
+    if isinstance(question_id_or_dict, dict):
+        q_obj = question_id_or_dict
+        q_id = q_obj.get("question_id", q_obj.get("id", question_id or 1))
+        q_text = q_obj.get("question", "")
+        q_ans = q_obj.get("answer", q_obj.get("candidate_answer", ""))
+        q_cat = q_obj.get("category")
+        q_round = q_obj.get("round_number", 1)
+        q_domain = q_obj.get("domain", domain)
+        q_exp = q_obj.get("expected_key_points", expected_key_points)
+        q_tr = q_obj.get("test_results", test_results)
+        q_status = q_obj.get("status", status)
+        q_company = question or company
+        q_role = answer or role
+        q_diff = category or difficulty
+    else:
+        q_id = int(question_id or question_id_or_dict or 1)
+        q_text = str(question or "")
+        q_ans = str(answer or "")
+        q_cat = category
+        q_round = round_number or 1
+        q_domain = domain
+        q_exp = expected_key_points
+        q_tr = test_results
+        q_status = status
+        q_company = company
+        q_role = role
+        q_diff = difficulty
 
-    # 1. Non-answer / Empty / Gibberish check -> Strict 0-5%
-    if is_non_answer(trimmed_ans):
-        return {
-            "question_id": question_id,
-            "question": question,
-            "score": 5,
-            "status": "incorrect",
-            "verdict": "Non-Responsive • 5/100",
-            "feedback": "No substantive response provided. Your input was detected as a placeholder, non-answer, or gibberish. Please provide a relevant, complete answer.",
-            "suggested_answer_points": [
-                "Address the core problem requirements and constraints",
-                "Explain the theoretical approach and algorithm step-by-step",
-                "State Big-O time and space complexities where applicable",
-            ],
-            "identified_keywords": [],
-            "technical_accuracy": 0,
-            "communication_clarity": 10,
-            "problem_solving": 5,
-        }
+    trimmed_ans = str(q_ans or "").strip()
+
+    # 1. Zero-Credit Gate Check (Skipped, Empty, 'I don't know', Gibberish, Keyword Stuffing, Off-topic, Contradicted)
+    gate_eval = evaluate_zero_credit_gate(
+        question=q_text,
+        answer=trimmed_ans,
+        status=q_status,
+        expected_concepts=q_exp,
+        domain=q_domain,
+        question_id=q_id,
+    )
+    if gate_eval:
+        return gate_eval
 
     # 2. Aptitude Evaluation (Round 1)
-    apt_eval = evaluate_aptitude_answer(question, trimmed_ans)
+    apt_eval = evaluate_aptitude_answer(q_text, trimmed_ans)
     if apt_eval:
+        apt_score = max(0, min(100, int(apt_eval["score"])))
         return {
-            "question_id": question_id,
-            "question": question,
-            "score": apt_eval["score"],
-            "status": apt_eval["status"],
+            "question_id": q_id,
+            "question": q_text,
+            "candidate_answer": trimmed_ans,
+            "score": apt_score,
+            "status": "CORRECT" if apt_score >= 70 else "PARTIAL" if apt_score >= 30 else "INCORRECT",
+            "relevance": 90,
+            "technical_accuracy": apt_eval.get("technical_accuracy", apt_score),
+            "completeness": apt_eval.get("technical_accuracy", apt_score),
+            "technical_depth": apt_eval.get("problem_solving", apt_score),
+            "communication_clarity": apt_eval.get("communication_clarity", 80),
             "verdict": apt_eval["verdict"],
             "feedback": apt_eval["feedback"],
+            "strengths": ["Correctly solved numerical/logical deduction problem."] if apt_score >= 70 else [],
+            "weaknesses": [] if apt_score >= 70 else ["Calculation error or missing formula steps."],
+            "missing_concepts": [] if apt_score >= 70 else ["Exact numerical deduction"],
             "suggested_answer_points": apt_eval.get("suggested_answer_points", []),
             "identified_keywords": apt_eval.get("keywords", []),
-            "technical_accuracy": apt_eval.get("technical_accuracy", 80),
-            "communication_clarity": apt_eval.get("communication_clarity", 80),
-            "problem_solving": apt_eval.get("problem_solving", 80),
+            "ideal_answer": "Provide step-by-step arithmetic deduction and final numerical solution.",
         }
 
     # 3. DSA Automated Test Case Evaluation (Round 2)
-    if test_results and isinstance(test_results, dict) and test_results.get("totalCount", 0) > 0:
-        total = test_results.get("totalCount", 1)
-        passed = test_results.get("passedCount", 0)
+    if q_tr and isinstance(q_tr, dict) and q_tr.get("totalCount", 0) > 0:
+        total = q_tr.get("totalCount", 1)
+        passed = q_tr.get("passedCount", 0)
         ratio = passed / total
         base_score = round(ratio * 80)
         has_complexity = any(c in trimmed_ans.lower() for c in ["o(", "o (", "complexity", "big-o", "big o", "runtime"])
         complexity_bonus = 15 if has_complexity else 0
-        final_score = min(base_score + complexity_bonus + 5, 100)
-        status = "correct" if final_score >= 75 else "partial" if final_score >= 40 else "incorrect"
-        verdict = f"{'Accepted' if ratio == 1 else 'Partially Accepted'} • {final_score}/100"
-        feedback = f"Automated test runner: {passed}/{total} test cases passed ({test_results.get('executionTimeMs', 10)}ms). "
+        final_score = min(base_score + complexity_bonus + 5, 100) if ratio > 0 else 0
+        status_str = "CORRECT" if final_score >= 70 else "PARTIAL" if final_score >= 30 else "INCORRECT"
+        verdict = f"{'Accepted' if ratio == 1 else 'Partially Accepted' if ratio > 0 else 'Failed'} • {final_score}/100"
+        feedback = f"Automated test runner: {passed}/{total} test cases passed ({q_tr.get('executionTimeMs', 10)}ms). "
         if ratio == 1:
             feedback += "Outstanding solution! Code passed all edge cases."
-        else:
+        elif ratio > 0:
             feedback += f"{total - passed} test case(s) failed. Check boundary conditions."
+        else:
+            feedback += "All test cases failed. Code failed to meet requirements."
 
         return {
-            "question_id": question_id,
-            "question": question,
+            "question_id": q_id,
+            "question": q_text,
+            "candidate_answer": trimmed_ans,
             "score": final_score,
-            "status": status,
+            "status": status_str,
+            "relevance": 90 if ratio > 0 else 30,
+            "technical_accuracy": round(ratio * 100),
+            "completeness": round(ratio * 100),
+            "technical_depth": final_score,
+            "communication_clarity": 80,
             "verdict": verdict,
             "feedback": feedback,
+            "strengths": ["Automated test cases passed successfully."] if ratio >= 0.7 else [],
+            "weaknesses": [f"{total - passed} automated test cases failed."] if ratio < 1.0 else [],
+            "missing_concepts": ["Edge case handling"] if ratio < 1.0 else [],
             "suggested_answer_points": [
-                f"Ensure correct function output matching expected test assertions ({passed}/{total} passed)",
+                f"Ensure correct function output matching expected assertions ({passed}/{total} passed)",
                 "Optimize runtime time and memory space complexities",
             ],
             "identified_keywords": ["test cases", "runtime execution"],
-            "technical_accuracy": round(ratio * 100),
-            "communication_clarity": 80,
-            "problem_solving": final_score,
+            "ideal_answer": "Complete bug-free implementation passing all boundary and performance test cases.",
         }
 
-    # 4. Semantic Rubric Evaluation (Rounds 3 & 4 or General)
-    rubric = find_rubric_for_question(question, domain=domain, expected_key_points=expected_key_points)
+    # 4. Strict Semantic Rubric Evaluation (Rounds 3 & 4 or General)
+    rubric = find_rubric_for_question(q_text, domain=q_domain, expected_key_points=q_exp)
     lower_ans = trimmed_ans.lower()
     words = trimmed_ans.split()
     word_count = len(words)
 
     all_keywords = rubric["keywords"] if rubric else [
-        "o(1)", "o(n)", "complexity", "trade-off", "performance", "architecture", "data structure"
+        "complexity", "trade-off", "performance", "architecture", "data structure", "concurrency"
     ]
     matched_kw = [kw for kw in all_keywords if kw in lower_ans]
     has_complexity = any(c in lower_ans for c in ["o(", "o (", "complexity", "big-o", "big o", "runtime", "auxiliary space", "time complexity"])
@@ -598,78 +951,105 @@ def evaluate_single_question(
     has_structure = any(s in trimmed_ans for s in ["1.", "2.", "-", "•", "\n\n", "step", "first", "second", "finally"])
     has_code = any(f in lower_ans for f in ["function", "const", "def ", "class ", "return", "select", "import", "async", "await", "()", "{}"])
 
-    # 4a. Explicit Relevance Check — catch completely off-topic answers
-    if is_irrelevant_to_question(question, trimmed_ans):
-        return {
-            "question_id": question_id,
-            "question": question,
-            "score": 5,
-            "status": "incorrect",
-            "verdict": "Off-Topic • 5/100",
-            "feedback": "Your answer appears to be completely unrelated to the question asked. Please re-read the question and provide a relevant technical response.",
-            "suggested_answer_points": rubric["coreConcepts"] if rubric else [
-                "Address the core problem stated in the question",
-                "Use relevant technical terminology",
-                "Provide concrete examples or implementations",
-            ],
-            "identified_keywords": [],
-            "technical_accuracy": 3,
-            "communication_clarity": 8,
-            "problem_solving": 3,
-        }
+    # Strict 5-factor scoring
+    # 1. Relevance (25%)
+    # 2. Technical Correctness (30%)
+    # 3. Completeness (20%)
+    # 4. Technical Depth / Reasoning (15%)
+    # 5. Communication (10%)
 
-    # 4b. Semantic Rubric Evaluation (Rounds 3 & 4 or General)
-    if len(matched_kw) == 0:
-        tech = min(15 + word_count * 0.4, 28)
-        comm = min(25 + word_count * 0.5, 45)
-        prob = min(15 + (15 if has_complexity else 0), 30)
-    elif len(matched_kw) == 1:
-        tech = min(30 + word_count * 0.6, 50)
-        comm = min(40 + (15 if has_structure else 0) + word_count * 0.4, 60)
-        prob = min(30 + (20 if has_complexity else 0) + (15 if has_tradeoffs else 0), 55)
-    elif len(matched_kw) <= 3:
-        tech = min(50 + len(matched_kw) * 8 + (10 if word_count >= 30 else 0), 75)
-        comm = min(50 + (15 if has_structure else 5) + (15 if word_count >= 40 else 5), 80)
-        prob = min(45 + (20 if has_complexity else 5) + (15 if has_tradeoffs else 5), 78)
+    # Calculate relevance
+    core_concepts = rubric["coreConcepts"] if rubric else (q_exp or [])
+    concepts_hit = [c for c in core_concepts if any(w in lower_ans for w in re.findall(r'[a-z]{4,}', c.lower()))]
+    
+    if len(matched_kw) == 0 and len(concepts_hit) == 0:
+        relevance = 25
+        tech_acc = min(15 + word_count * 0.3, 30)
+        completeness = 15
+        depth = 15
+        comm = min(20 + (10 if has_structure else 0), 40)
+    elif len(matched_kw) <= 2:
+        relevance = 65
+        tech_acc = min(35 + len(matched_kw) * 12 + word_count * 0.2, 60)
+        completeness = 40 + len(concepts_hit) * 15
+        depth = 30 + (15 if has_complexity else 0) + (10 if has_tradeoffs else 0)
+        comm = min(50 + (10 if has_structure else 0), 75)
     else:
-        tech = min(70 + len(matched_kw) * 6 + (10 if has_tradeoffs else 0) + (8 if has_code else 0), 98)
-        comm = min(65 + (15 if has_structure else 5) + (15 if word_count >= 50 else 5), 96)
-        prob = min(60 + (20 if has_complexity else 5) + (18 if has_tradeoffs else 5), 96)
+        relevance = 90
+        tech_acc = min(60 + len(matched_kw) * 8 + (10 if has_code else 0), 95)
+        completeness = min(50 + len(concepts_hit) * 20, 95)
+        depth = min(50 + (20 if has_complexity else 5) + (20 if has_tradeoffs else 5), 95)
+        comm = min(65 + (15 if has_structure else 5) + (15 if word_count >= 50 else 5), 95)
 
     if word_count < 12:
-        tech = max(tech - 25, 10)
-        comm = max(comm - 20, 15)
-        prob = max(prob - 20, 10)
+        tech_acc = max(tech_acc - 25, 0)
+        comm = max(comm - 20, 0)
+        depth = max(depth - 20, 0)
+        completeness = max(completeness - 20, 0)
 
-    q_score = round(0.50 * tech + 0.30 * comm + 0.20 * prob)
-    status = "correct" if q_score >= 70 else "partial" if q_score >= 40 else "incorrect"
-    verdict = f"{'Strong Answer' if q_score >= 80 else 'Good Attempt' if q_score >= 60 else 'Needs Work'} • {q_score}/100"
+    # Weighted calculation
+    weighted_score = (
+        0.25 * relevance +
+        0.30 * tech_acc +
+        0.20 * completeness +
+        0.15 * depth +
+        0.10 * comm
+    )
 
-    if q_score >= 80:
-        feedback = f"Outstanding technical articulation! Covered {len(matched_kw)} key concepts ({', '.join(matched_kw[:4])}). Strong trade-off evaluation."
-    elif q_score >= 60:
-        feedback = f"Solid understanding of core concepts ({', '.join(matched_kw[:3]) if matched_kw else 'general principles'}). Add explicit Big-O analysis and failure recovery mechanisms."
-    elif q_score >= 40:
-        feedback = "Basic conceptual awareness. Lacks architectural depth, concrete examples, or complexity trade-offs."
+    # Overriding gate: If relevance is near zero, entire score MUST be 0
+    if relevance < 20.0:
+        q_score = 0
     else:
-        feedback = "Answer lacked required technical depth or was off-topic. Review the model key points below."
+        q_score = max(0, min(100, round(weighted_score)))
+
+    status_str = "CORRECT" if q_score >= 70 else "PARTIAL" if q_score >= 30 else "INCORRECT"
+    verdict = f"{'Strong Answer' if q_score >= 80 else 'Solid Answer' if q_score >= 70 else 'Partially Correct' if q_score >= 40 else 'Needs Work' if q_score > 0 else 'Zero Credit'} • {q_score}/100"
+
+    feedback = ""
+    if q_score >= 80:
+        feedback = f"Outstanding technical execution! Covered key concepts ({', '.join(matched_kw[:3]) or 'principles'}) with clear reasoning."
+        strengths = [f"Strong explanation of {', '.join(matched_kw[:3]) or 'core concepts'}."]
+        weaknesses = []
+        missing = []
+    elif q_score >= 65:
+        feedback = f"Solid understanding demonstrated. Covered {len(matched_kw)} key concepts. Elaborate more on failure modes and runtime complexity."
+        strengths = [f"Good grasp of {', '.join(matched_kw[:2]) or 'fundamentals'}."]
+        weaknesses = ["Could provide deeper trade-off analysis and failure handling."]
+        missing = [c for c in core_concepts if c not in concepts_hit][:2]
+    elif q_score >= 30:
+        feedback = "Basic conceptual awareness. Lacks architectural depth, concrete examples, or complexity trade-offs."
+        strengths = ["Attempted explanation of foundational concepts."]
+        weaknesses = ["Answer was high-level or missed critical underlying mechanisms."]
+        missing = [c for c in core_concepts if c not in concepts_hit][:3]
+    else:
+        feedback = "Answer lacked required technical depth or failed to address the core problem. Review the reference points below."
+        strengths = []
+        weaknesses = ["Lacked substantive technical accuracy or was too superficial."]
+        missing = core_concepts[:3] if core_concepts else ["Technical explanation"]
 
     return {
-        "question_id": question_id,
-        "question": question,
+        "question_id": q_id,
+        "question": q_text,
+        "candidate_answer": trimmed_ans,
         "score": q_score,
-        "status": status,
+        "status": status_str,
+        "relevance": round(relevance),
+        "technical_accuracy": round(tech_acc),
+        "completeness": round(completeness),
+        "technical_depth": round(depth),
+        "communication_clarity": round(comm),
         "verdict": verdict,
         "feedback": feedback,
+        "strengths": strengths,
+        "weaknesses": weaknesses,
+        "missing_concepts": missing,
         "suggested_answer_points": rubric["coreConcepts"] if rubric else [
             "State fundamental system constraints and assumptions upfront",
             "Detail asymptotic time and space complexities (Big-O)",
             "Explain architectural failure modes and mitigation strategies",
         ],
         "identified_keywords": matched_kw[:6],
-        "technical_accuracy": round(tech),
-        "communication_clarity": round(comm),
-        "problem_solving": round(prob),
+        "ideal_answer": "A complete response addresses core theoretical principles, internal data structures, asymptotic complexities, and operational trade-offs.",
     }
 
 def evaluate_with_local_rubric(
@@ -680,200 +1060,137 @@ def evaluate_with_local_rubric(
 ) -> Dict[str, Any]:
     """
     Intelligent question-specific semantic & NLP rubric evaluator.
-    Accurately scores candidates from 0% (empty/nonsense) up to 98% (senior depth).
+    Strictly follows zero-credit gating rules and 5-factor scoring.
     """
     detailed_feedback = []
-    total_tech_score = 0
-    total_comm_score = 0
-    total_problem_score = 0
     all_matched_keywords = set()
+    all_strengths = []
+    all_weaknesses = []
+    all_missing_concepts = set()
 
     for item in answers:
         q_id = item.get("question_id", 1)
         q_text = item.get("question", "")
         answer_text = str(item.get("answer", "")).strip()
+        status_hint = item.get("status")
+        expected_points = item.get("expected_key_points")
+        domain_val = item.get("domain")
 
-        # Aptitude check first
-        apt_res = evaluate_aptitude_answer(q_text, answer_text)
-        if apt_res and not is_non_answer(answer_text):
-            detailed_feedback.append({
-                "question_id": q_id,
-                "question": q_text,
-                "score": apt_res["score"],
-                "technical_accuracy": apt_res["technical_accuracy"],
-                "communication_clarity": apt_res["communication_clarity"],
-                "feedback": apt_res["feedback"],
-                "identified_keywords": apt_res.get("keywords", []),
-                "suggested_answer_points": apt_res.get("suggested_answer_points", []),
-            })
-            total_tech_score += apt_res["technical_accuracy"]
-            total_comm_score += apt_res["communication_clarity"]
-            total_problem_score += apt_res.get("problem_solving", apt_res["score"])
-            all_matched_keywords.update(apt_res.get("keywords", []))
-            continue
+        eval_res = evaluate_single_question(
+            question_id=q_id,
+            question=q_text,
+            answer=answer_text,
+            company=company,
+            role=role,
+            difficulty=difficulty,
+            domain=domain_val,
+            expected_key_points=expected_points,
+            status=status_hint,
+        )
 
-        lower_answer = answer_text.lower()
-        words = answer_text.split()
-        word_count = len(words)
+        detailed_feedback.append(eval_res)
+        all_matched_keywords.update(eval_res.get("identified_keywords", []))
 
-        rubric = find_rubric_for_question(q_text)
+        # Only accumulate strengths from answers that achieved >= 70%
+        if eval_res.get("score", 0) >= 70:
+            all_strengths.extend(eval_res.get("strengths", []))
+        elif eval_res.get("score", 0) < 70 and eval_res.get("status") not in ("SKIPPED", "EMPTY"):
+            all_weaknesses.extend(eval_res.get("weaknesses", []))
 
-        # 1. Non-answer / Empty check -> Strict 0-8%
-        if is_non_answer(answer_text):
-            detailed_feedback.append({
-                "question_id": q_id,
-                "question": q_text,
-                "score": 5,
-                "technical_accuracy": 0,
-                "communication_clarity": 10,
-                "feedback": "No substantive technical explanation provided. Candidate did not address the question.",
-                "identified_keywords": [],
-                "suggested_answer_points": rubric["coreConcepts"] if rubric else [
-                    "State core theoretical principles clearly",
-                    "Explain step-by-step mechanisms and algorithms",
-                    "Detail asymptotic Big-O runtime and failure modes",
-                ],
-            })
-            total_tech_score += 0
-            total_comm_score += 10
-            total_problem_score += 0
-            continue
+        all_missing_concepts.update(eval_res.get("missing_concepts", []))
 
-        # 2. Keyword & Concept Detection
-        all_keywords = rubric["keywords"] if rubric else [
-            "o(1)", "o(n)", "complexity", "trade-off", "performance", "architecture", "data structure"
-        ]
-        matched_kw = [kw for kw in all_keywords if kw in lower_answer]
-        all_matched_keywords.update(matched_kw)
+    num_answers = len(answers) if answers else 1
+    total_possible = num_answers * 100
+    total_score_sum = sum(df["score"] for df in detailed_feedback)
 
-        has_complexity = any(c in lower_answer for c in ["o(", "o (", "complexity", "big-o", "big o", "runtime", "auxiliary space", "time complexity"])
-        has_tradeoffs = any(t in lower_answer for t in ["trade-off", "tradeoff", "advantage", "disadvantage", "pros", "cons", "scale", "bottleneck", "edge case", "versus", "vs"])
-        has_structure = any(s in answer_text for s in ["1.", "2.", "-", "•", "\n\n", "step", "first", "second", "finally"])
-        has_code = any(f in lower_answer for f in ["function", "const", "def ", "class ", "return", "select", "import", "async", "await", "()", "{}"])
+    # Authoritative Final Score calculated over ALL questions:
+    final_score = round(total_score_sum / total_possible * 100) if total_possible > 0 else 0
+    final_score = max(0, min(100, final_score))
 
-        # 2b. Explicit Relevance Check — catch completely off-topic answers
-        if is_irrelevant_to_question(q_text, answer_text):
-            detailed_feedback.append({
-                "question_id": q_id,
-                "question": q_text,
-                "score": 5,
-                "technical_accuracy": 3,
-                "communication_clarity": 8,
-                "feedback": "Answer is completely off-topic and unrelated to the question asked. No relevant concepts detected.",
-                "identified_keywords": [],
-                "suggested_answer_points": rubric["coreConcepts"] if rubric else [
-                    "Address the core problem stated in the question",
-                    "Use relevant technical terminology",
-                    "Provide concrete examples or implementations",
-                ],
-            })
-            total_tech_score += 3
-            total_comm_score += 8
-            total_problem_score += 3
-            continue
+    avg_tech = round(sum(df.get("technical_accuracy", 0) for df in detailed_feedback) / num_answers)
+    avg_comm = round(sum(df.get("communication_clarity", 0) for df in detailed_feedback) / num_answers)
+    avg_prob = round(sum(df.get("technical_depth", 0) for df in detailed_feedback) / num_answers)
 
-        # 3. Dynamic multi-factor scoring based on question depth
-        if len(matched_kw) == 0:
-            tech = min(15 + word_count * 0.4, 28)
-            comm = min(25 + word_count * 0.5, 45)
-            prob = min(15 + (15 if has_complexity else 0), 30)
-        elif len(matched_kw) == 1:
-            tech = min(30 + word_count * 0.6, 50)
-            comm = min(40 + (15 if has_structure else 0) + word_count * 0.4, 60)
-            prob = min(30 + (20 if has_complexity else 0) + (15 if has_tradeoffs else 0), 55)
-        elif len(matched_kw) <= 3:
-            tech = min(50 + len(matched_kw) * 8 + (10 if word_count >= 30 else 0), 75)
-            comm = min(50 + (15 if has_structure else 5) + (15 if word_count >= 40 else 5), 80)
-            prob = min(45 + (20 if has_complexity else 5) + (15 if has_tradeoffs else 5), 78)
-        else:
-            tech = min(70 + len(matched_kw) * 6 + (10 if has_tradeoffs else 0) + (8 if has_code else 0), 98)
-            comm = min(65 + (15 if has_structure else 5) + (15 if word_count >= 50 else 5), 96)
-            prob = min(60 + (20 if has_complexity else 5) + (18 if has_tradeoffs else 5), 96)
-
-        if word_count < 12:
-            tech = max(tech - 25, 10)
-            comm = max(comm - 20, 15)
-            prob = max(prob - 20, 10)
-
-        q_score = round(0.50 * tech + 0.30 * comm + 0.20 * prob)
-        total_tech_score += tech
-        total_comm_score += comm
-        total_problem_score += prob
-
-        # 4. Contextual Feedback
-        if q_score >= 85:
-            q_feedback = f"Outstanding technical articulation! Thoroughly covered {len(matched_kw)} core concepts ({', '.join(matched_kw[:4])}). Strong trade-off evaluation and structured reasoning."
-        elif q_score >= 70:
-            q_feedback = f"Solid grasp of core principles ({', '.join(matched_kw) if matched_kw else 'fundamentals'}). To reach Staff/Principal tier, explicitly discuss Big-O runtime/memory bounds and concurrency failure modes."
-        elif q_score >= 45:
-            q_feedback = "Basic conceptual understanding. Lacks technical depth and architectural mechanics. Elaborate on internal algorithms, data structures, and production trade-offs."
-        else:
-            q_feedback = "Answer was too brief or off-topic. Missed critical core concepts required for this problem. Review the model points below."
-
-        detailed_feedback.append({
-            "question_id": q_id,
-            "question": q_text,
-            "score": q_score,
-            "feedback": q_feedback,
-            "suggested_answer_points": rubric["coreConcepts"] if rubric else [
-                "Clearly state assumptions and constraints upfront",
-                "Explicitly articulate asymptotic time and space complexities (Big-O)",
-                "Detail production failure modes, concurrency handling, and caching/indexing strategies",
-            ],
-            "identified_keywords": matched_kw[:6],
-            "technical_accuracy": round(tech),
-            "communication_clarity": round(comm),
-        })
-
-    num_answers = max(len(answers), 1)
-    avg_tech = round(total_tech_score / num_answers)
-    avg_comm = round(total_comm_score / num_answers)
-    avg_prob = round(total_problem_score / num_answers)
-    final_score = round(0.50 * avg_tech + 0.30 * avg_comm + 0.20 * avg_prob)
+    # Authoritative Question Counts:
+    skipped_count = sum(1 for df in detailed_feedback if df.get("status") in ("SKIPPED", "EMPTY", "NO_ANSWER"))
+    correct_count = sum(1 for df in detailed_feedback if df.get("score", 0) >= 70 and df.get("status") not in ("SKIPPED", "EMPTY", "NO_ANSWER"))
+    partially_correct_count = sum(1 for df in detailed_feedback if 30 <= df.get("score", 0) < 70 and df.get("status") not in ("SKIPPED", "EMPTY", "NO_ANSWER"))
+    incorrect_count = sum(1 for df in detailed_feedback if df.get("score", 0) < 30 and df.get("status") not in ("SKIPPED", "EMPTY", "NO_ANSWER"))
+    answered_count = num_answers - skipped_count
 
     grade = (
         "A+ (Strong Hire • Outstanding)" if final_score >= 90
         else "A (Hire • Strong Performance)" if final_score >= 80
         else "B+ (Leaning Hire • Good Fundamentals)" if final_score >= 70
-        else "B- (Borderline • Needs Practice)" if final_score >= 55
-        else "C (Needs Significant Preparation)" if final_score >= 35
-        else "F (Incomplete / Unsatisfactory)"
+        else "B- (Borderline • Needs Practice)" if final_score >= 50
+        else "C (Needs Significant Preparation)" if final_score >= 30
+        else "F (Incomplete / Unsatisfactory • 0-29%)"
     )
 
-    strengths = []
-    improvements = []
+    # Deduplicate strengths and weaknesses
+    clean_strengths = list(dict.fromkeys(all_strengths))[:4]
+    clean_improvements = list(dict.fromkeys(all_weaknesses))[:4]
 
-    if final_score >= 70:
-        strengths.append(f"Solid grasp of core {role} engineering fundamentals.")
-        strengths.append(f"Demonstrated knowledge across key domain concepts.")
-        strengths.append(f"Structured responses align well with {company}'s hiring bar.")
-    elif final_score >= 40:
-        strengths.append("Familiarity with basic terminologies.")
-        strengths.append("Attempted structured explanation on core topics.")
-    else:
-        strengths.append("Identified problem domains to study.")
+    if not clean_strengths:
+        if final_score == 0:
+            clean_strengths.append("No technical competencies demonstrated in submitted answers.")
+        else:
+            clean_strengths.append(f"Basic familiarity with {role} concepts.")
 
-    if final_score < 85:
-        improvements.append("Explicitly state Big-O runtime and auxiliary space complexity in your initial thought process.")
-        improvements.append("Elaborate on production failure modes, concurrency race conditions, and caching/indexing trade-offs.")
-        improvements.append("Provide concrete code snippets or step-by-step algorithms rather than high-level definitions.")
+    if not clean_improvements:
+        if final_score < 100:
+            clean_improvements.append("Deepen asymptotic Big-O runtime analysis and edge-case handling.")
 
     overall_summary = (
-        f"Candidate achieved an overall interview performance score of {final_score}% ({grade}) for {company}'s {role} position. "
-        f"Technical Depth: {avg_tech}%, Communication: {avg_comm}%, Problem Solving: {avg_prob}%."
+        f"Candidate achieved an authoritative score of {final_score}/100 ({grade}) for {company}'s {role} position across {num_answers} questions. "
+        f"Questions breakdown: {correct_count} Correct, {partially_correct_count} Partially Correct, {incorrect_count} Incorrect, {skipped_count} Skipped."
     )
 
+    analysis_payload = {
+        "overall_performance": {
+            "overall_score": final_score,
+            "performance_level": grade,
+            "completion_rate": f"{round((answered_count / num_answers) * 100)}%",
+            "total_questions": num_answers,
+            "answered_count": answered_count,
+            "skipped_count": skipped_count,
+        },
+        "technical_performance": {
+            "technical_score": avg_tech,
+            "problem_solving_score": avg_prob,
+            "conceptual_understanding": "High" if avg_tech >= 75 else "Moderate" if avg_tech >= 45 else "Low",
+        },
+        "communication": {
+            "communication_score": avg_comm,
+            "clarity": "Strong" if avg_comm >= 75 else "Adequate" if avg_comm >= 45 else "Needs Improvement",
+        },
+        "strengths": clean_strengths,
+        "weaknesses": clean_improvements,
+        "missing_concepts": list(all_missing_concepts)[:6],
+    }
+
     return {
+        "score": final_score,
         "overall_score": final_score,
         "technical_score": avg_tech,
         "communication_score": avg_comm,
         "problem_solving_score": avg_prob,
         "grade": grade,
+        "question_count": num_answers,
+        "total_questions": num_answers,
+        "answered_count": answered_count,
+        "skipped_count": skipped_count,
+        "correct_count": correct_count,
+        "partial_count": partially_correct_count,
+        "partially_correct_count": partially_correct_count,
+        "incorrect_count": incorrect_count,
         "overall_summary": overall_summary,
-        "strengths": strengths,
-        "improvements": improvements,
+        "strengths": clean_strengths,
+        "improvements": clean_improvements,
+        "missing_concepts": list(all_missing_concepts)[:6],
         "identified_keywords": list(all_matched_keywords),
         "detailed_feedback": detailed_feedback,
+        "analysis": analysis_payload,
     }
 
 def evaluate_with_gemini(
@@ -883,40 +1200,84 @@ def evaluate_with_gemini(
     answers: List[Dict[str, Any]],
     api_key: str,
 ) -> Optional[Dict[str, Any]]:
-    """Evaluates the candidate's answers using Google Gemini REST API."""
+    """Evaluates candidate answers strictly using Google Gemini REST API with zero-credit gating."""
+    # Pre-process answers with Zero-Credit Gate
+    # Any skipped, empty, non-answer, or gibberish answer is locked at score = 0
+    pre_evaluated = {}
+    answers_to_send_to_gemini = []
+
+    for idx, item in enumerate(answers):
+        q_id = item.get("question_id", idx + 1)
+        q_text = item.get("question", "")
+        a_text = str(item.get("answer", "")).strip()
+        status_hint = item.get("status")
+
+        gate_res = evaluate_zero_credit_gate(
+            question=q_text,
+            answer=a_text,
+            status=status_hint,
+            question_id=q_id,
+        )
+        if gate_res:
+            pre_evaluated[q_id] = gate_res
+        else:
+            answers_to_send_to_gemini.append((q_id, item))
+
+    # If all answers were caught by the gate (e.g. all skipped or all random/empty)
+    if len(answers_to_send_to_gemini) == 0:
+        return evaluate_with_local_rubric(company, role, difficulty, answers)
+
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
 
     questions_and_answers_text = ""
-    for idx, item in enumerate(answers, 1):
-        questions_and_answers_text += f"\n--- Question {idx} (ID: {item.get('question_id')}) ---\n"
+    for q_id, item in answers_to_send_to_gemini:
+        questions_and_answers_text += f"\n--- Question (ID: {q_id}) ---\n"
         questions_and_answers_text += f"Question: {item.get('question')}\n"
         questions_and_answers_text += f"Candidate Answer: {item.get('answer')}\n"
 
     system_instruction = (
-        f"You are a Staff Technical Interviewer evaluating a candidate for {company}'s {role} role ({difficulty} difficulty).\n"
-        "Grade each answer strictly on a 0-100 scale based on factual technical correctness, communication clarity, and problem-solving depth.\n"
-        "If the candidate gave no answer, wrote gibberish, or said 'I don't know', give a score of 0-5.\n"
+        f"You are a strict, professional Staff Technical Interviewer evaluating candidate answers for {company}'s {role} position ({difficulty} difficulty).\n\n"
+        "CRITICAL EVALUATION RULES:\n"
+        "1. ZERO-CREDIT FOR IRRELEVANT OR NON-ANSWERS:\n"
+        "   - If the candidate's answer is completely off-topic, random, or discusses personal topics (e.g. cricket, sports, weather, movies, food) unrelated to the question, give score = 0, status = 'IRRELEVANT', relevance = 0.\n"
+        "   - If the answer is keyword stuffing (an unpunctuated list of technical terms with no sentences or grammar), give score = 0, status = 'IRRELEVANT'.\n"
+        "   - If the candidate says they do not know, give score = 0, status = 'NO_ANSWER'.\n"
+        "   - If the answer contradicts core technical facts, penalize heavily (score 0-10, status = 'INCORRECT').\n"
+        "   - NEVER give points merely because some text exists or because keywords are present. Zero credit must be strictly 0/100.\n\n"
+        "2. STRICT 5-DIMENSION RUBRIC FOR LEGITIMATE ATTEMPTS:\n"
+        "   - Relevance (25% weight): Directly addresses this question? If relevance < 20, overall score MUST be 0.\n"
+        "   - Technical Correctness (30% weight): Factual accuracy of technical mechanisms.\n"
+        "   - Completeness (20% weight): Covers expected concepts and constraints.\n"
+        "   - Technical Depth / Reasoning (15% weight): Demonstrates understanding of trade-offs, Big-O, internal algorithms.\n"
+        "   - Communication Clarity (10% weight): Logical structure and clarity.\n\n"
+        "3. HONEST REPORTING:\n"
+        "   - Strengths must only reflect demonstrated competence in actual answers.\n"
+        "   - Weaknesses and missing concepts must detail specific gaps.\n\n"
         "Return ONLY a valid JSON object matching this structure (no markdown fences around it):\n"
         "{\n"
-        '  "overall_score": 85,\n'
-        '  "technical_score": 88,\n'
-        '  "communication_score": 84,\n'
-        '  "problem_solving_score": 82,\n'
-        '  "grade": "A (Hire • Strong Performance)",\n'
-        '  "overall_summary": "Comprehensive executive summary of the performance.",\n'
-        '  "strengths": ["Strength 1", "Strength 2", "Strength 3"],\n'
-        '  "improvements": ["Improvement 1", "Improvement 2", "Improvement 3"],\n'
-        '  "identified_keywords": ["react", "fiber", "closure", "time complexity"],\n'
+        '  "overall_summary": "Executive summary...",\n'
+        '  "strengths": ["Strength 1", "Strength 2"],\n'
+        '  "improvements": ["Improvement 1", "Improvement 2"],\n'
+        '  "missing_concepts": ["concept1", "concept2"],\n'
+        '  "identified_keywords": ["keyword1", "keyword2"],\n'
         '  "detailed_feedback": [\n'
         "    {\n"
         '      "question_id": 1,\n'
         '      "question": "Question text",\n'
-        '      "score": 88,\n'
-        '      "technical_accuracy": 90,\n'
+        '      "candidate_answer": "Answer text",\n'
+        '      "status": "CORRECT",\n'
+        '      "score": 85,\n'
+        '      "relevance": 90,\n'
+        '      "technical_accuracy": 85,\n'
+        '      "completeness": 80,\n'
+        '      "technical_depth": 80,\n'
         '      "communication_clarity": 85,\n'
-        '      "feedback": "Detailed constructive feedback on what was strong and what was missing.",\n'
-        '      "suggested_answer_points": ["Point 1", "Point 2", "Point 3"],\n'
-        '      "identified_keywords": ["keyword1", "keyword2"]\n'
+        '      "feedback": "Honest critique...",\n'
+        '      "strengths": ["..."],\n'
+        '      "weaknesses": ["..."],\n'
+        '      "missing_concepts": ["..."],\n'
+        '      "suggested_answer_points": ["Point 1", "Point 2"],\n'
+        '      "ideal_answer": "Model answer..."\n'
         "    }\n"
         "  ]\n"
         "}"
@@ -931,13 +1292,13 @@ def evaluate_with_gemini(
             }
         ],
         "generationConfig": {
-            "temperature": 0.2,
+            "temperature": 0.1,
             "responseMimeType": "application/json",
         },
     }
 
     try:
-        response = requests.post(url, json=payload, timeout=20)
+        response = requests.post(url, json=payload, timeout=25)
         if response.status_code == 200:
             data = response.json()
             raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -948,9 +1309,116 @@ def evaluate_with_gemini(
             if raw_text.endswith("```"):
                 raw_text = raw_text[:-3]
             parsed = json.loads(raw_text.strip())
-            return parsed
+
+            gemini_feedback_map = {
+                df.get("question_id"): df for df in parsed.get("detailed_feedback", [])
+            }
+
+            # Merge pre-evaluated gate results with Gemini results in exact order
+            merged_detailed = []
+            for idx, item in enumerate(answers):
+                q_id = item.get("question_id", idx + 1)
+                if q_id in pre_evaluated:
+                    merged_detailed.append(pre_evaluated[q_id])
+                elif q_id in gemini_feedback_map:
+                    gf = gemini_feedback_map[q_id]
+                    q_score = int(gf.get("score", 0))
+                    status_val = str(gf.get("status", "CORRECT")).upper()
+                    relevance_val = int(gf.get("relevance", 80))
+
+                    # Post-validate AI output: zero-credit overrides
+                    if status_val in ("SKIPPED", "EMPTY", "NO_ANSWER", "IRRELEVANT") or relevance_val < 20:
+                        gf["score"] = 0
+                        gf["relevance"] = 0
+                        gf["technical_accuracy"] = 0
+                        gf["completeness"] = 0
+                        gf["technical_depth"] = 0
+                        gf["communication_clarity"] = 0
+                        gf["status"] = status_val if status_val in ("SKIPPED", "EMPTY", "NO_ANSWER", "IRRELEVANT") else "IRRELEVANT"
+                    else:
+                        gf["score"] = max(0, min(100, q_score))
+
+                    merged_detailed.append(gf)
+                else:
+                    # Fallback for single question
+                    fallback_df = evaluate_single_question(
+                        question_id=q_id,
+                        question=item.get("question", ""),
+                        answer=item.get("answer", ""),
+                        company=company,
+                        role=role,
+                        difficulty=difficulty,
+                    )
+                    merged_detailed.append(fallback_df)
+
+            num_answers = len(answers)
+            total_possible = num_answers * 100
+            total_score_sum = sum(df["score"] for df in merged_detailed)
+
+            authoritative_final_score = round(total_score_sum / total_possible * 100) if total_possible > 0 else 0
+            authoritative_final_score = max(0, min(100, authoritative_final_score))
+
+            skipped_count = sum(1 for df in merged_detailed if df.get("status") in ("SKIPPED", "EMPTY", "NO_ANSWER"))
+            correct_count = sum(1 for df in merged_detailed if df.get("score", 0) >= 70 and df.get("status") not in ("SKIPPED", "EMPTY", "NO_ANSWER"))
+            partially_correct_count = sum(1 for df in merged_detailed if 30 <= df.get("score", 0) < 70 and df.get("status") not in ("SKIPPED", "EMPTY", "NO_ANSWER"))
+            incorrect_count = sum(1 for df in merged_detailed if df.get("score", 0) < 30 and df.get("status") not in ("SKIPPED", "EMPTY", "NO_ANSWER"))
+            answered_count = num_answers - skipped_count
+
+            avg_tech = round(sum(df.get("technical_accuracy", 0) for df in merged_detailed) / num_answers)
+            avg_comm = round(sum(df.get("communication_clarity", 0) for df in merged_detailed) / num_answers)
+            avg_prob = round(sum(df.get("technical_depth", 0) for df in merged_detailed) / num_answers)
+
+            grade = (
+                "A+ (Strong Hire • Outstanding)" if authoritative_final_score >= 90
+                else "A (Hire • Strong Performance)" if authoritative_final_score >= 80
+                else "B+ (Leaning Hire • Good Fundamentals)" if authoritative_final_score >= 70
+                else "B- (Borderline • Needs Practice)" if authoritative_final_score >= 50
+                else "C (Needs Significant Preparation)" if authoritative_final_score >= 30
+                else "F (Incomplete / Unsatisfactory • 0-29%)"
+            )
+
+            return {
+                "overall_score": authoritative_final_score,
+                "technical_score": avg_tech,
+                "communication_score": avg_comm,
+                "problem_solving_score": avg_prob,
+                "grade": grade,
+                "total_questions": num_answers,
+                "answered_count": answered_count,
+                "skipped_count": skipped_count,
+                "correct_count": correct_count,
+                "partially_correct_count": partially_correct_count,
+                "incorrect_count": incorrect_count,
+                "overall_summary": parsed.get("overall_summary") or f"Candidate completed {num_answers} questions with final score {authoritative_final_score}/100 ({grade}).",
+                "strengths": parsed.get("strengths", []),
+                "improvements": parsed.get("improvements", []),
+                "missing_concepts": parsed.get("missing_concepts", []),
+                "identified_keywords": parsed.get("identified_keywords", []),
+                "detailed_feedback": merged_detailed,
+                "analysis": {
+                    "overall_performance": {
+                        "overall_score": authoritative_final_score,
+                        "performance_level": grade,
+                        "completion_rate": f"{round((answered_count / num_answers) * 100)}%",
+                        "total_questions": num_answers,
+                        "answered_count": answered_count,
+                        "skipped_count": skipped_count,
+                    },
+                    "technical_performance": {
+                        "technical_score": avg_tech,
+                        "problem_solving_score": avg_prob,
+                    },
+                    "communication": {
+                        "communication_score": avg_comm,
+                    },
+                    "strengths": parsed.get("strengths", []),
+                    "weaknesses": parsed.get("improvements", []),
+                    "missing_concepts": parsed.get("missing_concepts", []),
+                },
+            }
     except Exception as e:
         print(f"[LLM Evaluator] Gemini API error: {e}")
+
     return None
 
 def evaluate_interview_submission(
@@ -961,6 +1429,7 @@ def evaluate_interview_submission(
 ) -> Dict[str, Any]:
     """
     Main evaluation entry point.
+    Evaluates candidate's stored answers deferred after interview completion.
     Checks environment for GEMINI_API_KEY, and falls back to question-specific rubric evaluator.
     """
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
