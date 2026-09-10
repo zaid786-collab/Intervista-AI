@@ -124,16 +124,25 @@ export default function AuthPage({ mode = "login" }) {
     setError("");
     setOauthLoading(provider);
     try {
-      const redirectUri = `${window.location.origin}/oauth/callback`;
+      const baseOrigin = window.location.origin.includes("127.0.0.1")
+        ? window.location.origin.replace("127.0.0.1", "localhost")
+        : window.location.origin;
+
+      const redirectUri = provider === "github"
+        ? `${baseOrigin}/oauth/github/callback`
+        : `${baseOrigin}/oauth/callback`;
+
+      // Store provider and redirect destination in sessionStorage for reliable callback resolution
+      sessionStorage.setItem("oauth_provider", provider);
+      if (redirectDest && redirectDest !== "/dashboard") {
+        sessionStorage.setItem("oauth_redirect", redirectDest);
+      } else {
+        sessionStorage.removeItem("oauth_redirect");
+      }
+
       const res = await getOAuthUrl(provider, redirectUri);
       if (res?.url) {
-        // If there's an intended destination, append to OAuth redirect
-        let targetUrl = res.url;
-        if (redirectDest && redirectDest !== "/dashboard") {
-          const separator = targetUrl.includes("?") ? "&" : "?";
-          targetUrl = `${targetUrl}${separator}redirect=${encodeURIComponent(redirectDest)}`;
-        }
-        window.location.href = targetUrl;
+        window.location.href = res.url;
       } else {
         throw new Error(`Unable to obtain ${provider} authorization link.`);
       }

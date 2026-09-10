@@ -1,6 +1,6 @@
 import os
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv
+from app.config import reload_env
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -21,8 +21,6 @@ from app.routers import (
     feedback,
 )
 from app.seed import seed_db
-
-load_dotenv()
 
 # Creates any tables that don't exist yet
 Base.metadata.create_all(bind=engine)

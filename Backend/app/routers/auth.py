@@ -5,6 +5,7 @@ import secrets
 import uuid
 from datetime import timedelta, timezone
 from typing import Optional
+from urllib.parse import urlencode
 import requests
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -225,39 +226,55 @@ def login(
     return schemas.TokenResponse(access_token=token, user=user)
 
 
+from app.config import get_env, reload_env
+
+
 @router.get("/oauth/{provider}/url", response_model=schemas.OAuthUrlResponse)
 def get_oauth_authorization_url(
     provider: str,
     redirect_uri: str = "http://localhost:5173/oauth/callback",
+    state: Optional[str] = None,
 ):
+    reload_env()
     provider_clean = provider.lower().strip()
     if provider_clean == "google":
-        client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
-        if not client_id:
-            # Fallback dev simulation URL if Google client credentials are not yet configured in .env
-            dev_url = f"{redirect_uri}?provider=google&code=mock_google_auth_code&state=dev"
-            return schemas.OAuthUrlResponse(url=dev_url, provider="google")
+        client_id = get_env("GOOGLE_CLIENT_ID")
+        client_secret = get_env("GOOGLE_CLIENT_SECRET")
+        callback_url = get_env("GOOGLE_CALLBACK_URL") or redirect_uri
+        if not client_id or not client_secret:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Google OAuth is not configured on the server. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Backend/.env.",
+            )
         
-        # OpenID Connect / OAuth 2.0 Auth URL
+        # OpenID Connect / OAuth 2.0 Auth URL with prompt=select_account
         scope = "openid email profile"
+        oauth_state = state or f"google:{secrets.token_urlsafe(16)}"
         url = (
             f"https://accounts.google.com/o/oauth2/v2/auth?"
-            f"client_id={client_id}&redirect_uri={redirect_uri}&response_type=code&scope={scope}&access_type=offline&prompt=select_account"
+            f"client_id={client_id}&redirect_uri={callback_url}&response_type=code&scope={scope}&access_type=offline&prompt=select_account&state={oauth_state}"
         )
         return schemas.OAuthUrlResponse(url=url, provider="google")
 
     elif provider_clean == "github":
-        client_id = os.getenv("GITHUB_CLIENT_ID", "").strip()
-        if not client_id:
-            # Fallback dev simulation URL if GitHub client credentials are not yet configured in .env
-            dev_url = f"{redirect_uri}?provider=github&code=mock_github_auth_code&state=dev"
-            return schemas.OAuthUrlResponse(url=dev_url, provider="github")
+        client_id = get_env("GITHUB_CLIENT_ID")
+        client_secret = get_env("GITHUB_CLIENT_SECRET")
+        callback_url = get_env("GITHUB_CALLBACK_URL") or redirect_uri or "http://localhost:5173/oauth/github/callback"
+        if not client_id or not client_secret:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="GitHub OAuth is not configured on the server. Please configure GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in Backend/.env.",
+            )
 
-        scope = "user:email"
-        url = (
-            f"https://github.com/login/oauth/authorize?"
-            f"client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}"
-        )
+        scope = "read:user user:email"
+        oauth_state = state or f"github:{secrets.token_urlsafe(16)}"
+        params = {
+            "client_id": client_id,
+            "redirect_uri": callback_url,
+            "scope": scope,
+            "state": oauth_state,
+        }
+        url = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
         return schemas.OAuthUrlResponse(url=url, provider="github")
 
     raise HTTPException(
@@ -270,11 +287,18 @@ def get_oauth_authorization_url(
 def oauth_callback(
     provider: str,
     payload: schemas.OAuthCallbackRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    reload_env()
     provider_clean = provider.lower().strip()
+    logger.info("[OAUTH_STEP_1_ENTERED] provider=%s, has_code=%s, has_redirect_uri=%s", provider_clean, bool(payload.code), bool(payload.redirect_uri))
+
     if provider_clean not in ("google", "github"):
         raise HTTPException(status_code=400, detail="Unsupported OAuth provider.")
+
+    if not payload.code or not payload.code.strip():
+        raise HTTPException(status_code=400, detail="Missing authorization code.")
 
     email: str = ""
     name: str = ""
@@ -282,128 +306,150 @@ def oauth_callback(
     avatar: Optional[str] = None
 
     if provider_clean == "google":
-        client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
-        client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+        client_id = get_env("GOOGLE_CLIENT_ID")
+        client_secret = get_env("GOOGLE_CLIENT_SECRET")
+        callback_url = get_env("GOOGLE_CALLBACK_URL") or payload.redirect_uri or "http://localhost:5173/oauth/callback"
 
-        if payload.code == "mock_google_auth_code" or not (client_id and client_secret):
-            # Development fallback when OAuth credentials are not configured
-            email = "google.candidate@example.com"
-            name = "Google Candidate"
-            provider_user_id = "google_dev_1001"
-            avatar = "https://lh3.googleusercontent.com/a/default-user"
-        else:
-            try:
-                # Exchange authorization code for token
-                token_resp = requests.post(
-                    "https://oauth2.googleapis.com/token",
-                    data={
-                        "client_id": client_id,
-                        "client_secret": client_secret,
-                        "code": payload.code,
-                        "grant_type": "authorization_code",
-                        "redirect_uri": payload.redirect_uri or "http://localhost:5173/oauth/callback",
-                    },
-                    timeout=10,
-                )
-                if not token_resp.ok:
-                    logger.error("Google token exchange failed: %s", token_resp.text)
-                    raise HTTPException(status_code=400, detail="Failed to exchange authorization code with Google.")
+        if not client_id or not client_secret:
+            raise HTTPException(
+                status_code=400,
+                detail="Google OAuth is not configured on the server. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Backend/.env.",
+            )
 
-                token_data = token_resp.json()
-                access_token = token_data.get("access_token")
+        try:
+            # Exchange authorization code for token
+            token_resp = requests.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "code": payload.code.strip(),
+                    "grant_type": "authorization_code",
+                    "redirect_uri": callback_url,
+                },
+                timeout=10,
+            )
+            if not token_resp.ok:
+                logger.error("Google token exchange failed: %s", token_resp.text)
+                raise HTTPException(status_code=400, detail="Failed to exchange authorization code with Google.")
 
-                # Fetch user profile
-                userinfo_resp = requests.get(
-                    "https://www.googleapis.com/oauth2/v3/userinfo",
-                    headers={"Authorization": f"Bearer {access_token}"},
-                    timeout=10,
-                )
-                if not userinfo_resp.ok:
-                    raise HTTPException(status_code=400, detail="Failed to fetch Google user profile.")
+            token_data = token_resp.json()
+            access_token = token_data.get("access_token")
+            if not access_token:
+                raise HTTPException(status_code=400, detail="No access token returned by Google.")
 
-                u_info = userinfo_resp.json()
-                email = (u_info.get("email") or "").lower().strip()
-                name = u_info.get("name") or email.split("@")[0]
-                provider_user_id = str(u_info.get("sub") or "")
-                avatar = u_info.get("picture")
-            except HTTPException:
-                raise
-            except Exception as exc:
-                logger.error("Google OAuth error: %s", exc)
-                raise HTTPException(status_code=400, detail="Google authentication failed. Please try again.")
+            # Fetch user profile
+            userinfo_resp = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10,
+            )
+            if not userinfo_resp.ok:
+                raise HTTPException(status_code=400, detail="Failed to fetch Google user profile.")
+
+            userinfo = userinfo_resp.json()
+            provider_user_id = str(userinfo.get("sub") or "")
+            name = userinfo.get("name") or userinfo.get("given_name") or "Google User"
+            avatar = userinfo.get("picture")
+            email = (userinfo.get("email") or "").lower().strip()
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.error("Google OAuth error: %s", exc)
+            raise HTTPException(status_code=400, detail="Google authentication failed. Please try again.")
 
     elif provider_clean == "github":
-        client_id = os.getenv("GITHUB_CLIENT_ID", "").strip()
-        client_secret = os.getenv("GITHUB_CLIENT_SECRET", "").strip()
+        client_id = get_env("GITHUB_CLIENT_ID")
+        client_secret = get_env("GITHUB_CLIENT_SECRET")
+        callback_url = get_env("GITHUB_CALLBACK_URL") or payload.redirect_uri or "http://localhost:5173/oauth/github/callback"
 
-        if payload.code == "mock_github_auth_code" or not (client_id and client_secret):
-            # Development fallback
-            email = "github.engineer@example.com"
-            name = "GitHub Engineer"
-            provider_user_id = "github_dev_2002"
-            avatar = "https://avatars.githubusercontent.com/u/9919"
-        else:
-            try:
-                # Exchange code for GitHub access token
-                token_resp = requests.post(
-                    "https://github.com/login/oauth/access_token",
-                    headers={"Accept": "application/json"},
-                    data={
-                        "client_id": client_id,
-                        "client_secret": client_secret,
-                        "code": payload.code,
-                        "redirect_uri": payload.redirect_uri or "http://localhost:5173/oauth/callback",
-                    },
+        if not client_id or not client_secret:
+            raise HTTPException(
+                status_code=400,
+                detail="GitHub OAuth is not configured on the server. Please configure GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in Backend/.env.",
+            )
+
+        try:
+            logger.info("[OAUTH_STEP_2_TOKEN_REQUEST_STARTED] provider=github, redirect_uri=%s", callback_url)
+            # Exchange code for GitHub access token
+            token_resp = requests.post(
+                "https://github.com/login/oauth/access_token",
+                headers={"Accept": "application/json", "User-Agent": "Intervista-AI"},
+                data={
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "code": payload.code.strip(),
+                    "redirect_uri": callback_url,
+                },
+                timeout=10,
+            )
+            if not token_resp.ok:
+                logger.error("[OAUTH_STEP_3_TOKEN_RESPONSE_FAILED] status=%s, body_len=%s", token_resp.status_code, len(token_resp.text))
+                raise HTTPException(status_code=400, detail="Failed to exchange authorization code with GitHub.")
+
+            token_data = token_resp.json()
+            gh_token = token_data.get("access_token")
+            logger.info("[OAUTH_STEP_3_TOKEN_RESPONSE_RECEIVED] status=%s, has_token=%s", token_resp.status_code, bool(gh_token))
+            if not gh_token:
+                err_msg = token_data.get("error_description", "No access token returned by GitHub.")
+                logger.error("[OAUTH_STEP_3_TOKEN_ERROR] detail=%s", err_msg)
+                raise HTTPException(status_code=400, detail=err_msg)
+
+            # Fetch user info
+            logger.info("[OAUTH_STEP_4_USER_REQUEST_STARTED] endpoint=https://api.github.com/user")
+            user_resp = requests.get(
+                "https://api.github.com/user",
+                headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/json", "User-Agent": "Intervista-AI"},
+                timeout=10,
+            )
+            if not user_resp.ok:
+                logger.error("[OAUTH_STEP_5_USER_RESPONSE_FAILED] status=%s", user_resp.status_code)
+                raise HTTPException(status_code=400, detail="Failed to fetch GitHub profile.")
+
+            gh_user = user_resp.json()
+            provider_user_id = str(gh_user.get("id") or "")
+            name = gh_user.get("name") or gh_user.get("login") or "GitHub User"
+            avatar = gh_user.get("avatar_url")
+            email = (gh_user.get("email") or "").lower().strip()
+            logger.info("[OAUTH_STEP_5_USER_RESPONSE_RECEIVED] status=%s, has_email=%s", user_resp.status_code, bool(email))
+
+            # If email is private in primary profile, fetch from emails endpoint
+            if not email:
+                logger.info("[OAUTH_STEP_6_USER_EMAILS_REQUEST_STARTED] endpoint=https://api.github.com/user/emails")
+                emails_resp = requests.get(
+                    "https://api.github.com/user/emails",
+                    headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/json", "User-Agent": "Intervista-AI"},
                     timeout=10,
                 )
-                if not token_resp.ok:
-                    logger.error("GitHub token exchange failed: %s", token_resp.text)
-                    raise HTTPException(status_code=400, detail="Failed to exchange authorization code with GitHub.")
-
-                token_data = token_resp.json()
-                gh_token = token_data.get("access_token")
-                if not gh_token:
-                    raise HTTPException(status_code=400, detail="No access token returned by GitHub.")
-
-                # Fetch user info
-                user_resp = requests.get(
-                    "https://api.github.com/user",
-                    headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/json"},
-                    timeout=10,
-                )
-                if not user_resp.ok:
-                    raise HTTPException(status_code=400, detail="Failed to fetch GitHub profile.")
-
-                gh_user = user_resp.json()
-                provider_user_id = str(gh_user.get("id") or "")
-                name = gh_user.get("name") or gh_user.get("login") or "GitHub User"
-                avatar = gh_user.get("avatar_url")
-                email = (gh_user.get("email") or "").lower().strip()
-
-                # If email is private in primary profile, fetch from emails endpoint
-                if not email:
-                    emails_resp = requests.get(
-                        "https://api.github.com/user/emails",
-                        headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/json"},
-                        timeout=10,
-                    )
-                    if emails_resp.ok:
-                        email_list = emails_resp.json()
+                if emails_resp.ok:
+                    email_list = emails_resp.json()
+                    if isinstance(email_list, list):
                         primary_email = next((e["email"] for e in email_list if e.get("primary") and e.get("verified")), None)
+                        if not primary_email:
+                            primary_email = next((e["email"] for e in email_list if e.get("verified")), None)
                         if not primary_email and email_list:
                             primary_email = email_list[0].get("email")
                         email = (primary_email or "").lower().strip()
-            except HTTPException:
-                raise
-            except Exception as exc:
-                logger.error("GitHub OAuth error: %s", exc)
-                raise HTTPException(status_code=400, detail="GitHub authentication failed. Please try again.")
+                logger.info("[OAUTH_STEP_7_USER_EMAILS_RESPONSE_RECEIVED] status=%s, resolved_email=%s", emails_resp.status_code if 'emails_resp' in locals() else None, bool(email))
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.error("GitHub OAuth error: %s", exc)
+            raise HTTPException(status_code=400, detail="GitHub authentication failed. Please try again.")
 
     if not email:
         raise HTTPException(status_code=400, detail="No verified email address found for this OAuth account.")
 
-    # 1. ACCOUNT LINKING: Check if user exists by email
-    user = db.query(models.User).filter(models.User.email == email).first()
+    # 1. ACCOUNT LINKING: Check if user exists by email or provider ID to prevent duplicates
+    logger.info("[OAUTH_STEP_8_DATABASE_LOOKUP_CREATE] checking existing user: has_email=%s, has_provider_id=%s", bool(email), bool(provider_user_id))
+    user = None
+    if email:
+        user = db.query(models.User).filter(models.User.email == email).first()
+    if not user and provider_user_id:
+        if provider_clean == "github":
+            user = db.query(models.User).filter(models.User.github_id == provider_user_id).first()
+        elif provider_clean == "google":
+            user = db.query(models.User).filter(models.User.google_id == provider_user_id).first()
 
     if user:
         # Existing account found -> Link provider IDs and avatar if not present
@@ -415,6 +461,8 @@ def oauth_callback(
         if avatar and not user.avatar:
             user.avatar = avatar
 
+        # Clear any pending signup verification OTPs since email is OAuth-verified
+        db.query(models.EmailVerificationOTP).filter(models.EmailVerificationOTP.user_id == user.id).delete()
         db.commit()
         db.refresh(user)
     else:
@@ -431,13 +479,60 @@ def oauth_callback(
             is_admin=is_first_user,
         )
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        try:
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+            user = db.query(models.User).filter(models.User.email == email).first()
+            if not user and provider_user_id:
+                user = db.query(models.User).filter(models.User.github_id == provider_user_id).first()
+            if not user:
+                raise HTTPException(status_code=500, detail="Failed to persist user profile.")
+
+    logger.info("[OAUTH_STEP_8_DATABASE_LOOKUP_CREATE_COMPLETED] user_id=%s, is_active=%s", user.id, user.is_active)
 
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has been disabled.")
 
+    # Audit login event and notify via welcome email (cooldown protected)
+    now = utcnow()
+    cutoff = now - timedelta(seconds=LOGIN_EMAIL_COOLDOWN_SECONDS)
+    recent_login = (
+        db.query(models.LoginEvent)
+        .filter(models.LoginEvent.user_id == user.id, models.LoginEvent.created_at >= cutoff)
+        .first()
+    )
+    event_id = str(uuid.uuid4())
+    if recent_login:
+        login_event = models.LoginEvent(
+            user_id=user.id,
+            event_id=event_id,
+            email_status="duplicate_suppressed",
+        )
+        db.add(login_event)
+        db.commit()
+        logger.info("[EMAIL] Duplicate login email suppressed for user %s (within cooldown window)", user.email)
+    else:
+        login_event = models.LoginEvent(
+            user_id=user.id,
+            event_id=event_id,
+            email_status="queued",
+        )
+        db.add(login_event)
+        db.commit()
+
+        background_tasks.add_task(
+            process_login_welcome_email,
+            user_id=user.id,
+            recipient_email=user.email,
+            user_name=user.name,
+            event_id=event_id,
+        )
+
     token = create_access_token(subject=str(user.id))
+    logger.info("[OAUTH_STEP_9_JWT_GENERATION] token created for user_id=%s", user.id)
+    logger.info("[OAUTH_STEP_10_RESPONSE_RETURNED] user_id=%s, returning TokenResponse", user.id)
     return schemas.TokenResponse(access_token=token, user=user)
 
 

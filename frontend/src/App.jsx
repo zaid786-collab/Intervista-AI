@@ -31,7 +31,7 @@ function AppLayout() {
   const location = useLocation();
   const path = location.pathname;
 
-  const hideFooter = ["/login", "/signup", "/oauth/callback", "/profile", "/admin", "/dashboard"].includes(path);
+  const hideFooter = ["/login", "/signup", "/oauth/callback", "/oauth/github/callback", "/profile", "/admin", "/dashboard"].includes(path);
 
   return (
     <>
@@ -45,6 +45,7 @@ function AppLayout() {
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/signup" element={<AuthPage mode="signup" />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
+        <Route path="/oauth/github/callback" element={<OAuthCallback providerOverride="github" />} />
 
         {/* Global Protected Routes */}
         <Route

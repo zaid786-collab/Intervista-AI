@@ -50,6 +50,7 @@ async function request(path, { method = "GET", body, auth = false } = {}) {
         method,
         headers,
         body: payload,
+        signal: typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(15000) : undefined,
       });
 
       if (response) {

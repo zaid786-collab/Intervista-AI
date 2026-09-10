@@ -1,77 +1,145 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { callbackOAuth } from "../api";
 
-export default function OAuthCallback() {
+export default function OAuthCallback({ providerOverride }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { loginWithOAuth } = useAuth();
   const [statusMessage, setStatusMessage] = useState("Connecting with identity provider...");
   const [errorNotice, setErrorNotice] = useState(null);
+  const exchangeStarted = useRef(false);
 
   useEffect(() => {
-    let isMounted = true;
+    const code = searchParams.get("code");
+    const stateParam = searchParams.get("state") || "";
+    const oauthError = searchParams.get("error");
+    const errorDesc = searchParams.get("error_description");
+
+    // Resolve provider from override, URL path, URL param, state prefix, or sessionStorage
+    let provider = providerOverride || searchParams.get("provider");
+    if (!provider && window.location.pathname.includes("github")) {
+      provider = "github";
+    }
+    if (!provider && stateParam) {
+      if (stateParam.startsWith("google")) provider = "google";
+      else if (stateParam.startsWith("github")) provider = "github";
+    }
+    if (!provider) {
+      provider = sessionStorage.getItem("oauth_provider");
+    }
+    if (!provider) {
+      provider = "google";
+    }
+
+    console.log("[OAUTH] CALLBACK_MOUNTED", {
+      provider,
+      hasCode: Boolean(code),
+      hasState: Boolean(stateParam),
+      hasError: Boolean(oauthError),
+      pathname: window.location.pathname,
+    });
+
+    if (oauthError) {
+      const errorMsg = errorDesc || "Authentication was cancelled by the user.";
+      console.warn("[OAUTH] Provider returned error:", errorMsg);
+      sessionStorage.removeItem("oauth_provider");
+      sessionStorage.removeItem("oauth_redirect");
+      setErrorNotice(errorMsg);
+      setTimeout(() => navigate(`/login?error=${encodeURIComponent(errorMsg)}`, { replace: true }), 2000);
+      return;
+    }
+
+    if (!code) {
+      console.warn("[OAUTH] Authorization code missing from callback URL parameters");
+      sessionStorage.removeItem("oauth_provider");
+      sessionStorage.removeItem("oauth_redirect");
+      setErrorNotice("No authorization code received from authentication provider.");
+      setTimeout(() => navigate("/login?error=Authorization+code+missing", { replace: true }), 2000);
+      return;
+    }
+
+    // Ensure single execution of the one-time authorization code exchange
+    if (exchangeStarted.current) {
+      console.log("[OAUTH] Duplicate exchange execution ignored");
+      return;
+    }
+    exchangeStarted.current = true;
 
     async function handleOAuthExchange() {
-      const code = searchParams.get("code");
-      const provider = searchParams.get("provider") || (code?.startsWith("mock_github") ? "github" : "google");
-      const oauthError = searchParams.get("error");
-      const errorDesc = searchParams.get("error_description");
+      console.log("[OAUTH] EXCHANGE_STARTED", {
+        provider,
+        hasCode: Boolean(code),
+        hasState: Boolean(stateParam),
+      });
+      setStatusMessage(`Verifying your ${provider === "github" ? "GitHub" : "Google"} credentials...`);
 
-      if (oauthError) {
-        const errorMsg = errorDesc || "Authentication was cancelled by the user.";
-        if (isMounted) {
-          setErrorNotice(errorMsg);
-          setTimeout(() => navigate(`/login?error=${encodeURIComponent(errorMsg)}`), 1200);
-        }
-        return;
-      }
+      const baseOrigin = window.location.origin.includes("127.0.0.1")
+        ? window.location.origin.replace("127.0.0.1", "localhost")
+        : window.location.origin;
 
-      if (!code) {
-        if (isMounted) {
-          setErrorNotice("No authorization code received.");
-          setTimeout(() => navigate("/login?error=Authorization+code+missing"), 1200);
-        }
-        return;
-      }
+      const redirectUri = provider === "github"
+        ? `${baseOrigin}/oauth/github/callback`
+        : `${baseOrigin}/oauth/callback`;
+
+      // Safety timeout guard (15s) so loading is never permanent
+      const timeoutTimer = setTimeout(() => {
+        console.error("[OAUTH] EXCHANGE_FAILED - Request timed out after 15 seconds");
+        setErrorNotice("Authentication timed out. Please try logging in again.");
+        setTimeout(() => navigate("/login?error=Authentication+timed+out", { replace: true }), 2000);
+      }, 15000);
 
       try {
-        if (isMounted) setStatusMessage(`Verifying ${provider.toUpperCase()} credentials...`);
-
-        const redirectUri = `${window.location.origin}/oauth/callback`;
         const data = await callbackOAuth(provider, {
           code,
           redirect_uri: redirectUri,
+          state: stateParam || undefined,
         });
 
-        if (isMounted) {
-          setStatusMessage("Account verified! Launching your workspace...");
-          loginWithOAuth(data.access_token, data.user);
+        clearTimeout(timeoutTimer);
 
-          // Check if there was an intended redirect URL
-          const destination = searchParams.get("redirect") || "/dashboard";
-          setTimeout(() => {
-            navigate(destination, { replace: true });
-          }, 400);
+        console.log("[OAUTH] EXCHANGE_RESPONSE_RECEIVED", {
+          hasAccessToken: Boolean(data?.access_token),
+          hasUser: Boolean(data?.user),
+          status: "OK",
+        });
+
+        if (!data?.access_token || !data?.user) {
+          throw new Error("Invalid session data returned by authentication server.");
         }
+
+        console.log("[OAUTH] EXCHANGE_SUCCESS");
+        setStatusMessage("Account verified! Launching your workspace...");
+
+        // Store user session in auth context and localStorage
+        loginWithOAuth(data.access_token, data.user);
+
+        const savedRedirect = sessionStorage.getItem("oauth_redirect");
+        const destination = searchParams.get("redirect") || savedRedirect || "/dashboard";
+
+        sessionStorage.removeItem("oauth_provider");
+        sessionStorage.removeItem("oauth_redirect");
+
+        // Navigate immediately to the destination
+        navigate(destination, { replace: true });
       } catch (err) {
-        if (isMounted) {
-          const message = err.message || "Failed to complete OAuth authentication.";
-          setErrorNotice(message);
-          setTimeout(() => {
-            navigate(`/login?error=${encodeURIComponent(message)}`, { replace: true });
-          }, 1500);
-        }
+        clearTimeout(timeoutTimer);
+        console.error("[OAUTH] EXCHANGE_FAILED", {
+          message: err?.message || "Failed to complete OAuth authentication.",
+        });
+        sessionStorage.removeItem("oauth_provider");
+        sessionStorage.removeItem("oauth_redirect");
+        const message = err?.message || "Failed to complete OAuth authentication.";
+        setErrorNotice(message);
+        setTimeout(() => {
+          navigate(`/login?error=${encodeURIComponent(message)}`, { replace: true });
+        }, 2000);
       }
     }
 
     handleOAuthExchange();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [searchParams, navigate, loginWithOAuth]);
+  }, [searchParams, navigate, loginWithOAuth, providerOverride]);
 
   return (
     <div
