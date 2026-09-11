@@ -54,6 +54,9 @@ import { STRUCTURED_DSA_BY_ROLE } from "../../utils/dsaQuestions";
 import { runTestCases } from "../../utils/codeRunner";
 import { ProctoringManager, PROCTORING_VIOLATION_TYPES } from "../../utils/ProctoringManager";
 import aiBotImage from "../../assets/ai_bot.jpg";
+import { useComputerVision } from "../../computerVision/useComputerVision";
+import { VisionStatusBadge } from "../../computerVision/VisionStatusBadge";
+import { VisionAnalysisCard } from "../../computerVision/VisionAnalysisCard";
 
 const COMPANIES = [
   "Google",
@@ -672,8 +675,9 @@ function generateDomainQuestions(companyName, roleName, interviewType, domainNam
 }
 
 // Resilient Video Stream Player Component
-function VideoPlayer({ stream, mirrored = false, style = {}, className = "" }) {
-  const vRef = useRef(null);
+function VideoPlayer({ stream, mirrored = false, style = {}, className = "", videoRef = null }) {
+  const localRef = useRef(null);
+  const vRef = videoRef || localRef;
 
   useEffect(() => {
     const el = vRef.current;
@@ -730,6 +734,7 @@ function MockInterview({ onInterviewCompleted }) {
   const [submittedQuestions, setSubmittedQuestions] = useState({}); // Tracks submitted questions during the test; full evaluation takes place at the end
   const [questionEvaluations, setQuestionEvaluations] = useState({}); // Per-question evaluation results
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false); // Question submission & evaluation state
+  const [showSubmitConfirmModal, setShowSubmitConfirmModal] = useState(false); // Confirmation modal for submitting test from any question
   const [initError, setInitError] = useState(null); // Error state for interview initialization
   const [streamWarning, setStreamWarning] = useState(null); // Warning when a stream drops during active interview
 
@@ -752,10 +757,18 @@ function MockInterview({ onInterviewCompleted }) {
   const cameraStreamRef = useRef(null);
   const micStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
+  const candidateVideoRef = useRef(null);
   const [isCameraActive, setIsCameraActive] = useState(true);
   const [isMicActive, setIsMicActive] = useState(true);
   const [cameraMirrored, setCameraMirrored] = useState(true);
   const [audioLevel, setAudioLevel] = useState(0);
+
+  // Computer Vision Analysis Hook (Runs non-intrusive client-side analysis)
+  const visionCV = useComputerVision({
+    isInterviewActive: interviewActive && !evaluationResult && !terminationData,
+    isCameraActive: isCameraActive && !!cameraStream,
+    videoRef: candidateVideoRef,
+  });
   const [isDictating, setIsDictating] = useState(false);
   const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
   const [autoPlayAudio, setAutoPlayAudio] = useState(true);
@@ -2025,13 +2038,22 @@ function solution() {
     }
   };
 
-  // 2. SUBMIT INTERVIEW HANDLER
+  // 2. SUBMIT INTERVIEW HANDLERS
+  const handleInitiateSubmit = () => {
+    if (terminationData) {
+      alert("This interview has been terminated for proctoring violations. Answer submission is disabled.");
+      return;
+    }
+    setShowSubmitConfirmModal(true);
+  };
+
   const handleSubmitInterview = async () => {
     if (terminationData) {
       alert("This interview has been terminated for proctoring violations. Answer submission is disabled.");
       return;
     }
 
+    setShowSubmitConfirmModal(false);
     setLoading(true);
     setAiSpeechState("analyzing");
 
@@ -2041,14 +2063,18 @@ function solution() {
     const activeMinutes = Math.max(Math.round(elapsedSeconds / 60), 1);
 
     const answersPayload = sessionQuestions.map((q) => {
-      const isSkipped = submittedQuestions[q.id] === "SKIPPED";
-      const ansVal = isSkipped ? "" : (answers[q.id] || "");
+      const rawAns = answers[q.id] || "";
+      const trimmed = rawAns.trim();
+      // An answer is ONLY skipped if candidate explicitly clicked Skip AND has not entered an answer
+      const isExplicitSkipped = submittedQuestions[q.id] === "SKIPPED" && !trimmed;
+      const finalAns = isExplicitSkipped ? "" : rawAns;
+      const status = isExplicitSkipped ? "SKIPPED" : trimmed.length > 0 ? "COMPLETED" : "EMPTY";
       return {
         question_id: q.id,
         question: q.question,
-        answer: ansVal,
-        candidate_answer: ansVal,
-        status: isSkipped ? "SKIPPED" : ansVal.trim() ? "COMPLETED" : "EMPTY",
+        answer: finalAns,
+        candidate_answer: finalAns,
+        status,
         test_results: testResultsMap[q.id] || null,
       };
     });
@@ -2056,6 +2082,7 @@ function solution() {
     const token = getToken();
     const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
     let evalData = null;
+    const visionSummary = visionCV.getFinalSummary();
 
     const effectiveDomain = domain === "Custom / Other Topic" ? (customDomain.trim() || "General Software Engineering") : domain;
     for (const base of candidateBases) {
@@ -2080,6 +2107,7 @@ function solution() {
             proctoring_data: {
               violations: proctoringManagerRef.current?.getViolationHistory() || [],
             },
+            vision_data: visionSummary,
           }),
         });
 
@@ -2096,6 +2124,13 @@ function solution() {
       evalData = await evaluateInterview(company, role, difficulty, answersPayload, apiKey, interviewType, effectiveDomain);
     }
 
+    if (evalData && !evalData.vision_data) {
+      evalData.vision_data = visionSummary;
+    }
+
+    const fallbackAnswered = answersPayload.filter((a) => a.status === "COMPLETED").length;
+    const fallbackSkipped = answersPayload.filter((a) => a.status === "SKIPPED" || a.status === "EMPTY").length;
+
     recordLocalInterviewSession({
       id: evalData.interview_id || Date.now(),
       company,
@@ -2110,10 +2145,17 @@ function solution() {
       communication_score: evalData.communication_score,
       problem_solving_score: evalData.problem_solving_score,
       grade: evalData.grade,
+      total_questions: evalData.total_questions || sessionQuestions.length,
+      answered_count: evalData.answered_count !== undefined ? evalData.answered_count : fallbackAnswered,
+      skipped_count: evalData.skipped_count !== undefined ? evalData.skipped_count : fallbackSkipped,
+      correct_count: evalData.correct_count || 0,
+      partial_count: evalData.partially_correct_count || evalData.partial_count || 0,
+      incorrect_count: evalData.incorrect_count || 0,
       strengths: evalData.strengths,
       improvements: evalData.improvements,
       detailed_feedback: evalData.detailed_feedback,
       identified_keywords: evalData.identified_keywords,
+      vision_data: evalData.vision_data || visionSummary,
     });
 
     if (proctoringManagerRef.current) {
@@ -3192,7 +3234,7 @@ function solution() {
 
                       <div className="feed-media-wrap">
                         {cameraStream && isCameraActive ? (
-                          <VideoPlayer stream={cameraStream} mirrored={cameraMirrored} />
+                          <VideoPlayer stream={cameraStream} mirrored={cameraMirrored} videoRef={candidateVideoRef} />
                         ) : (
                           <div className="feed-off-placeholder">
                             <FaVideoSlash style={{ fontSize: "20px", color: "#64748b" }} />
@@ -3200,6 +3242,18 @@ function solution() {
                           </div>
                         )}
                         <span className="live-rec-badge">● PROCTOR ACTIVE</span>
+
+                        {/* Real-time Computer Vision HUD & Status */}
+                        {cameraStream && isCameraActive && (
+                          <VisionStatusBadge
+                            isModelReady={visionCV.isModelReady}
+                            isModelLoading={visionCV.isModelLoading}
+                            faceDetected={visionCV.faceDetected}
+                            direction={visionCV.direction}
+                            expression={visionCV.expression}
+                            activeTip={visionCV.activeTip}
+                          />
+                        )}
                       </div>
 
                       {/* Integrated Audio Bar */}
@@ -3759,6 +3813,13 @@ function solution() {
                                         ...prev,
                                         [curQ.id]: val,
                                       }));
+                                      if (curQ?.id && submittedQuestions[curQ.id] === "SKIPPED" && val.trim().length > 0) {
+                                        setSubmittedQuestions((prev) => {
+                                          const copy = { ...prev };
+                                          delete copy[curQ.id];
+                                          return copy;
+                                        });
+                                      }
                                     }}
                                     onPaste={(e) => {
                                       if (proctoringManagerRef.current) {
@@ -4142,37 +4203,154 @@ function solution() {
                               </button>
                             </div>
 
-                            {currentQIndex < sessionQuestions.length - 1 ? (
+                            <div className="cockpit-footer-right" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                              {currentQIndex < sessionQuestions.length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCurrentQIndex((prev) => Math.min(prev + 1, sessionQuestions.length - 1));
+                                    setShowHint(false);
+                                    setActiveTestCaseTab(0);
+                                  }}
+                                  className="cockpit-next-btn"
+                                >
+                                  {((currentQIndex + 1) % 5 === 0)
+                                    ? `Next Round (Round ${Math.floor((currentQIndex + 1) / 5) + 1}) →`
+                                    : "Next Question →"}
+                                </button>
+                              )}
+
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setCurrentQIndex((prev) => Math.min(prev + 1, sessionQuestions.length - 1));
-                                  setShowHint(false);
-                                  setActiveTestCaseTab(0);
-                                }}
-                                className="cockpit-next-btn"
-                              >
-                                {((currentQIndex + 1) % 5 === 0)
-                                  ? `Next Round (Round ${Math.floor((currentQIndex + 1) / 5) + 1}) →`
-                                  : "Next Question →"}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={handleSubmitInterview}
+                                onClick={handleInitiateSubmit}
                                 disabled={loading}
                                 className="cockpit-submit-btn"
+                                title="Submit interview from any question and generate AI evaluation"
+                                style={{
+                                  background: "linear-gradient(135deg, #10b981, #059669)",
+                                  boxShadow: "0 2px 10px rgba(16, 185, 129, 0.3)",
+                                  whiteSpace: "nowrap",
+                                }}
                               >
                                 {loading ? <FaSpinner className="fa-spin" /> : <FaCheckCircle />}
-                                {loading ? "Evaluating AI Rubrics..." : "Submit All 4 Rounds & Generate AI Report"}
+                                {loading ? "Evaluating AI Rubrics..." : "Submit Test"}
                               </button>
-                            )}
+                            </div>
                           </div>
                         </div>
                       );
                     })()}
                   </div>
                 </div>
+
+                {/* ================= SUBMIT TEST CONFIRMATION MODAL ================= */}
+                {showSubmitConfirmModal && (
+                  <div className="interview-modal-backdrop" style={{ zIndex: 12000 }}>
+                    <div
+                      className="preflight-modal-box"
+                      style={{
+                        maxWidth: "480px",
+                        textAlign: "center",
+                        padding: "32px 28px",
+                        borderRadius: "16px",
+                        background: "var(--bg-card, #1e293b)",
+                        border: "1px solid var(--border-color, rgba(255,255,255,0.12))",
+                        boxShadow: "0 25px 60px rgba(0,0,0,0.6)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "56px",
+                          height: "56px",
+                          borderRadius: "50%",
+                          background: "rgba(16, 185, 129, 0.15)",
+                          color: "#10b981",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "26px",
+                          margin: "0 auto 16px auto",
+                        }}
+                      >
+                        <FaCheckCircle />
+                      </div>
+
+                      <h3 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "12px", color: "var(--text-primary, #f8fafc)" }}>
+                        Submit Interview?
+                      </h3>
+
+                      {(() => {
+                        const answeredCount = sessionQuestions.filter((q) => {
+                          const ans = (answers[q.id] || "").trim();
+                          const isExplicitSkipped = submittedQuestions[q.id] === "SKIPPED" && !ans;
+                          return !isExplicitSkipped && ans.length > 0;
+                        }).length;
+                        const totalCount = sessionQuestions.length;
+                        const remainingCount = Math.max(0, totalCount - answeredCount);
+
+                        return remainingCount > 0 ? (
+                          <p style={{ fontSize: "14px", lineHeight: "1.6", color: "var(--text-secondary, #94a3b8)", marginBottom: "24px" }}>
+                            You have answered <strong>{answeredCount}</strong> of <strong>{totalCount}</strong> questions.
+                            The remaining <strong>{remainingCount}</strong> {remainingCount === 1 ? "question" : "questions"} will be marked as skipped/empty.
+                            <br /><br />
+                            Are you sure you want to submit?
+                          </p>
+                        ) : (
+                          <p style={{ fontSize: "14px", lineHeight: "1.6", color: "var(--text-secondary, #94a3b8)", marginBottom: "24px" }}>
+                            You have answered all <strong>{totalCount}</strong> questions.
+                            <br /><br />
+                            Are you sure you want to submit your interview?
+                          </p>
+                        );
+                      })()}
+
+                      <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowSubmitConfirmModal(false)}
+                          disabled={loading}
+                          style={{
+                            padding: "10px 22px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border-color, rgba(255,255,255,0.2))",
+                            background: "transparent",
+                            color: "var(--text-primary, #f8fafc)",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowSubmitConfirmModal(false);
+                            handleSubmitInterview();
+                          }}
+                          disabled={loading}
+                          style={{
+                            padding: "10px 24px",
+                            borderRadius: "8px",
+                            border: "none",
+                            background: "linear-gradient(135deg, #10b981, #059669)",
+                            color: "#fff",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
+                          }}
+                        >
+                          {loading ? <FaSpinner className="fa-spin" /> : <FaCheckCircle />}
+                          {loading ? "Evaluating Rubrics..." : "Submit Test"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               /* ================= REPORT CARD ================= */
@@ -4183,7 +4361,15 @@ function solution() {
                   </div>
                   <h2>Interview Performance & AI Rubric Report</h2>
                   <p>
-                    {company} • {role} ({difficulty}) • {interviewType} • {domain === "Custom / Other Topic" ? (customDomain.trim() || "Custom Topic") : domain} • {sessionQuestions.length} Questions Completed
+                    {company} • {role} ({difficulty}) • {interviewType} • {domain === "Custom / Other Topic" ? (customDomain.trim() || "Custom Topic") : domain} • {
+                      evaluationResult?.answered_count !== undefined && evaluationResult?.total_questions
+                        ? evaluationResult.answered_count === evaluationResult.total_questions
+                          ? `${evaluationResult.total_questions} Questions Answered`
+                          : evaluationResult.answered_count === 0
+                          ? `${evaluationResult.total_questions} Questions Evaluated (0 Answered, ${evaluationResult.skipped_count || evaluationResult.total_questions} Skipped)`
+                          : `${evaluationResult.answered_count} of ${evaluationResult.total_questions} Answered • ${evaluationResult.total_questions} Questions Evaluated`
+                        : `${sessionQuestions.length} Questions Evaluated`
+                    }
                   </p>
                   <button
                     type="button"
@@ -4259,6 +4445,11 @@ function solution() {
                     })}
                   </div>
                 </div>
+
+                {/* Computer Vision Presentation Analysis Card */}
+                {evaluationResult.vision_data && (
+                  <VisionAnalysisCard visionData={evaluationResult.vision_data} />
+                )}
 
                 {/* Identified Keywords */}
                 {evaluationResult.identified_keywords && evaluationResult.identified_keywords.length > 0 && (

@@ -362,6 +362,7 @@ class SubmitInterviewRequest(BaseModel):
     answers: List[CandidateAnswer]
     warning_count: Optional[int] = 0
     proctoring_data: Optional[dict] = None
+    vision_data: Optional[dict] = None
 
 
 class QuestionFeedback(BaseModel):
@@ -478,6 +479,7 @@ class SubmitInterviewResponse(BaseModel):
     warning_count: Optional[int] = 0
     proctoring_summary: Optional[dict] = None
     analysis: Optional[dict] = None
+    vision_data: Optional[dict] = None
 
 
 class ScheduleInterviewRequest(BaseModel):
@@ -679,6 +681,7 @@ class PerformanceMetricsSchema(BaseModel):
     problem_solving_score: int
     grade: str
     total_questions: int
+    answered_count: Optional[int] = 0
     correct_count: int
     partial_count: int
     incorrect_count: int
@@ -720,6 +723,7 @@ class InterviewAnalysisResponse(BaseModel):
     recommended_topics: List[str] = []
     recommended_resources: List[RecommendedResourceItem] = []
     roadmap: List[RoadmapStep] = []
+    vision_data: Optional[dict] = None
     message: Optional[str] = None
 
 

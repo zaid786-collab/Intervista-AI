@@ -115,6 +115,7 @@ class Interview(Base):
     correct_count = Column(Integer, default=0, nullable=True)
     partial_count = Column(Integer, default=0, nullable=True)
     incorrect_count = Column(Integer, default=0, nullable=True)
+    vision_data = Column(Text, nullable=True)  # JSON string of computer vision analysis and presentation metrics
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 

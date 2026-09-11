@@ -215,10 +215,42 @@ NO_ANSWER_PATTERNS = [
 
 def is_skipped_answer(text: str, status: Optional[str] = None) -> bool:
     """Checks if question was skipped explicitly by candidate."""
-    if status and str(status).upper() in ("SKIPPED", "SKIP"):
+    if status and str(status).upper() in ("SKIPPED", "SKIP", "EMPTY"):
         return True
     trimmed = str(text or "").strip().lower()
     return trimmed in ("skip", "skipped", "i skip", "skip question", "skip this question")
+
+def is_starter_boilerplate(text: str) -> bool:
+    """Checks if answer is purely untouched starter boilerplate with no candidate solution."""
+    trimmed = str(text or "").strip()
+    if not trimmed:
+        return False
+    lower = trimmed.lower()
+    starter_markers = [
+        "// write your c++ solution here",
+        "// write your solution here",
+        "// write your code here",
+        "// your code here",
+        "/* write your solution here */",
+        "/* write your code here */",
+        "# write your python solution here",
+        "# write your code here",
+        "// your code goes here",
+        "todo: implement",
+        "pass  # write your code here",
+    ]
+    if any(marker in lower for marker in starter_markers):
+        cleaned = re.sub(r'//.*', '', trimmed)
+        cleaned = re.sub(r'/\*[\s\S]*?\*/', '', cleaned)
+        cleaned = re.sub(r'#.*', '', cleaned)
+        cleaned = re.sub(r'\s+', '', cleaned)
+        cleaned_no_sig = re.sub(r'#include<[^>]+>', '', cleaned)
+        cleaned_no_sig = re.sub(r'std::stringreverseWords\(std::strings\)\{returns;\}', '', cleaned_no_sig)
+        cleaned_no_sig = re.sub(r'functionreverseWords\(s\)\{returns;\}', '', cleaned_no_sig)
+        cleaned_no_sig = re.sub(r'classLRUCache\{[\s\S]*?\}', '', cleaned_no_sig)
+        if len(cleaned_no_sig.strip()) <= 15 or "returns;" in cleaned or "return-1;" in cleaned:
+            return True
+    return False
 
 def is_empty_answer(text: str) -> bool:
     """Checks if answer is empty or whitespace only."""
@@ -407,8 +439,8 @@ def evaluate_zero_credit_gate(
     """
     trimmed = str(answer or "").strip()
     
-    # 1. Skipped
-    if is_skipped_answer(trimmed, status):
+    # 1. Skipped, Empty, or Untouched Starter Boilerplate
+    if is_skipped_answer(trimmed, status) or is_empty_answer(trimmed) or is_starter_boilerplate(trimmed):
         return {
             "question_id": question_id,
             "question": question,
@@ -428,29 +460,6 @@ def evaluate_zero_credit_gate(
             "suggested_answer_points": expected_concepts or ["Address question requirements and theoretical principles."],
             "identified_keywords": [],
             "ideal_answer": "Provide a complete technical explanation covering core concepts and trade-offs.",
-        }
-        
-    # 2. Empty
-    if is_empty_answer(trimmed):
-        return {
-            "question_id": question_id,
-            "question": question,
-            "candidate_answer": "",
-            "status": "EMPTY",
-            "score": 0,
-            "relevance": 0,
-            "technical_accuracy": 0,
-            "completeness": 0,
-            "technical_depth": 0,
-            "communication_clarity": 0,
-            "verdict": "Empty Answer • 0/100",
-            "feedback": "Empty response provided. Zero credit assigned.",
-            "strengths": [],
-            "weaknesses": ["No response submitted."],
-            "missing_concepts": expected_concepts or ["Core concepts required for this question"],
-            "suggested_answer_points": expected_concepts or ["Explain core mechanism and provide implementation details."],
-            "identified_keywords": [],
-            "ideal_answer": "Provide a substantive, structured answer addressing the prompt.",
         }
         
     # 3. 'I don't know' / Non-answer

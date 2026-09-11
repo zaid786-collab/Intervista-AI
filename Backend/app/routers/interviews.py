@@ -770,20 +770,25 @@ def submit_mock_interview(
 
     answers_dicts = []
     for a in payload.answers:
-        ans_text = a.answer
+        ans_text = (a.answer or "").strip()
         ans_status = a.status or "SUBMITTED"
-        if a.question_id in db_answers_map:
+
+        # If payload specifies SKIPPED or EMPTY, or answer is empty: strictly mark as SKIPPED
+        if ans_status in ("SKIPPED", "EMPTY") or not ans_text:
+            ans_text = ""
+            ans_status = "SKIPPED"
+        elif a.question_id in db_answers_map and not ans_text:
             db_record = db_answers_map[a.question_id]
-            if not ans_text or ans_text.strip() == "":
-                ans_text = db_record["answer"]
-                ans_status = db_record["status"]
+            if db_record.get("answer"):
+                ans_text = db_record["answer"].strip()
+                ans_status = db_record.get("status") or "COMPLETED"
 
         answers_dicts.append({
             "question_id": a.question_id,
             "question": a.question,
-            "answer": ans_text or "",
+            "answer": ans_text,
             "status": ans_status,
-            "test_results": a.test_results,
+            "test_results": a.test_results if ans_status != "SKIPPED" else None,
         })
 
     # 2. Run Deferred Evaluation across ALL answers
@@ -878,6 +883,7 @@ def submit_mock_interview(
         correct_count=correct_count,
         partial_count=partially_correct_count,
         incorrect_count=incorrect_count,
+        vision_data=json.dumps(payload.vision_data) if payload.vision_data else None,
         report_data=json.dumps({
             "strengths": strengths,
             "improvements": improvements,
@@ -886,6 +892,7 @@ def submit_mock_interview(
             "identified_keywords": identified_keywords,
             "proctoring_summary": proctoring_summary,
             "analysis": analysis,
+            "vision_data": payload.vision_data,
             "total_questions": total_questions,
             "answered_count": answered_count,
             "skipped_count": skipped_count,
@@ -976,6 +983,7 @@ def submit_mock_interview(
         warning_count=warning_count,
         proctoring_summary=proctoring_summary,
         analysis=analysis,
+        vision_data=payload.vision_data,
     )
 
 @router.post("/evaluate-question", response_model=schemas.EvaluateQuestionResponse)
@@ -1401,6 +1409,7 @@ def get_interview_analysis(
         problem_solving_score=interview.problem_solving_score or overall_score,
         grade=interview.grade or ("A (Strong Performance)" if overall_score >= 80 else "B (Competent)" if overall_score >= 50 else "Needs Practice"),
         total_questions=total_q,
+        answered_count=answered_cnt,
         correct_count=correct_cnt,
         partial_count=partial_cnt,
         incorrect_count=incorrect_cnt,
@@ -1657,6 +1666,14 @@ def get_interview_analysis(
         ),
     ]
 
+    # 12. Extract Computer Vision Analysis Data (if available)
+    cv_data = report_data.get("vision_data")
+    if not cv_data and getattr(interview, "vision_data", None):
+        try:
+            cv_data = json.loads(interview.vision_data)
+        except Exception:
+            cv_data = None
+
     return schemas.InterviewAnalysisResponse(
         has_interview=True,
         has_data=True,
@@ -1669,6 +1686,7 @@ def get_interview_analysis(
         recommended_topics=recommended_topics,
         recommended_resources=recommended_resources,
         roadmap=roadmap,
+        vision_data=cv_data,
     )
 
 

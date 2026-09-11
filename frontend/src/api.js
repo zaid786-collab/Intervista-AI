@@ -219,6 +219,7 @@ export function recordLocalInterviewSession(session) {
     improvements: session.improvements,
     detailed_feedback: session.detailed_feedback,
     identified_keywords: session.identified_keywords,
+    vision_data: session.vision_data || null,
   };
 
   const updatedRecent = [newInterview, ...(current.recent_interviews || [])];
@@ -381,12 +382,13 @@ export async function fetchAnalysisData(interviewId) {
       communication_score: latest.communication_score || scoreNum,
       problem_solving_score: latest.problem_solving_score || scoreNum,
       grade: latest.grade || (scoreNum >= 80 ? "A (Strong Performance)" : scoreNum >= 50 ? "B (Competent)" : "Needs Practice"),
-      total_questions: 10,
-      correct_count: Math.round(scoreNum / 10),
-      partial_count: scoreNum >= 50 ? 1 : 0,
-      incorrect_count: Math.max(0, 10 - Math.round(scoreNum / 10)),
-      skipped_count: 0,
-      completion_rate: 100,
+      total_questions: latest.total_questions || 10,
+      answered_count: latest.answered_count !== undefined ? latest.answered_count : Math.max(0, (latest.total_questions || 10) - (latest.skipped_count || 0)),
+      correct_count: latest.correct_count !== undefined ? latest.correct_count : Math.round(scoreNum / 10),
+      partial_count: latest.partial_count !== undefined ? latest.partial_count : (scoreNum >= 50 ? 1 : 0),
+      incorrect_count: latest.incorrect_count !== undefined ? latest.incorrect_count : Math.max(0, (latest.total_questions || 10) - Math.round(scoreNum / 10)),
+      skipped_count: latest.skipped_count !== undefined ? latest.skipped_count : 0,
+      completion_rate: latest.total_questions ? Math.round(((latest.answered_count !== undefined ? latest.answered_count : Math.max(0, (latest.total_questions || 10) - (latest.skipped_count || 0))) / latest.total_questions) * 100) : 0,
     },
     strengths: latest.strengths && latest.strengths.length > 0 ? latest.strengths : scoreNum >= 60 ? [`Solid technical foundations in ${domain}`, "Demonstrated problem-solving approach"] : ["Not enough interview data yet."],
     improvement_areas: [
@@ -441,6 +443,7 @@ export async function fetchAnalysisData(interviewId) {
         description: `Take another interview for ${company} (${domain} • ${difficulty}) to validate your progress.`,
       },
     ],
+    vision_data: latest.vision_data || null,
   };
 }
 

@@ -19,6 +19,7 @@ import {
   FaShieldAlt,
   FaSpinner,
 } from "react-icons/fa";
+import { VisionAnalysisCard } from "../computerVision/VisionAnalysisCard";
 import "./Analysis.css";
 
 export default function Analysis() {
@@ -151,15 +152,21 @@ export default function Analysis() {
     problem_solving_score = overall_score,
     grade = "B",
     total_questions = 10,
+    answered_count = null,
     correct_count = 0,
     partial_count = 0,
     incorrect_count = 0,
     skipped_count = 0,
-    completion_rate = 100,
+    completion_rate = 0,
   } = performance;
 
   // Compute percentage segments for the visual breakdown bar
   const totalSafe = total_questions > 0 ? total_questions : 1;
+  const actualAnswered = answered_count !== null && answered_count !== undefined
+    ? answered_count
+    : Math.max(0, total_questions - skipped_count);
+  const actualCompletionRate = Math.round((actualAnswered / totalSafe) * 100);
+
   const correctPct = Math.round((correct_count / totalSafe) * 100);
   const partialPct = Math.round((partial_count / totalSafe) * 100);
   const incorrectPct = Math.round((incorrect_count / totalSafe) * 100);
@@ -231,7 +238,7 @@ export default function Analysis() {
           <div className="analysis-card analysis-breakdown-card">
             <div className="score-header">
               <span className="card-label">Performance Breakdown</span>
-              <span className="completion-badge">{completion_rate}% Completion</span>
+              <span className="completion-badge">{actualAnswered} of {total_questions} Answered ({actualCompletionRate}%)</span>
             </div>
 
             {/* Compact Visual Segmented Bar */}
@@ -302,10 +309,15 @@ export default function Analysis() {
             </div>
 
             <div className="total-questions-footnote">
-              Evaluated across <strong>{total_questions} questions</strong> for {company} ({role})
+              {total_questions} Questions Evaluated • <strong>{actualAnswered} Answered</strong> • <strong>{skipped_count} Skipped</strong> for {company} ({role})
             </div>
           </div>
         </section>
+
+        {/* Section: Computer Vision Presentation Analysis */}
+        {analysisData?.vision_data && (
+          <VisionAnalysisCard visionData={analysisData.vision_data} />
+        )}
 
         {/* Section 6 & 7: Strengths & Improvement Areas */}
         <section className="analysis-dual-grid" aria-label="Strengths and Improvement Areas">
