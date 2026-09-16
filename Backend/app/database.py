@@ -7,7 +7,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 reload_env()
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parent
 DEFAULT_DATABASE_PATH = PROJECT_ROOT / "Backend" / "intervista_ai_v2.db"
 configured_database_url = os.getenv("DATABASE_URL")
 

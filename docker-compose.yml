@@ -1,0 +1,20 @@
+services:
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: intervista-backend
+    env_file:
+      - ./Backend/.env
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: intervista-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend

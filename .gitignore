@@ -1,12 +1,24 @@
-# Environment files
+# Environment files and credentials
 .env
+.env.*
 *.env
-Backend/.env
-frontend/.env
+*.env.*
+Backend/.env*
+frontend/.env*
+!*.env.example
+!Backend/.env.example
+!frontend/.env.example
+*.pem
+*.key
+*.cert
 
 # Python
 __pycache__/
 *.py[cod]
+.venv/
+venv/
+Backend/.venv/
+Backend/venv/
 
 # Database
 *.db
@@ -15,7 +27,14 @@ __pycache__/
 
 # Frontend build
 frontend/dist/
+dist/
 node_modules/
+frontend/node_modules/
+.npm-cache/
+
+# Logs
+logs/
+*.log
 
 # IDE
 .vscode/
