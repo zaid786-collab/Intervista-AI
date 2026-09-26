@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 from app.config import reload_env
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from app.database import Base, engine
 from app import models
 from app.routers import (
