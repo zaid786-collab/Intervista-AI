@@ -72,12 +72,12 @@ def seed_db():
         # Seed Default Users if none exist
         if db.query(models.User).count() == 0:
             from app.auth import hash_password
-            print("Seeding default demo & admin accounts...")
+            print("Seeding default demo & sample accounts...")
             admin_user = models.User(
                 name="Admin User",
                 email="admin@intervista.ai",
                 hashed_password=hash_password("admin123"),
-                is_admin=True,
+                is_admin=False,
                 is_active=True,
             )
             demo_user = models.User(
@@ -91,6 +91,12 @@ def seed_db():
             db.add(demo_user)
             db.commit()
             print("Default users created: admin@intervista.ai / admin123, demo@intervista.ai / demo123")
+
+        # Demote legacy demo admin if it exists
+        legacy_admin = db.query(models.User).filter(models.User.email == "admin@intervista.ai").first()
+        if legacy_admin and legacy_admin.is_admin:
+            legacy_admin.is_admin = False
+            db.commit()
 
         print("Database seed complete!")
 

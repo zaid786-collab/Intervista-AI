@@ -63,11 +63,46 @@ def ensure_db_columns():
                 pass
 
 
+def normalize_admin_privileges():
+    """Idempotently ensures that ONLY the master admin email (zaidkhan24082006@gmail.com)
+    has is_admin=True, and every other user account has is_admin=False.
+    Safe to run repeatedly on startup without hardcoded credentials.
+    """
+    from app.database import SessionLocal
+    from app.dependencies import MASTER_ADMIN_EMAIL, is_master_admin_email
+    import logging
+
+    log = logging.getLogger(__name__)
+    db = SessionLocal()
+    try:
+        # Demote any non-master user who currently has is_admin=True
+        all_admins = db.query(models.User).filter(models.User.is_admin.is_(True)).all()
+        for user in all_admins:
+            if not is_master_admin_email(user.email):
+                user.is_admin = False
+                log.info("Demoted non-master admin account: %s", user.email)
+
+        # If the master admin account exists, ensure is_admin=True
+        all_users = db.query(models.User).all()
+        for user in all_users:
+            if is_master_admin_email(user.email) and not user.is_admin:
+                user.is_admin = True
+                log.info("Promoted master admin account: %s", user.email)
+
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        log.warning("Could not normalize admin privileges during startup: %s", exc)
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure all columns exist and seed default mock data if empty
+    # Ensure all columns exist, seed default mock data if empty, and normalize admin role
     ensure_db_columns()
     seed_db()
+    normalize_admin_privileges()
     yield
 
 

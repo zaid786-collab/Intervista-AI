@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.auth import create_access_token, hash_password, verify_password
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, is_master_admin_email
 from app.models import utcnow
 from app.services.email_service import send_verification_otp, send_login_welcome_email, is_smtp_configured
 
@@ -100,14 +100,12 @@ def signup(payload: schemas.SignupRequest, db: Session = Depends(get_db)):
             return schemas.SignupResponse(message=msg, email=existing.email)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="An account with this email already exists. Please log in.")
 
-    # The very first user to ever sign up is automatically made an admin.
-    is_first_user = db.query(models.User).count() == 0
-
+    # Only the designated master admin email receives admin privileges
     user = models.User(
         name=payload.name.strip() or email.split("@")[0],
         email=email,
         hashed_password=hash_password(payload.password),
-        is_admin=is_first_user,
+        is_admin=is_master_admin_email(email),
     )
     db.add(user)
     db.commit()
@@ -143,8 +141,13 @@ def verify_email(payload: schemas.VerifyEmailRequest, db: Session = Depends(get_
     if not is_valid_otp and not is_dev_code:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code. Please check your email or try 123456.")
 
+    expected_admin = is_master_admin_email(user.email)
+    if user.is_admin != expected_admin:
+        user.is_admin = expected_admin
+
     db.query(models.EmailVerificationOTP).filter(models.EmailVerificationOTP.user_id == user.id).delete()
     db.commit()
+    db.refresh(user)
     token = create_access_token(subject=str(user.id))
     return schemas.TokenResponse(access_token=token, user=user)
 
@@ -173,6 +176,13 @@ def login(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has been disabled.")
+
+    # Ensure admin status strictly matches master admin whitelist
+    expected_admin = is_master_admin_email(user.email)
+    if user.is_admin != expected_admin:
+        user.is_admin = expected_admin
+        db.commit()
+        db.refresh(user)
 
     # In dev mode or valid password, clear pending OTP on login to let user in
     db.query(models.EmailVerificationOTP).filter(models.EmailVerificationOTP.user_id == user.id).delete()
@@ -461,13 +471,18 @@ def oauth_callback(
         if avatar and not user.avatar:
             user.avatar = avatar
 
+        # Ensure admin status strictly matches master admin whitelist
+        expected_admin = is_master_admin_email(user.email)
+        if user.is_admin != expected_admin:
+            user.is_admin = expected_admin
+
         # Clear any pending signup verification OTPs since email is OAuth-verified
         db.query(models.EmailVerificationOTP).filter(models.EmailVerificationOTP.user_id == user.id).delete()
         db.commit()
         db.refresh(user)
     else:
         # 2. New account creation for verified OAuth identity
-        is_first_user = db.query(models.User).count() == 0
+        is_admin = is_master_admin_email(email)
         user = models.User(
             name=name or email.split("@")[0],
             email=email,
@@ -476,7 +491,7 @@ def oauth_callback(
             github_id=provider_user_id if provider_clean == "github" else None,
             auth_provider=provider_clean,
             avatar=avatar,
-            is_admin=is_first_user,
+            is_admin=is_admin,
         )
         db.add(user)
         try:
@@ -489,6 +504,11 @@ def oauth_callback(
                 user = db.query(models.User).filter(models.User.github_id == provider_user_id).first()
             if not user:
                 raise HTTPException(status_code=500, detail="Failed to persist user profile.")
+            expected_admin = is_master_admin_email(user.email)
+            if user.is_admin != expected_admin:
+                user.is_admin = expected_admin
+                db.commit()
+                db.refresh(user)
 
     logger.info("[OAUTH_STEP_8_DATABASE_LOOKUP_CREATE_COMPLETED] user_id=%s, is_active=%s", user.id, user.is_active)
 

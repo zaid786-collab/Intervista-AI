@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.database import get_db
-from app.dependencies import get_current_admin
+from app.dependencies import get_current_admin, is_master_admin_email
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -74,19 +74,44 @@ def update_user(
     db: Session = Depends(get_db),
     admin: models.User = Depends(get_current_admin),
 ):
-    """Admin-only: promote/demote to admin, enable/disable an account, or
-    set a user's progress percentage (useful once the admin-side progress
-    bar view is built)."""
+    """Admin-only: enable/disable an account, or set a user's progress percentage.
+    Admin promotion/demotion is strictly disallowed: only zaidkhan24082006@gmail.com can hold admin rights.
+    """
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    if user.id == admin.id and payload.is_admin is False:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot remove your own admin access.")
+    is_target_master = is_master_admin_email(user.email)
+
+    # Master admin cannot be demoted or disabled
+    if is_target_master:
+        if payload.is_admin is False:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The master administrator account cannot be demoted.",
+            )
+        if payload.is_active is False:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The master administrator account cannot be disabled.",
+            )
+
+    # Prevent granting admin privileges to any other user
+    if payload.is_admin is True and not is_target_master:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Admin privileges cannot be granted to this account. Only the master admin is permitted.",
+        )
 
     update_data = payload.model_dump(exclude_unset=True)
+    # Strip is_admin from arbitrary payload dict so it cannot be directly elevated
+    update_data.pop("is_admin", None)
+
     for field, value in update_data.items():
         setattr(user, field, value)
+
+    # Invariant: only master admin has is_admin=True
+    user.is_admin = is_target_master
 
     db.commit()
     db.refresh(user)
@@ -99,12 +124,15 @@ def delete_user(
     db: Session = Depends(get_db),
     admin: models.User = Depends(get_current_admin),
 ):
-    if user_id == admin.id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot delete your own account.")
-
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if is_master_admin_email(user.email) or user.id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The master administrator account cannot be deleted.",
+        )
 
     db.delete(user)
     db.commit()

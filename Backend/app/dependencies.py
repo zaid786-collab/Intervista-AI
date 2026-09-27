@@ -7,6 +7,16 @@ from app import models
 from app.auth import decode_access_token
 from app.database import get_db
 
+MASTER_ADMIN_EMAIL = "zaidkhan24082006@gmail.com"
+
+
+def is_master_admin_email(email: Optional[str]) -> bool:
+    """Case-insensitive, stripped check against the sole master admin email."""
+    if not email:
+        return False
+    return email.lower().strip() == MASTER_ADMIN_EMAIL.lower()
+
+
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
@@ -38,7 +48,7 @@ def get_current_user(
 
 
 def get_current_admin(current_user: models.User = Depends(get_current_user)) -> models.User:
-    if not cast(bool, current_user.is_admin):
+    if not cast(bool, current_user.is_admin) or not is_master_admin_email(current_user.email):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return current_user
 
