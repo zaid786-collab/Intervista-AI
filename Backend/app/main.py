@@ -26,7 +26,14 @@ Base.metadata.create_all(bind=engine)
 
 def ensure_db_columns():
     """Idempotently adds missing columns to existing SQLite/Postgres tables."""
-    from sqlalchemy import text
+    from sqlalchemy import text, inspect
+    try:
+        insp = inspect(engine)
+        user_cols = {c["name"] for c in insp.get_columns("users")}
+        interview_cols = {c["name"] for c in insp.get_columns("interviews")}
+    except Exception:
+        user_cols, interview_cols = set(), set()
+
     with engine.connect() as conn:
         for col, col_type in [
             ("technical_score", "INTEGER"),
@@ -44,23 +51,34 @@ def ensure_db_columns():
             ("correct_count", "INTEGER DEFAULT 0"),
             ("partial_count", "INTEGER DEFAULT 0"),
             ("incorrect_count", "INTEGER DEFAULT 0"),
+            ("started_at", "TIMESTAMP"),
+            ("ended_at", "TIMESTAMP"),
+            ("duration_seconds", "INTEGER"),
         ]:
-            try:
-                conn.execute(text(f"ALTER TABLE interviews ADD COLUMN {col} {col_type}"))
-                conn.commit()
-            except Exception:
-                pass
+            if col not in interview_cols:
+                try:
+                    conn.execute(text(f"ALTER TABLE interviews ADD COLUMN {col} {col_type}"))
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
 
         for col, col_type in [
             ("subscription_plan", "VARCHAR(50) DEFAULT 'free'"),
             ("subscription_cycle", "VARCHAR(20) DEFAULT 'monthly'"),
-            ("subscription_expires_at", "DATETIME"),
+            ("subscription_expires_at", "TIMESTAMP"),
+            ("last_login_at", "TIMESTAMP"),
+            ("last_active_at", "TIMESTAMP"),
+            ("last_login_ip", "VARCHAR(100)"),
+            ("last_login_user_agent", "VARCHAR(500)"),
+            ("is_blocked", "BOOLEAN DEFAULT FALSE"),
+            ("block_reason", "VARCHAR(500)"),
         ]:
-            try:
-                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
-                conn.commit()
-            except Exception:
-                pass
+            if col not in user_cols:
+                try:
+                    conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
 
 
 def normalize_admin_privileges():
