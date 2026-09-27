@@ -4229,7 +4229,6 @@ function solution() {
                                 style={{
                                   background: "linear-gradient(135deg, #10b981, #059669)",
                                   boxShadow: "0 2px 10px rgba(16, 185, 129, 0.3)",
-                                  whiteSpace: "nowrap",
                                 }}
                               >
                                 {loading ? <FaSpinner className="fa-spin" /> : <FaCheckCircle />}
