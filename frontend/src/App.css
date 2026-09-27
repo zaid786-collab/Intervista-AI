@@ -12,6 +12,7 @@ html {
   width: 100%;
   min-height: 100%;
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -118,10 +119,10 @@ p {
 
 
 /* =========================
-   MOBILE
+   TABLET & MOBILE
 ========================= */
 
-@media (max-width: 940px) {
+@media (max-width: 1024px) {
   .home,
   .resource-page,
   .resources-page {
