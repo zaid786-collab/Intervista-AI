@@ -49,7 +49,7 @@ import {
 import { useAuth } from "../../context/useAuth";
 import { generateInterviewPDF } from "../../utils/pdfGenerator";
 import { evaluateInterview, evaluateSingleQuestion, evaluateQuestionAPI } from "../../utils/evaluator";
-import { getToken, recordLocalInterviewSession, recordLocalScheduledInterview } from "../../api";
+import { getToken, recordLocalInterviewSession, recordLocalScheduledInterview, getApiBaseUrl } from "../../api";
 import { STRUCTURED_DSA_BY_ROLE } from "../../utils/dsaQuestions";
 import { runTestCases } from "../../utils/codeRunner";
 import { ProctoringManager, PROCTORING_VIOLATION_TYPES } from "../../utils/ProctoringManager";
@@ -1598,30 +1598,26 @@ function solution() {
 
     setIsSubmittingQuestion(true);
     const token = getToken();
-    const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+    const apiBase = getApiBaseUrl();
 
     try {
-      for (const base of candidateBases) {
-        try {
-          const url = base ? `${base}/api/interviews/save-answer` : `/api/interviews/save-answer`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({
-              session_id: activeSessionId,
-              question_id: q.id,
-              question: q.question,
-              candidate_answer: currentAns,
-              status: "COMPLETED",
-            }),
-          });
-          if (res.ok) break;
-        } catch {
-          // fallback to next base
-        }
+      try {
+        await fetch(`${apiBase}/api/interviews/save-answer`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            session_id: activeSessionId,
+            question_id: q.id,
+            question: q.question,
+            candidate_answer: currentAns,
+            status: "COMPLETED",
+          }),
+        });
+      } catch {
+        // gracefully continue
       }
 
       setSubmittedQuestions((prev) => ({
@@ -1653,30 +1649,26 @@ function solution() {
 
     setIsSubmittingQuestion(true);
     const token = getToken();
-    const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+    const apiBase = getApiBaseUrl();
 
     try {
-      for (const base of candidateBases) {
-        try {
-          const url = base ? `${base}/api/interviews/save-answer` : `/api/interviews/save-answer`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({
-              session_id: activeSessionId,
-              question_id: q.id,
-              question: q.question,
-              candidate_answer: "",
-              status: "SKIPPED",
-            }),
-          });
-          if (res.ok) break;
-        } catch {
-          // next base
-        }
+      try {
+        await fetch(`${apiBase}/api/interviews/save-answer`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            session_id: activeSessionId,
+            question_id: q.id,
+            question: q.question,
+            candidate_answer: "",
+            status: "SKIPPED",
+          }),
+        });
+      } catch {
+        // gracefully continue
       }
 
       setSubmittedQuestions((prev) => ({
@@ -1893,7 +1885,7 @@ function solution() {
 
     try {
       const token = getToken();
-      const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+      const apiBase = getApiBaseUrl();
       let fetchedQuestions = null;
 
       const effectiveDomain = domain === "Custom / Other Topic" ? (customDomain.trim() || "General Software Engineering") : domain;
@@ -1910,31 +1902,27 @@ function solution() {
 
       let sessionIdentifier = `intv_sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-      for (const base of candidateBases) {
-        try {
-          const url = base ? `${base}/api/interviews/start` : `/api/interviews/start`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify(payload),
-          });
+      try {
+        const res = await fetch(`${apiBase}/api/interviews/start`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(payload),
+        });
 
-          if (res.ok) {
-            const data = await res.json();
-            if (data.session_id) {
-              sessionIdentifier = data.session_id;
-            }
-            if (data.questions && data.questions.length > 0) {
-              fetchedQuestions = data.questions;
-              break;
-            }
+        if (res.ok) {
+          const data = await res.json();
+          if (data.session_id) {
+            sessionIdentifier = data.session_id;
           }
-        } catch {
-          // continue to next base URL
+          if (data.questions && data.questions.length > 0) {
+            fetchedQuestions = data.questions;
+          }
         }
+      } catch {
+        // continue to fallback question generation if server unreachable
       }
 
       // Fallback if backend unreachable
@@ -2080,44 +2068,40 @@ function solution() {
     });
 
     const token = getToken();
-    const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+    const apiBase = getApiBaseUrl();
     let evalData = null;
     const visionSummary = visionCV.getFinalSummary();
 
     const effectiveDomain = domain === "Custom / Other Topic" ? (customDomain.trim() || "General Software Engineering") : domain;
-    for (const base of candidateBases) {
-      try {
-        const url = base ? `${base}/api/interviews/submit` : `/api/interviews/submit`;
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    try {
+      const res = await fetch(`${apiBase}/api/interviews/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          session_id: activeSessionId,
+          company,
+          role,
+          difficulty,
+          interview_type: interviewType,
+          domain: effectiveDomain,
+          duration_minutes: activeMinutes,
+          answers: answersPayload,
+          warning_count: proctoringManagerRef.current?.getWarningCount() || 0,
+          proctoring_data: {
+            violations: proctoringManagerRef.current?.getViolationHistory() || [],
           },
-          body: JSON.stringify({
-            session_id: activeSessionId,
-            company,
-            role,
-            difficulty,
-            interview_type: interviewType,
-            domain: effectiveDomain,
-            duration_minutes: activeMinutes,
-            answers: answersPayload,
-            warning_count: proctoringManagerRef.current?.getWarningCount() || 0,
-            proctoring_data: {
-              violations: proctoringManagerRef.current?.getViolationHistory() || [],
-            },
-            vision_data: visionSummary,
-          }),
-        });
+          vision_data: visionSummary,
+        }),
+      });
 
-        if (res.ok) {
-          evalData = await res.json();
-          break;
-        }
-      } catch {
-        // fallback
+      if (res.ok) {
+        evalData = await res.json();
       }
+    } catch {
+      // fallback
     }
 
     if (!evalData) {
@@ -2187,29 +2171,25 @@ function solution() {
 
     setLoading(true);
     const token = getToken();
-    const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+    const apiBase = getApiBaseUrl();
 
-    for (const base of candidateBases) {
-      try {
-        const url = base ? `${base}/api/interviews/schedule` : `/api/interviews/schedule`;
-        await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            company,
-            role,
-            date: scheduleDate,
-            time: scheduleTime,
-            mode: scheduleMode,
-          }),
-        });
-        break;
-      } catch {
-        // fallback
-      }
+    try {
+      await fetch(`${apiBase}/api/interviews/schedule`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          company,
+          role,
+          date: scheduleDate,
+          time: scheduleTime,
+          mode: scheduleMode,
+        }),
+      });
+    } catch {
+      // fallback
     }
 
     recordLocalScheduledInterview({

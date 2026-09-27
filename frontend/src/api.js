@@ -1,9 +1,23 @@
 // Central place for all calls to the Intervista AI backend.
 // Supports automatic fallback across 127.0.0.1, localhost, and Vite proxy.
 
-let activeBaseUrl =
-  (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL) ||
-  "http://127.0.0.1:8000";
+export const PRODUCTION_API_URL = "https://intervista-ai.onrender.com";
+export const LOCAL_API_URL = "http://127.0.0.1:8000";
+
+export function getApiBaseUrl() {
+  if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/+$/, "");
+  }
+  if (
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1" ||
+      window.location.hostname === "0.0.0.0")
+  ) {
+    return LOCAL_API_URL;
+  }
+  return PRODUCTION_API_URL;
+}
 
 const TOKEN_KEY = "intervista-token";
 
@@ -32,38 +46,23 @@ async function request(path, { method = "GET", body, auth = false } = {}) {
   }
 
   const payload = body ? JSON.stringify(body) : undefined;
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+
   let response;
-
-  const candidateBases = [
-    activeBaseUrl,
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
-    "",
-  ];
-
-  let lastError = null;
-
-  for (const base of candidateBases) {
-    try {
-      const url = base ? `${base}${path}` : path;
-      response = await fetch(url, {
-        method,
-        headers,
-        body: payload,
-        signal: typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(15000) : undefined,
-      });
-
-      if (response) {
-        activeBaseUrl = base; // memorize working base URL
-        break;
-      }
-    } catch (err) {
-      lastError = err;
-    }
+  try {
+    response = await fetch(url, {
+      method,
+      headers,
+      body: payload,
+      signal: typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(25000) : undefined,
+    });
+  } catch (err) {
+    throw new Error(err?.message || `Cannot connect to Intervista AI backend at ${baseUrl}.`);
   }
 
   if (!response) {
-    throw new Error(lastError?.message || "Cannot connect to Intervista AI backend. Please ensure the backend server is running on port 8000.");
+    throw new Error(`Cannot connect to Intervista AI backend at ${baseUrl}.`);
   }
 
   // 204 No Content has no body to parse
