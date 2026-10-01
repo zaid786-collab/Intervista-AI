@@ -180,8 +180,8 @@ CURATED_QUESTION_BANKS = {
                     "expected_key_points": ["In-place two-pointer reversal", "O(N) time complexity", "O(1) auxiliary memory space", "Edge cases: leading, trailing, and multiple spaces"],
                     "function_name": "reverseWords",
                     "starter_templates": {
-                        "cpp": "#include <string>\n#include <algorithm>\n\nstd::string reverseWords(std::string s) {\n    // Write your C++ solution here\n    return s;\n}",
-                        "javascript": "function reverseWords(s) {\n    return s.trim().split(/\\s+/).reverse().join(' ');\n}",
+                        "cpp": "#include <string>\n#include <algorithm>\n\nstd::string reverseWords(std::string s) {\n    // Write your C++ solution here\n    return \"\";\n}",
+                        "javascript": "function reverseWords(s) {\n    // Write your JavaScript solution here\n    return \"\";\n}",
                     },
                     "test_cases": [
                         {"id": 1, "name": "Standard String", "inputStr": "\"the sky is blue\"", "expectedOutputStr": "\"blue is sky the\""},
@@ -197,7 +197,7 @@ CURATED_QUESTION_BANKS = {
                     "function_name": "LRUCache",
                     "starter_templates": {
                         "cpp": "#include <unordered_map>\n#include <list>\n\nclass LRUCache {\n    int capacity;\n    std::list<std::pair<int, int>> items;\n    std::unordered_map<int, std::list<std::pair<int, int>>::iterator> cache;\npublic:\n    LRUCache(int capacity) : capacity(capacity) {}\n    int get(int key) {\n        // Your code here\n        return -1;\n    }\n    void put(int key, int value) {\n        // Your code here\n    }\n};",
-                        "javascript": "class LRUCache {\n    constructor(capacity) {\n        this.capacity = capacity;\n        this.cache = new Map();\n    }\n    get(key) {\n        if (!this.cache.has(key)) return -1;\n        const v = this.cache.get(key);\n        this.cache.delete(key);\n        this.cache.set(key, v);\n        return v;\n    }\n    put(key, val) {\n        if (this.cache.has(key)) this.cache.delete(key);\n        else if (this.cache.size >= this.capacity) this.cache.delete(this.cache.keys().next().value);\n        this.cache.set(key, val);\n    }\n}"
+                        "javascript": "class LRUCache {\n    constructor(capacity) {\n        this.capacity = capacity;\n        // Initialize data structures\n    }\n    get(key) {\n        // Write your solution here\n        return -1;\n    }\n    put(key, val) {\n        // Write your solution here\n    }\n}"
                     },
                     "test_cases": [
                         {"id": 1, "name": "Capacity Test", "inputStr": "put(1,1), put(2,2), get(1)", "expectedOutputStr": "1"}

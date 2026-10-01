@@ -127,10 +127,17 @@ def generate_interview_pdf_report(
     role = interview_data.get("role", "Software Engineer")
     duration = interview_data.get("duration_minutes", 45)
     difficulty = interview_data.get("difficulty", "Medium")
-    overall_score = interview_data.get("score_num") or interview_data.get("score") or 0
-    if isinstance(overall_score, str):
-        overall_score = int(overall_score.replace("%", "")) if overall_score.replace("%", "").isdigit() else 75
-    grade = interview_data.get("grade") or ("A (Strong Hire)" if overall_score >= 80 else "B+ (Leaning Hire)")
+    raw_score = interview_data.get("score_num")
+    if raw_score is None:
+        raw_score = interview_data.get("score")
+    if isinstance(raw_score, str):
+        cleaned = raw_score.replace("%", "").strip()
+        overall_score = int(cleaned) if cleaned.isdigit() else 0
+    elif isinstance(raw_score, (int, float)):
+        overall_score = int(raw_score)
+    else:
+        overall_score = 0
+    grade = interview_data.get("grade") or ("A (Strong Hire)" if overall_score >= 80 else "B+ (Leaning Hire)" if overall_score >= 50 else "F (Incomplete / Unsatisfactory)")
 
     meta_data = [
         [
@@ -158,9 +165,9 @@ def generate_interview_pdf_report(
     elements.append(Spacer(1, 14))
 
     # 3. EXECUTIVE SCORECARD CARDS
-    tech_score = interview_data.get("technical_score") or round(overall_score * 1.02)
-    comm_score = interview_data.get("communication_score") or round(overall_score * 0.98)
-    prob_score = interview_data.get("problem_solving_score") or round(overall_score * 0.95)
+    tech_score = interview_data["technical_score"] if interview_data.get("technical_score") is not None else overall_score
+    comm_score = interview_data["communication_score"] if interview_data.get("communication_score") is not None else overall_score
+    prob_score = interview_data["problem_solving_score"] if interview_data.get("problem_solving_score") is not None else overall_score
 
     scorecard_data = [
         [
@@ -255,7 +262,7 @@ def generate_interview_pdf_report(
         elements.append(Paragraph("<b>📝 Question-by-Question Detailed Analysis & Marks</b>", section_header_style))
 
         for idx, qf in enumerate(detailed_feedback, 1):
-            q_score = qf.get("score", 80)
+            q_score = qf["score"] if qf.get("score") is not None else 0
             score_color = "#16a34a" if q_score >= 80 else "#d97706" if q_score >= 65 else "#dc2626"
             q_text = qf.get("question", f"Question {idx}")
             fb_text = qf.get("feedback", "Good fundamental answer.")

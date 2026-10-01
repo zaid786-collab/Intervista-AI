@@ -40,6 +40,12 @@ export const STRUCTURED_DSA_BY_ROLE = {
       ],
       function_name: "maxClicksInWindow",
       starter_templates: {
+        javascript: "function maxClicksInWindow(timestamps) {\n  // Write your solution here\n  return 0;\n}",
+        python: "def max_clicks_in_window(timestamps: list[int]) -> int:\n    # Write your solution here\n    return 0",
+        cpp: "int maxClicksInWindow(vector<int>& timestamps) {\n    // Write your solution here\n    return 0;\n}",
+        java: "public int maxClicksInWindow(int[] timestamps) {\n    // Write your solution here\n    return 0;\n}",
+      },
+      reference_solutions: {
         javascript: `function maxClicksInWindow(timestamps) {
   // Implement O(n) two-pointer sliding window
   let left = 0;
@@ -152,6 +158,12 @@ export const STRUCTURED_DSA_BY_ROLE = {
       ],
       function_name: "reconcileKeys",
       starter_templates: {
+        javascript: "function reconcileKeys(oldKeys, newKeys) {\n  // Write your solution here\n  return { retained: 0, inserted: 0, deleted: 0 };\n}",
+        python: "def reconcile_keys(old_keys: list[str], new_keys: list[str]) -> dict:\n    # Write your solution here\n    return {\"retained\": 0, \"inserted\": 0, \"deleted\": 0}",
+        cpp: "// C++ implementation using std::unordered_set\n// Write your solution here",
+        java: "// Java implementation using HashSet\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function reconcileKeys(oldKeys, newKeys) {
   const oldSet = new Set(oldKeys);
   const newSet = new Set(newKeys);
@@ -239,6 +251,12 @@ export const STRUCTURED_DSA_BY_ROLE = {
       ],
       function_name: "hasCircularModuleDependency",
       starter_templates: {
+        javascript: "function hasCircularModuleDependency(numModules, dependencies) {\n  // Write your solution here\n  return false;\n}",
+        python: "def has_circular_module_dependency(num_modules: int, dependencies: list[list[int]]) -> bool:\n    # Write your solution here\n    return False",
+        cpp: "bool hasCircularModuleDependency(int numModules, vector<pair<int, int>>& dependencies) {\n    // Write your solution here\n    return false;\n}",
+        java: "public boolean hasCircularModuleDependency(int numModules, int[][] dependencies) {\n    // Write your solution here\n    return false;\n}",
+      },
+      reference_solutions: {
         javascript: `function hasCircularModuleDependency(numModules, dependencies) {
   // 0 = unvisited (White), 1 = visiting (Gray), 2 = visited (Black)
   const adj = Array.from({ length: numModules }, () => []);
@@ -339,6 +357,12 @@ export const STRUCTURED_DSA_BY_ROLE = {
       ],
       function_name: "autocompletePrefix",
       starter_templates: {
+        javascript: "function autocompletePrefix(dictionary, prefix) {\n  // Write your solution here\n  return [];\n}",
+        python: "def autocomplete_prefix(dictionary: list[str], prefix: str) -> list[str]:\n    # Write your solution here\n    return []",
+        cpp: "vector<string> autocompletePrefix(vector<string>& dictionary, string prefix) {\n    // Write your solution here\n    return {};\n}",
+        java: "public List<String> autocompletePrefix(String[] dictionary, String prefix) {\n    // Write your solution here\n    return new ArrayList<>();\n}",
+      },
+      reference_solutions: {
         javascript: `function autocompletePrefix(dictionary, prefix) {
   // Return matching words sorted lexicographically
   const matches = dictionary.filter((word) => word.startsWith(prefix));
@@ -392,6 +416,12 @@ export const STRUCTURED_DSA_BY_ROLE = {
       ],
       function_name: "calculateVirtualWindow",
       starter_templates: {
+        javascript: "function calculateVirtualWindow(totalItems, itemHeightPx, scrollTopPx, viewportHeightPx, overscanCount = 2) {\n  // Write your solution here\n  return { startIndex: 0, endIndex: 0, offsetYPx: 0 };\n}",
+        python: "def calculate_virtual_window(total_items: int, item_height_px: int, scroll_top_px: int, viewport_height_px: int, overscan_count: int = 2) -> dict:\n    # Write your solution here\n    return {\"startIndex\": 0, \"endIndex\": 0, \"offsetYPx\": 0}",
+        cpp: "// C++ implementation for virtual window calculation\n// Write your solution here",
+        java: "// Java implementation for virtual window calculation\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function calculateVirtualWindow(totalItems, itemHeightPx, scrollTopPx, viewportHeightPx, overscanCount = 2) {
   const visibleStart = Math.floor(scrollTopPx / itemHeightPx);
   const visibleCount = Math.ceil(viewportHeightPx / itemHeightPx);
@@ -465,6 +495,12 @@ export const STRUCTURED_DSA_BY_ROLE = {
       ],
       function_name: "executeLRUOperations",
       starter_templates: {
+        javascript: "function executeLRUOperations(capacity, operations) {\n  // Write your solution here\n  return [];\n}",
+        python: "def execute_lru_operations(capacity: int, operations: list) -> list:\n    # Write your solution here\n    return []",
+        cpp: "// C++ LRU Cache operations\n// Write your solution here",
+        java: "// Java LRU Cache operations\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function executeLRUOperations(capacity, operations) {
   const cache = new Map();
   const results = [];
@@ -565,6 +601,12 @@ def execute_lru_operations(capacity: int, operations: list) -> list:
       ],
       function_name: "dijkstraShortestPath",
       starter_templates: {
+        javascript: "function dijkstraShortestPath(numNodes, edges) {\n  // Write your solution here\n  return [];\n}",
+        python: "def dijkstra_shortest_path(num_nodes: int, edges: list) -> list:\n    # Write your solution here\n    return []",
+        cpp: "// C++ Dijkstra implementation\n// Write your solution here",
+        java: "// Java Dijkstra implementation\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function dijkstraShortestPath(numNodes, edges) {
   const adj = Array.from({ length: numNodes }, () => []);
   for (const [u, v, w] of edges) {
@@ -649,6 +691,12 @@ def dijkstra_shortest_path(num_nodes: int, edges: list[list[int]]) -> list[int]:
       ],
       function_name: "rateLimiterSlidingWindow",
       starter_templates: {
+        javascript: "function rateLimiterSlidingWindow(timestamps, maxLimit, windowSec) {\n  // Write your solution here\n  return [];\n}",
+        python: "def rate_limiter_sliding_window(timestamps: list, max_limit: int, window_sec: int) -> list:\n    # Write your solution here\n    return []",
+        cpp: "// C++ Sliding Window Rate Limiter\n// Write your solution here",
+        java: "// Java Sliding Window Rate Limiter\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function rateLimiterSlidingWindow(timestamps, maxLimit, windowSec) {
   const queue = [];
   const results = [];
@@ -714,6 +762,12 @@ def rate_limiter_sliding_window(timestamps: list[int], max_limit: int, window_se
       constraints: ["1 <= numTx <= 500", "0 <= edges.length <= 2000"],
       function_name: "detectDeadlockCycle",
       starter_templates: {
+        javascript: "function detectDeadlockCycle(numTx, edges) {\n  // Write your solution here\n  return false;\n}",
+        python: "def detect_deadlock_cycle(num_tx: int, edges: list[list[int]]) -> bool:\n    # Write your solution here\n    return False",
+        cpp: "// C++ Wait-For Graph cycle detection\n// Write your solution here",
+        java: "// Java Wait-For Graph cycle detection\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function detectDeadlockCycle(numTx, edges) {
   const adj = Array.from({ length: numTx }, () => []);
   for (const [u, v] of edges) adj[u].push(v);
@@ -789,6 +843,12 @@ def rate_limiter_sliding_window(timestamps: list[int], max_limit: int, window_se
       constraints: ["1 <= events.length <= 10^5"],
       function_name: "deduplicateTransactions",
       starter_templates: {
+        javascript: "function deduplicateTransactions(events) {\n  // Write your solution here\n  return [];\n}",
+        python: "def deduplicate_transactions(events: list[dict]) -> list[dict]:\n    # Write your solution here\n    return []",
+        cpp: "// C++ Transaction deduplication\n// Write your solution here",
+        java: "// Java Transaction deduplication\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function deduplicateTransactions(events) {
   const seen = new Set();
   const uniqueEvents = [];
@@ -845,6 +905,12 @@ def rate_limiter_sliding_window(timestamps: list[int], max_limit: int, window_se
       constraints: ["0 <= addSet.length, removeSet.length <= 10^4"],
       function_name: "resolveLWWCRDT",
       starter_templates: {
+        javascript: "function resolveLWWCRDT(addSet, removeSet) {\n  // Write your solution here\n  return [];\n}",
+        python: "def resolve_lww_crdt(add_set: list[dict], remove_set: list[dict]) -> list[str]:\n    # Write your solution here\n    return []",
+        cpp: "// C++ LWW Element-Set CRDT\n// Write your solution here",
+        java: "// Java LWW Element-Set CRDT\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function resolveLWWCRDT(addSet, removeSet) {
   const addMap = new Map();
   const remMap = new Map();
@@ -920,6 +986,12 @@ def rate_limiter_sliding_window(timestamps: list[int], max_limit: int, window_se
       constraints: ["1 <= documents.length <= 10^4", "1 <= query.length <= 100"],
       function_name: "invertedIndexSearch",
       starter_templates: {
+        javascript: "function invertedIndexSearch(documents, query) {\n  // Write your solution here\n  return [];\n}",
+        python: "def inverted_index_search(documents: list[dict], query: str) -> list[int]:\n    # Write your solution here\n    return []",
+        cpp: "// C++ Inverted Index\n// Write your solution here",
+        java: "// Java Inverted Index\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function invertedIndexSearch(documents, query) {
   const index = new Map();
 
@@ -996,6 +1068,12 @@ def rate_limiter_sliding_window(timestamps: list[int], max_limit: int, window_se
       constraints: ["1 <= capacity <= 5000"],
       function_name: "ringBufferQueue",
       starter_templates: {
+        javascript: "function ringBufferQueue(capacity, ops) {\n  // Write your solution here\n  return [];\n}",
+        python: "def ring_buffer_queue(capacity: int, ops: list) -> list:\n    # Write your solution here\n    return []",
+        cpp: "// C++ Ring Buffer Queue\n// Write your solution here",
+        java: "// Java Ring Buffer Queue\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function ringBufferQueue(capacity, ops) {
   const buffer = [];
   const popped = [];
@@ -1059,6 +1137,12 @@ def rate_limiter_sliding_window(timestamps: list[int], max_limit: int, window_se
       constraints: ["1 <= codeVerifier.length <= 300"],
       function_name: "isValidPKCEVerifier",
       starter_templates: {
+        javascript: "function isValidPKCEVerifier(codeVerifier) {\n  // Write your solution here\n  return false;\n}",
+        python: "def is_valid_pkce_verifier(code_verifier: str) -> bool:\n    # Write your solution here\n    return False",
+        cpp: "// C++ RFC 7636 PKCE validation\n// Write your solution here",
+        java: "// Java RFC 7636 PKCE validation\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function isValidPKCEVerifier(codeVerifier) {
   if (typeof codeVerifier !== "string") return false;
   if (codeVerifier.length < 43 || codeVerifier.length > 128) return false;
@@ -1113,6 +1197,12 @@ def is_valid_pkce_verifier(code_verifier: str) -> bool:
       constraints: ["1 <= events.length <= 10^5"],
       function_name: "aggregateChannelMetrics",
       starter_templates: {
+        javascript: "function aggregateChannelMetrics(events) {\n  // Write your solution here\n  return {};\n}",
+        python: "def aggregate_channel_metrics(events: list[dict]) -> dict:\n    # Write your solution here\n    return {}",
+        cpp: "// C++ Metrics aggregator\n// Write your solution here",
+        java: "// Java Metrics aggregator\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function aggregateChannelMetrics(events) {
   const counts = {};
   for (const ev of events) {
@@ -1166,6 +1256,12 @@ def is_valid_pkce_verifier(code_verifier: str) -> bool:
       ],
       function_name: "topKCosineSimilarity",
       starter_templates: {
+        javascript: "function topKCosineSimilarity(queryVec, candidates, k) {\n  // Write your solution here\n  return [];\n}",
+        python: "def top_k_cosine_similarity(query_vec: list[float], candidates: list[dict], k: int) -> list[str]:\n    # Write your solution here\n    return []",
+        cpp: "// C++ Cosine Similarity Search\n// Write your solution here",
+        java: "// Java Cosine Similarity Search\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function topKCosineSimilarity(queryVec, candidates, k) {
   function dot(a, b) {
     let sum = 0;
@@ -1234,6 +1330,12 @@ def top_k_cosine_similarity(query_vec: list[float], candidates: list[dict], k: i
       constraints: ["1 <= totalPhysicalBlocks <= 10^5", "1 <= blockSize <= 128"],
       function_name: "allocatePagedBlocks",
       starter_templates: {
+        javascript: "function allocatePagedBlocks(totalPhysicalBlocks, blockSize, requests) {\n  // Write your solution here\n  return { allocated: 0, pending: 0, fragmentationRate: 0 };\n}",
+        python: "def allocate_paged_blocks(total_physical_blocks: int, block_size: int, requests: list[dict]) -> dict:\n    # Write your solution here\n    return {\"allocated\": 0, \"pending\": 0, \"fragmentationRate\": 0}",
+        cpp: "// C++ vLLM PagedAttention Block Manager\n// Write your solution here",
+        java: "// Java vLLM PagedAttention Block Manager\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function allocatePagedBlocks(totalPhysicalBlocks, blockSize, requests) {
   let freeBlocks = totalPhysicalBlocks;
   const allocations = [];
@@ -1296,6 +1398,12 @@ def allocate_paged_blocks(total_physical_blocks: int, block_size: int, requests:
       constraints: ["1 <= weights.length <= 10^5"],
       function_name: "quantizeWeightsInt8",
       starter_templates: {
+        javascript: "function quantizeWeightsInt8(weights) {\n  // Write your solution here\n  return [];\n}",
+        python: "def quantize_weights_int8(weights: list[float]) -> list[int]:\n    # Write your solution here\n    return []",
+        cpp: "// C++ Int8 Symmetric Quantization\n// Write your solution here",
+        java: "// Java Int8 Symmetric Quantization\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function quantizeWeightsInt8(weights) {
   let maxAbs = 0;
   for (const w of weights) {
@@ -1344,6 +1452,12 @@ def allocate_paged_blocks(total_physical_blocks: int, block_size: int, requests:
       constraints: ["1 <= denseRanks.length, sparseRanks.length <= 1000", "k >= 1"],
       function_name: "reciprocalRankFusion",
       starter_templates: {
+        javascript: "function reciprocalRankFusion(denseRanks, sparseRanks, k = 60) {\n  // Write your solution here\n  return [];\n}",
+        python: "def reciprocal_rank_fusion(dense_ranks: list[str], sparse_ranks: list[str], k: int = 60) -> list[str]:\n    # Write your solution here\n    return []",
+        cpp: "// C++ Reciprocal Rank Fusion\n// Write your solution here",
+        java: "// Java Reciprocal Rank Fusion\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function reciprocalRankFusion(denseRanks, sparseRanks, k = 60) {
   const scores = new Map();
 
@@ -1402,6 +1516,12 @@ def allocate_paged_blocks(total_physical_blocks: int, block_size: int, requests:
       constraints: ["1 <= paramCountBillions <= 1000", "1 <= numGPUs <= 1024"],
       function_name: "calculateZeROMemory",
       starter_templates: {
+        javascript: "function calculateZeROMemory(paramCountBillions, numGPUs) {\n  // Write your solution here\n  return { stage1GB: 0, stage2GB: 0, stage3GB: 0 };\n}",
+        python: "def calculate_zero_memory(param_count_billions: float, num_gpus: int) -> dict:\n    # Write your solution here\n    return {\"stage1GB\": 0, \"stage2GB\": 0, \"stage3GB\": 0}",
+        cpp: "// C++ ZeRO Memory Partitioning\n// Write your solution here",
+        java: "// Java ZeRO Memory Partitioning\n// Write your solution here",
+      },
+      reference_solutions: {
         javascript: `function calculateZeROMemory(paramCountBillions, numGPUs) {
   const p = paramCountBillions;
   const baselineGB = Math.round(16 * p * 10) / 10;

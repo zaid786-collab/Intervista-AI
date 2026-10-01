@@ -339,111 +339,19 @@ export async function fetchAnalysisData(interviewId) {
     if (data) {
       return data;
     }
-  } catch (err) {
-    console.warn("Backend /api/interviews/analysis error, checking local session data:", err.message);
-  }
-
-  // Fallback to local session storage if backend unreachable
-  const localDashboard = getLocalDashboardData();
-  const completed = (localDashboard.recent_interviews || []).filter((i) => i.status === "Completed");
-  if (completed.length === 0) {
     return {
-      has_interview: false,
-      has_data: false,
-      message: "No analysis available yet. Complete your first interview to unlock personalized performance analysis and learning recommendations.",
+      success: false,
+      error: "ANALYSIS_UNAVAILABLE",
+      message: "Performance analysis data unavailable.",
+    };
+  } catch (err) {
+    console.warn("Backend /api/interviews/analysis error:", err.message);
+    return {
+      success: false,
+      error: "ANALYSIS_UNAVAILABLE",
+      message: err.message || "Failed to load performance analysis from server.",
     };
   }
-
-  const latest = completed[0];
-  const scoreNum = latest.score_num || parseInt(String(latest.score).replace("%", ""), 10) || 0;
-  const role = latest.role || "Software Engineer";
-  const company = latest.company || "Google";
-  const domain = latest.domain || (role.toLowerCase().includes("c++") ? "C++" : role.toLowerCase().includes("frontend") ? "React" : "General Software Engineering");
-  const difficulty = latest.difficulty || "Medium";
-  const interviewType = latest.interview_type || "Technical";
-
-  return {
-    has_interview: true,
-    has_data: true,
-    interview_id: latest.id,
-    date: latest.date || "Recent",
-    target_choices: {
-      role,
-      company,
-      difficulty,
-      domain,
-      interview_type: interviewType,
-      tag_string: `${role} • ${domain} • ${difficulty} • ${interviewType}`,
-    },
-    performance: {
-      overall_score: scoreNum,
-      technical_score: latest.technical_score || scoreNum,
-      communication_score: latest.communication_score || scoreNum,
-      problem_solving_score: latest.problem_solving_score || scoreNum,
-      grade: latest.grade || (scoreNum >= 80 ? "A (Strong Performance)" : scoreNum >= 50 ? "B (Competent)" : "Needs Practice"),
-      total_questions: latest.total_questions || 10,
-      answered_count: latest.answered_count !== undefined ? latest.answered_count : Math.max(0, (latest.total_questions || 10) - (latest.skipped_count || 0)),
-      correct_count: latest.correct_count !== undefined ? latest.correct_count : Math.round(scoreNum / 10),
-      partial_count: latest.partial_count !== undefined ? latest.partial_count : (scoreNum >= 50 ? 1 : 0),
-      incorrect_count: latest.incorrect_count !== undefined ? latest.incorrect_count : Math.max(0, (latest.total_questions || 10) - Math.round(scoreNum / 10)),
-      skipped_count: latest.skipped_count !== undefined ? latest.skipped_count : 0,
-      completion_rate: latest.total_questions ? Math.round(((latest.answered_count !== undefined ? latest.answered_count : Math.max(0, (latest.total_questions || 10) - (latest.skipped_count || 0))) / latest.total_questions) * 100) : 0,
-    },
-    strengths: latest.strengths && latest.strengths.length > 0 ? latest.strengths : scoreNum >= 60 ? [`Solid technical foundations in ${domain}`, "Demonstrated problem-solving approach"] : ["Not enough interview data yet."],
-    improvement_areas: [
-      {
-        topic: domain.includes("C++") ? "C++ Memory Management & RAII" : "Dynamic Programming",
-        score: Math.max(scoreNum - 15, 35),
-        current_performance: scoreNum >= 70 ? "Needs Practice" : "Weak",
-        reason: "Boundary conditions and complex edge-case handling under time constraints.",
-        priority: scoreNum >= 70 ? "Medium Priority" : "High Priority",
-      },
-      {
-        topic: domain.includes("C++") ? "STL Containers & Algorithms" : "Graph Traversal & BFS/DFS",
-        score: Math.max(scoreNum - 10, 42),
-        current_performance: scoreNum >= 70 ? "Needs Practice" : "Needs Improvement",
-        reason: "Asymptotic Big-O runtime optimization and state preservation.",
-        priority: "Medium Priority",
-      },
-    ],
-    recommended_topics: domain.includes("C++")
-      ? ["Dynamic Programming", "Graph Traversal", "STL Containers", "Time & Space Complexity", "Smart Pointers & RAII"]
-      : ["Dynamic Programming", "Graph Traversal", "Arrays & Sliding Window", "Time & Space Complexity", "System Architecture"],
-    recommended_resources: [
-      {
-        topic: domain.includes("C++") ? "C++ Memory Management & RAII" : "Dynamic Programming",
-        name: domain.includes("C++") ? "C++ Smart Pointers & RAII Mastery" : "Climbing Stairs (DP Fundamentals)",
-        difficulty: "Easy",
-        url: "https://leetcode.com/problems/climbing-stairs/",
-        type: "Practice Problem",
-      },
-      {
-        topic: domain.includes("C++") ? "STL Containers & Algorithms" : "Graph Traversal & BFS/DFS",
-        name: domain.includes("C++") ? "Top K Frequent Elements (std::priority_queue)" : "Number of Islands (BFS/DFS)",
-        difficulty: "Medium",
-        url: "https://leetcode.com/problems/number-of-islands/",
-        type: "Practice Problem",
-      },
-    ],
-    roadmap: [
-      {
-        step_number: 1,
-        title: "Fix Weak Areas",
-        description: `Focus on highest-priority improvement topics for ${domain}.`,
-      },
-      {
-        step_number: 2,
-        title: "Targeted Practice",
-        description: `Solve 2-3 focused practice problems at ${difficulty} difficulty.`,
-      },
-      {
-        step_number: 3,
-        title: "Reattempt Mock Interview",
-        description: `Take another interview for ${company} (${domain} • ${difficulty}) to validate your progress.`,
-      },
-    ],
-    vision_data: latest.vision_data || null,
-  };
 }
 
 

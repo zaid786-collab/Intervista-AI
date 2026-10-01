@@ -10,14 +10,20 @@ function buildReportHTML(interviewData, candidateName = "Interview Candidate") {
   const duration = interviewData.duration_minutes || 45;
   const dateStr = interviewData.date || new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-  const scoreNum = typeof interviewData.score === "number"
-    ? interviewData.score
-    : parseInt(String(interviewData.score || interviewData.score_percentage || "75").replace("%", ""), 10) || 75;
+  let scoreNum = 0;
+  if (typeof interviewData.score === "number") {
+    scoreNum = interviewData.score;
+  } else if (typeof interviewData.score_num === "number") {
+    scoreNum = interviewData.score_num;
+  } else if (interviewData.score != null || interviewData.score_percentage != null) {
+    const parsed = parseInt(String(interviewData.score ?? interviewData.score_percentage ?? "0").replace("%", ""), 10);
+    scoreNum = isNaN(parsed) ? 0 : parsed;
+  }
 
-  const grade = interviewData.grade || (scoreNum >= 85 ? "A+ (Strong Hire)" : scoreNum >= 75 ? "A (Hire)" : "B+ (Leaning Hire)");
-  const techScore = interviewData.technical_score || Math.min(Math.round(scoreNum * 1.02), 100);
-  const commScore = interviewData.communication_score || Math.max(Math.round(scoreNum * 0.98), 40);
-  const probScore = interviewData.problem_solving_score || Math.max(Math.round(scoreNum * 0.95), 40);
+  const grade = interviewData.grade || (scoreNum >= 85 ? "A+ (Strong Hire)" : scoreNum >= 75 ? "A (Hire)" : scoreNum >= 50 ? "B+ (Leaning Hire)" : "F (Incomplete / Unsatisfactory)");
+  const techScore = typeof interviewData.technical_score === "number" ? interviewData.technical_score : scoreNum;
+  const commScore = typeof interviewData.communication_score === "number" ? interviewData.communication_score : scoreNum;
+  const probScore = typeof interviewData.problem_solving_score === "number" ? interviewData.problem_solving_score : scoreNum;
 
   const summaryText = interviewData.feedback || interviewData.overall_summary || (
     `Candidate achieved an overall interview performance score of ${scoreNum}% (${grade}) for ${company}'s ${role} position.`
@@ -154,7 +160,7 @@ function buildReportHTML(interviewData, candidateName = "Interview Candidate") {
             <tr>
               <td><strong>Q${idx + 1}</strong></td>
               <td><strong>${q.question || `Question ${idx + 1}`}</strong></td>
-              <td style="text-align: center; color: #16a34a; font-weight: 700;">${q.score || 80}%</td>
+              <td style="text-align: center; color: #16a34a; font-weight: 700;">${q.score ?? 0}%</td>
               <td>
                 <div>${q.feedback || "Solid answer."}</div>
                 ${q.identified_keywords && q.identified_keywords.length > 0 ? `<div style="margin-top: 4px; font-size: 10.5px; color: #475569;"><strong>Matched Concepts:</strong> ${q.identified_keywords.join(", ")}</div>` : ""}
@@ -265,14 +271,20 @@ export async function generateInterviewPDF(interviewData, candidateName = "Inter
     const duration = interviewData.duration_minutes || 45;
     const dateStr = interviewData.date || new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-    const scoreNum = typeof interviewData.score === "number"
-      ? interviewData.score
-      : parseInt(String(interviewData.score || interviewData.score_percentage || "75").replace("%", ""), 10) || 75;
+    let scoreNum = 0;
+    if (typeof interviewData.score === "number") {
+      scoreNum = interviewData.score;
+    } else if (typeof interviewData.score_num === "number") {
+      scoreNum = interviewData.score_num;
+    } else if (interviewData.score != null || interviewData.score_percentage != null) {
+      const parsed = parseInt(String(interviewData.score ?? interviewData.score_percentage ?? "0").replace("%", ""), 10);
+      scoreNum = isNaN(parsed) ? 0 : parsed;
+    }
 
-    const grade = interviewData.grade || (scoreNum >= 85 ? "A+ (Strong Hire)" : scoreNum >= 75 ? "A (Hire)" : "B+ (Leaning Hire)");
-    const techScore = interviewData.technical_score || Math.min(Math.round(scoreNum * 1.02), 100);
-    const commScore = interviewData.communication_score || Math.max(Math.round(scoreNum * 0.98), 40);
-    const probScore = interviewData.problem_solving_score || Math.max(Math.round(scoreNum * 0.95), 40);
+    const grade = interviewData.grade || (scoreNum >= 85 ? "A+ (Strong Hire)" : scoreNum >= 75 ? "A (Hire)" : scoreNum >= 50 ? "B+ (Leaning Hire)" : "F (Incomplete / Unsatisfactory)");
+    const techScore = typeof interviewData.technical_score === "number" ? interviewData.technical_score : scoreNum;
+    const commScore = typeof interviewData.communication_score === "number" ? interviewData.communication_score : scoreNum;
+    const probScore = typeof interviewData.problem_solving_score === "number" ? interviewData.problem_solving_score : scoreNum;
 
     // 1. BRAND HEADER
     doc.setFillColor(15, 23, 42);
@@ -451,7 +463,7 @@ export async function generateInterviewPDF(interviewData, candidateName = "Inter
       currentY += 3;
 
       const tableRows = detailed.map((qf, idx) => {
-        const qScore = qf.score || 80;
+        const qScore = typeof qf.score === "number" ? qf.score : (parseInt(String(qf.score ?? "0").replace("%", ""), 10) || 0);
         const qText = qf.question || `Question ${idx + 1}`;
         const feedback = qf.feedback || "Solid response.";
         const keywords = (qf.identified_keywords || []).join(", ");

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.auth import create_access_token, hash_password, verify_password
+from app.config import get_env
 from app.database import get_db
 from app.dependencies import get_current_user, is_master_admin_email
 from app.models import utcnow
@@ -20,6 +21,10 @@ from app.services.email_service import send_verification_otp, send_login_welcome
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+def is_dev_environment() -> bool:
+    env = get_env("ENVIRONMENT", get_env("ENV", "development")).lower().strip()
+    return env in ("dev", "development", "local", "test")
 
 
 OTP_EXPIRY_MINUTES = 10
@@ -96,7 +101,8 @@ def signup(payload: schemas.SignupRequest, db: Session = Depends(get_db)):
         ).first()
         if pending_otp:
             sent = issue_otp(existing, db)
-            msg = f"A new verification code has been sent to {existing.email}." if sent else "Verification code ready. Enter your code (or 123456 in dev mode)."
+            dev_hint = " (or 123456 in dev mode)" if is_dev_environment() else ""
+            msg = f"A new verification code has been sent to {existing.email}." if sent else f"Verification code ready. Enter your code{dev_hint}."
             return schemas.SignupResponse(message=msg, email=existing.email)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="An account with this email already exists. Please log in.")
 
@@ -118,8 +124,9 @@ def signup(payload: schemas.SignupRequest, db: Session = Depends(get_db)):
             message=f"Verification code sent to {user.email}.",
             email=user.email,
         )
+    dev_hint = " (or 123456 in dev mode)" if is_dev_environment() else ""
     return schemas.SignupResponse(
-        message="Account created! Enter the code sent to your email (or 123456 in dev mode).",
+        message=f"Account created! Enter the code sent to your email{dev_hint}.",
         email=user.email,
     )
 
@@ -136,10 +143,11 @@ def verify_email(payload: schemas.VerifyEmailRequest, db: Session = Depends(get_
 
     code_str = payload.code.strip()
     is_valid_otp = otp and not otp_is_expired(otp) and otp.code_hash == hashlib.sha256(code_str.encode()).hexdigest()
-    is_dev_code = code_str in ["123456", "000000", "999999", "111111"]
+    is_dev_code = is_dev_environment() and (code_str in ["123456", "000000", "999999", "111111"])
 
     if not is_valid_otp and not is_dev_code:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code. Please check your email or try 123456.")
+        err_msg = "Invalid or expired verification code. Please check your email or try 123456." if is_dev_environment() else "Invalid or expired verification code. Please check your email."
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=err_msg)
 
     expected_admin = is_master_admin_email(user.email)
     if user.is_admin != expected_admin:
@@ -159,7 +167,8 @@ def resend_otp(payload: schemas.ResendOTPRequest, db: Session = Depends(get_db))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found.")
     
     sent = issue_otp(user, db)
-    msg = f"A new verification code has been sent to {user.email}." if sent else "New code generated. Enter your code (or 123456 in dev mode)."
+    dev_hint = " (or 123456 in dev mode)" if is_dev_environment() else ""
+    msg = f"A new verification code has been sent to {user.email}." if sent else f"New code generated. Enter your code{dev_hint}."
     return schemas.SignupResponse(message=msg, email=user.email)
 
 

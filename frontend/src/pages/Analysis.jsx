@@ -72,8 +72,9 @@ export default function Analysis() {
     );
   }
 
-  // Error State (Network or Unhandled API Failure)
-  if (error && !analysisData) {
+  // Error State (Network or API Failure)
+  if (error || (analysisData && analysisData.success === false)) {
+    const errorMsg = error || analysisData?.message || "Performance analysis is currently unavailable. Please try again later.";
     return (
       <main className="analysis-page">
         <div className="container analysis-empty-container">
@@ -82,7 +83,7 @@ export default function Analysis() {
               <FaExclamationCircle className="analysis-empty-icon" />
             </div>
             <h2>Unable to Load Analysis</h2>
-            <p>{error}</p>
+            <p>{errorMsg}</p>
             <button
               type="button"
               className="analysis-btn analysis-btn-primary"
@@ -145,20 +146,18 @@ export default function Analysis() {
     tag_string,
   } = target_choices;
 
-  const {
-    overall_score = 0,
-    technical_score = overall_score,
-    communication_score = overall_score,
-    problem_solving_score = overall_score,
-    grade = "B",
-    total_questions = 10,
-    answered_count = null,
-    correct_count = 0,
-    partial_count = 0,
-    incorrect_count = 0,
-    skipped_count = 0,
-    completion_rate = 0,
-  } = performance;
+  const overall_score = performance.overall_score ?? 0;
+  const technical_score = performance.technical_score !== undefined && performance.technical_score !== null ? performance.technical_score : overall_score;
+  const communication_score = performance.communication_score !== undefined && performance.communication_score !== null ? performance.communication_score : overall_score;
+  const problem_solving_score = performance.problem_solving_score !== undefined && performance.problem_solving_score !== null ? performance.problem_solving_score : overall_score;
+  const grade = performance.grade || (overall_score >= 80 ? "A (Strong Performance)" : overall_score >= 50 ? "B (Competent)" : "F (Incomplete / Unsatisfactory • 0-29%)");
+  const total_questions = performance.total_questions ?? 10;
+  const answered_count = performance.answered_count ?? null;
+  const correct_count = performance.correct_count ?? 0;
+  const partial_count = performance.partial_count ?? 0;
+  const incorrect_count = performance.incorrect_count ?? 0;
+  const skipped_count = performance.skipped_count ?? 0;
+  const completion_rate = performance.completion_rate ?? 0;
 
   // Compute percentage segments for the visual breakdown bar
   const totalSafe = total_questions > 0 ? total_questions : 1;
