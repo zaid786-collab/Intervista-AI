@@ -1,0 +1,2 @@
+# Intervista AI - Root requirements forwarding to Backend/requirements.txt
+-r Backend/requirements.txt
