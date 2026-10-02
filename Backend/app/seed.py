@@ -42,6 +42,12 @@ DEFAULT_NOTIFICATIONS = [
 ]
 
 def seed_db():
+    try:
+        from app.main import ensure_db_columns
+        ensure_db_columns()
+    except Exception:
+        pass
+
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:

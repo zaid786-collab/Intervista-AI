@@ -45,6 +45,7 @@ def ensure_db_columns():
             ("correct_count", "INTEGER DEFAULT 0"),
             ("partial_count", "INTEGER DEFAULT 0"),
             ("incorrect_count", "INTEGER DEFAULT 0"),
+            ("vision_data", "TEXT"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE interviews ADD COLUMN {col} {col_type}"))
@@ -53,9 +54,22 @@ def ensure_db_columns():
                 pass
 
         for col, col_type in [
+            ("google_id", "VARCHAR(120)"),
+            ("github_id", "VARCHAR(120)"),
+            ("auth_provider", "VARCHAR(50) DEFAULT 'local'"),
+            ("is_admin", "BOOLEAN DEFAULT FALSE"),
+            ("progress", "INTEGER DEFAULT 0"),
+            ("xp", "INTEGER DEFAULT 1250"),
+            ("target_role", "VARCHAR(120) DEFAULT 'Software Engineer'"),
+            ("bio", "VARCHAR(500) DEFAULT 'Passionate software engineer practicing for top tech interviews.'"),
+            ("skills", "VARCHAR(500) DEFAULT 'React, Node.js, Python, System Design, SQL'"),
+            ("avatar", "VARCHAR(500)"),
+            ("is_active", "BOOLEAN DEFAULT TRUE"),
             ("subscription_plan", "VARCHAR(50) DEFAULT 'free'"),
             ("subscription_cycle", "VARCHAR(20) DEFAULT 'monthly'"),
             ("subscription_expires_at", "DATETIME"),
+            ("created_at", "DATETIME"),
+            ("updated_at", "DATETIME"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
