@@ -107,16 +107,18 @@ def normalize_admin_privileges():
         # Demote any non-master user who currently has is_admin=True
         all_admins = db.query(models.User).filter(models.User.is_admin.is_(True)).all()
         for user in all_admins:
-            if not is_master_admin_email(user.email):
-                user.is_admin = False
-                log.info("Demoted non-master admin account: %s", user.email)
+            user_email = getattr(user, "email", None)
+            if user_email is not None and not is_master_admin_email(str(user_email)):
+                setattr(user, "is_admin", False)
+                log.info("Demoted non-master admin account: %s", user_email)
 
         # If the master admin account exists, ensure is_admin=True
         all_users = db.query(models.User).all()
         for user in all_users:
-            if is_master_admin_email(user.email) and not user.is_admin:
-                user.is_admin = True
-                log.info("Promoted master admin account: %s", user.email)
+            user_email = getattr(user, "email", None)
+            if user_email is not None and is_master_admin_email(str(user_email)) and not bool(user.is_admin):
+                setattr(user, "is_admin", True)
+                log.info("Promoted master admin account: %s", user_email)
 
         db.commit()
     except Exception as exc:
