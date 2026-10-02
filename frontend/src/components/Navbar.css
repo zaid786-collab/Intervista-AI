@@ -10,19 +10,20 @@
   top: 0;
   left: 0;
 
-  z-index: 1000;
+  z-index: 10000;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
 
-  padding: 0 60px;
+  padding: 0 clamp(18px, 2.5vw, 48px);
 
   background: rgba(5, 8, 20, 0.92);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
 }
 
 
@@ -73,11 +74,13 @@
   font-weight: 800;
 
   box-shadow: 0 8px 22px rgba(37, 214, 255, 0.35);
+  flex-shrink: 0;
 }
 
 .logo h2 {
-  font-size: clamp(1.1rem, 1.6vw, 1.8rem);
+  font-size: clamp(1.15rem, 1.35vw, 1.6rem);
   margin: 0;
+  white-space: nowrap;
 }
 
 
@@ -87,26 +90,28 @@
 
 .navMenu {
   flex: 1;
+  min-width: 0;
 
   display: flex;
   justify-content: space-between;
   align-items: center;
 
-  margin-left: 70px;
+  margin-left: clamp(16px, 2.2vw, 48px);
 }
 
 .navLinks {
   display: flex;
   align-items: center;
 
-  gap: 18px;
+  gap: clamp(6px, 0.9vw, 16px);
 
   list-style: none;
 
   margin: 0;
   padding: 0;
 
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .navLinks li {
@@ -116,18 +121,20 @@
   align-items: center;
   justify-content: center;
 
-  min-height: 44px;
+  min-height: 40px;
 
-  padding: 0 16px;
+  padding: 0 clamp(8px, 0.85vw, 15px);
 
   color: #b7bfd3;
 
-  font-size: 18px;
+  font-size: clamp(13px, 0.92vw, 16px);
   font-weight: 500;
 
   cursor: pointer;
 
-  border-radius: 12px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
 
   transition:
     color 0.3s ease,
@@ -140,6 +147,7 @@
   background: rgba(255, 255, 255, 0.04);
 
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .navLinks li::after {
@@ -247,7 +255,6 @@
 
 .navLinks li.active-page .navLinkButton {
   color: #ffffff;
-
   font-weight: 600;
 
   text-shadow: 0 0 10px rgba(37, 214, 255, 0.5);
@@ -261,7 +268,8 @@
 .navRight {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: clamp(8px, 1vw, 14px);
+  flex-shrink: 0;
 }
 
 .loginBtn,
@@ -271,11 +279,13 @@
   align-items: center;
   justify-content: center;
 
-  border-radius: 16px;
+  border-radius: 14px;
 
   transition: all 0.35s ease;
 
   text-decoration: none;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .profileBtn.active-page,
@@ -297,12 +307,14 @@
   position: relative;
   overflow: hidden;
 
-  width: 110px;
-  height: 56px;
+  width: auto;
+  min-width: clamp(76px, 6vw, 100px);
+  height: clamp(40px, 3.2vw, 48px);
+  padding: 0 clamp(12px, 1vw, 18px);
 
   color: #ffffff;
 
-  font-size: 17px;
+  font-size: clamp(13px, 0.92vw, 15.5px);
   font-weight: 600;
 
   background: #11151f;
@@ -353,9 +365,9 @@
 ========================= */
 
 .startBtn {
-  height: 56px;
+  height: clamp(40px, 3.2vw, 48px);
 
-  padding: 0 32px;
+  padding: 0 clamp(14px, 1.3vw, 24px);
 
   border: none;
 
@@ -363,7 +375,7 @@
 
   color: #ffffff;
 
-  font-size: 18px;
+  font-size: clamp(13px, 0.95vw, 16px);
   font-weight: 600;
 
   cursor: pointer;
@@ -384,15 +396,17 @@
 ========================= */
 
 .profileBtn {
-  height: 56px;
+  height: clamp(40px, 3.2vw, 48px);
 
-  padding: 0 20px;
+  padding: 0 clamp(12px, 1vw, 18px);
 
   background: #11151f;
 
   border: 1px solid rgba(255, 255, 255, 0.12);
 
   color: #fff;
+  font-size: clamp(13px, 0.92vw, 15.5px);
+  font-weight: 600;
 
   cursor: pointer;
 }
@@ -433,8 +447,8 @@
 
   gap: 5px;
 
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
 
   border: 1px solid rgba(255, 255, 255, 0.14);
 
@@ -445,10 +459,11 @@
   cursor: pointer;
 
   flex-shrink: 0;
+  padding: 0;
 }
 
 .navToggle span {
-  width: 22px;
+  width: 20px;
   height: 2px;
 
   background: #fff;
@@ -491,78 +506,53 @@
 
 
 /* =========================
-   TABLET
+   TABLET & MOBILE (<= 1024px)
+   Encompasses iPads, tablets, and mobile screens
 ========================= */
 
-@media (max-width: 1080px) {
+@media (max-width: 1024px) {
   .navbar {
     padding: 0 24px;
   }
 
-  .navMenu {
-    margin-left: 20px;
-  }
-
-  .navLinks {
-    gap: 10px;
-  }
-
-  .navRight {
-    gap: 10px;
-  }
-}
-
-
-/* =========================
-   MOBILE NAVBAR
-========================= */
-
-@media (max-width: 940px) {
-  .navbar {
-    height: 90px;
-    min-height: 90px;
-
-    padding: 0 20px;
-
-    flex-wrap: nowrap;
-  }
-
   .navToggle {
     display: flex;
-
-    position: relative;
-    z-index: 1002;
+    z-index: 10002;
   }
 
   .navMenu {
-    position: absolute;
-
+    position: fixed;
     top: 90px;
     left: 0;
-
+    right: 0;
     width: 100%;
 
-    display: none;
+    max-height: calc(100vh - 90px);
+    max-height: calc(100dvh - 90px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 
+    display: none;
     flex-direction: column;
     align-items: stretch;
 
     margin: 0;
-    padding: 20px;
-
-    gap: 18px;
+    padding: 20px 24px;
+    gap: 16px;
 
     background: rgba(5, 8, 20, 0.98);
 
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
 
-    z-index: 1001;
+    z-index: 10001;
+    box-sizing: border-box;
   }
 
   .navMenu.open {
@@ -571,41 +561,34 @@
 
   .navLinks {
     display: flex;
-
     flex-direction: column;
-
     align-items: stretch;
-
     width: 100%;
-
     gap: 8px;
   }
 
   .navLinks li {
     width: 100%;
-
-    min-height: 52px;
-
+    min-height: 48px;
     padding: 0 16px;
+    font-size: 16px;
+    justify-content: flex-start;
+    border-radius: 12px;
   }
 
   .navLinkButton {
     width: 100%;
+    height: 100%;
+    justify-content: flex-start;
   }
 
   .navRight {
     display: flex;
-
     flex-direction: column;
-
     align-items: stretch;
-
     width: 100%;
-
     gap: 10px;
-
-    padding-top: 15px;
-
+    padding-top: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
@@ -618,54 +601,105 @@
   .profileBtn,
   .startBtn {
     width: 100%;
+    height: 48px;
+    min-height: 48px;
+    font-size: 15px;
+    justify-content: center;
   }
 }
 
 
 /* =========================
-   SMALL MOBILE
+   SMALL MOBILE (<= 560px)
 ========================= */
 
 @media (max-width: 560px) {
   .navbar {
     height: 70px;
     min-height: 70px;
-
     padding: 0 16px;
   }
 
   .logo h2 {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
   }
 
   .logoBox {
-    width: 30px;
-    height: 30px;
-
+    width: 32px;
+    height: 32px;
     border-radius: 10px;
   }
 
   .navToggle {
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
   }
 
   .navMenu {
     top: 70px;
-
-    padding: 15px;
+    max-height: calc(100vh - 70px);
+    max-height: calc(100dvh - 70px);
+    padding: 16px;
+    gap: 14px;
   }
 
   .navLinks li {
-    min-height: 48px;
+    min-height: 44px;
+    font-size: 15px;
   }
 
   .loginBtn,
   .profileBtn,
   .startBtn {
-    height: 50px;
+    height: 46px;
+    min-height: 46px;
+    font-size: 14.5px;
   }
 }
+
+
+/* =========================
+   EXTRA SMALL MOBILE (<= 360px)
+========================= */
+
+@media (max-width: 360px) {
+  .navbar {
+    padding: 0 12px;
+  }
+
+  .logo {
+    gap: 8px;
+  }
+
+  .logo h2 {
+    font-size: 0.98rem;
+  }
+
+  .logoBox {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+
+  .navMenu {
+    padding: 14px 12px;
+  }
+
+  .navLinks li {
+    min-height: 42px;
+    font-size: 14px;
+  }
+
+  .loginBtn,
+  .profileBtn,
+  .startBtn {
+    height: 44px;
+    min-height: 44px;
+    font-size: 14px;
+  }
+}
+
 
 /* =========================================================
    KEEP NAVBAR BEHIND EDITOR & BLURRED IN NORMAL/HALF SCREEN
@@ -691,4 +725,4 @@ body:has(.solution-editor-container.editor-screen-max) .navbar {
   pointer-events: none !important;
   transform: translateY(-100%) !important;
   z-index: -1 !important;
-}
+}

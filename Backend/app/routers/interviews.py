@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.dependencies import get_current_user, get_current_user_optional
-from app.services.llm_evaluator import evaluate_interview_submission, evaluate_single_question
+from app.services.llm_evaluator import evaluate_interview_submission, evaluate_single_question, is_starter_boilerplate
 from app.services.pdf_generator import generate_interview_pdf_report
 from app.services.question_generator import generate_interview_session
 
@@ -465,6 +465,7 @@ def start_mock_interview(
     # Initialize authoritative proctoring state for this session
     ACTIVE_PROCTORING_SESSIONS[session_id] = {
         "session_id": session_id,
+        "user_id": current_user.id if current_user else None,
         "company": payload.company,
         "role": payload.role,
         "difficulty": payload.difficulty,
@@ -658,10 +659,23 @@ def record_proctoring_violation(
     )
 
 @router.get("/session/{session_id}/proctoring", response_model=schemas.ProctoringStatusResponse)
-def get_session_proctoring_status(session_id: str):
-    """Returns current authoritative proctoring status of an interview session."""
+def get_session_proctoring_status(
+    session_id: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns current authoritative proctoring status of an interview session with ownership isolation."""
     session = ACTIVE_PROCTORING_SESSIONS.get(session_id)
     if not session:
+        # Check database answers for this session's ownership
+        db_answer = db.query(models.InterviewAnswer).filter(models.InterviewAnswer.session_id == session_id).first()
+        if db_answer and db_answer.user_id is not None and current_user.id != db_answer.user_id:
+            is_admin = getattr(current_user, "is_admin", False) or getattr(current_user, "role", None) == "admin"
+            if not is_admin:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Unauthorized access to this proctoring session.",
+                )
         return schemas.ProctoringStatusResponse(
             session_id=session_id,
             warning_count=0,
@@ -670,6 +684,17 @@ def get_session_proctoring_status(session_id: str):
             terminated=False,
             violations=[],
         )
+
+    # Enforce candidate ownership isolation
+    sess_user_id = session.get("user_id")
+    if sess_user_id is not None and current_user.id != sess_user_id:
+        is_admin = getattr(current_user, "is_admin", False) or getattr(current_user, "role", None) == "admin"
+        if not is_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized access to this proctoring session.",
+            )
+
     return schemas.ProctoringStatusResponse(
         session_id=session_id,
         warning_count=session["warning_count"],
@@ -747,13 +772,87 @@ def submit_mock_interview(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # 0. Reject submission if the interview session was terminated for cheating or proctoring violations
+    # 0. Check idempotency and reject terminated sessions
     if payload.session_id:
         active_sess = ACTIVE_PROCTORING_SESSIONS.get(payload.session_id)
         if active_sess and active_sess.get("status") in ("TERMINATED_FOR_PROCTORING", "TERMINATED_FOR_CHEATING"):
             raise HTTPException(
                 status_code=403,
                 detail="Interview was terminated for proctoring violations. Answer submission is strictly prohibited.",
+            )
+
+        # Idempotency check: has this session already been submitted?
+        existing_interview = None
+        if active_sess and active_sess.get("interview_id"):
+            existing_interview = db.query(models.Interview).filter(models.Interview.id == active_sess["interview_id"]).first()
+        if not existing_interview:
+            existing_ans = db.query(models.InterviewAnswer).filter(
+                models.InterviewAnswer.session_id == payload.session_id,
+                models.InterviewAnswer.interview_id.isnot(None)
+            ).first()
+            if existing_ans and existing_ans.interview_id:
+                existing_interview = db.query(models.Interview).filter(models.Interview.id == existing_ans.interview_id).first()
+
+        if existing_interview:
+            # Already submitted: return existing result without duplicate interview, activity, notification, or XP awards
+            rep = {}
+            if existing_interview.report_data:
+                try:
+                    rep = json.loads(existing_interview.report_data)
+                except Exception:
+                    rep = {}
+
+            raw_feedback = rep.get("detailed_feedback", [])
+            df_reconstructed = [
+                schemas.QuestionFeedback(
+                    question_id=qf.get("question_id", idx + 1),
+                    question=qf.get("question", f"Question {idx + 1}"),
+                    candidate_answer=qf.get("candidate_answer", ""),
+                    status=qf.get("status", "CORRECT"),
+                    score=int(qf.get("score", 0)),
+                    feedback=qf.get("feedback", "No feedback available."),
+                    suggested_answer_points=qf.get("suggested_answer_points", []),
+                    identified_keywords=qf.get("identified_keywords", []),
+                    technical_accuracy=int(qf.get("technical_accuracy", 0)),
+                    communication_clarity=int(qf.get("communication_clarity", 0)),
+                    completeness=int(qf.get("completeness", 0)),
+                    technical_depth=int(qf.get("technical_depth", 0)),
+                    relevance=int(qf.get("relevance", 0)),
+                    missing_concepts=qf.get("missing_concepts", []),
+                    ideal_answer=qf.get("ideal_answer"),
+                )
+                for idx, qf in enumerate(raw_feedback)
+            ]
+
+            return schemas.SubmitInterviewResponse(
+                interview_id=existing_interview.id,
+                score=existing_interview.score_num if existing_interview.score_num is not None else 0,
+                score_percentage=existing_interview.score or f"{existing_interview.score_num or 0}%",
+                grade=existing_interview.grade or "F (Incomplete / Unsatisfactory • 0-29%)",
+                total_questions=existing_interview.question_count or len(df_reconstructed) or len(payload.answers),
+                answered_count=existing_interview.answered_count or 0,
+                skipped_count=existing_interview.skipped_count or 0,
+                correct_count=existing_interview.correct_count or 0,
+                partially_correct_count=existing_interview.partial_count or 0,
+                incorrect_count=existing_interview.incorrect_count or 0,
+                strengths=rep.get("strengths", []),
+                improvements=rep.get("improvements", []),
+                missing_concepts=rep.get("missing_concepts", []),
+                detailed_feedback=df_reconstructed,
+                overall_summary=existing_interview.feedback or "",
+                technical_score=existing_interview.technical_score if existing_interview.technical_score is not None else (existing_interview.score_num or 0),
+                communication_score=existing_interview.communication_score if existing_interview.communication_score is not None else (existing_interview.score_num or 0),
+                problem_solving_score=existing_interview.problem_solving_score if existing_interview.problem_solving_score is not None else (existing_interview.score_num or 0),
+                identified_keywords=rep.get("identified_keywords", []),
+                warning_count=existing_interview.warning_count or 0,
+                proctoring_summary=rep.get("proctoring_summary", {
+                    "warning_count": existing_interview.warning_count or 0,
+                    "max_warnings": 5,
+                    "status": "Completed",
+                    "violations": [],
+                }),
+                analysis=rep.get("analysis", {}),
+                vision_data=rep.get("vision_data"),
             )
 
     # 1. Merge submitted answers with any pre-stored answers from database
@@ -914,6 +1013,9 @@ def submit_mock_interview(
         db.query(models.InterviewAnswer).filter(
             models.InterviewAnswer.session_id == payload.session_id
         ).update({"interview_id": interview.id})
+        if payload.session_id in ACTIVE_PROCTORING_SESSIONS:
+            ACTIVE_PROCTORING_SESSIONS[payload.session_id]["interview_id"] = interview.id
+            ACTIVE_PROCTORING_SESSIONS[payload.session_id]["status"] = "COMPLETED"
 
     # 4. Add Activity Feed Record
     activity = models.Activity(
@@ -1046,12 +1148,12 @@ def download_interview_pdf(
         "id": interview.id,
         "company": interview.company,
         "role": interview.role,
-        "score_num": interview.score_num or int(interview.score.replace("%", "")) if interview.score else 75,
-        "score": interview.score or f"{interview.score_num}%",
-        "technical_score": interview.technical_score or interview.score_num or 80,
-        "communication_score": interview.communication_score or interview.score_num or 80,
-        "problem_solving_score": interview.problem_solving_score or interview.score_num or 80,
-        "grade": interview.grade or "A (Strong Performance)",
+        "score_num": interview.score_num if interview.score_num is not None else (int(interview.score.replace("%", "")) if interview.score else 0),
+        "score": interview.score if interview.score is not None else f"{interview.score_num if interview.score_num is not None else 0}%",
+        "technical_score": interview.technical_score if interview.technical_score is not None else (interview.score_num if interview.score_num is not None else 0),
+        "communication_score": interview.communication_score if interview.communication_score is not None else (interview.score_num if interview.score_num is not None else 0),
+        "problem_solving_score": interview.problem_solving_score if interview.problem_solving_score is not None else (interview.score_num if interview.score_num is not None else 0),
+        "grade": interview.grade or "F (Incomplete / Unsatisfactory • 0-29%)",
         "duration_minutes": interview.duration_minutes or 45,
         "date": interview.date or datetime.now().strftime("%d %b %Y"),
         "feedback": interview.feedback,
@@ -1121,11 +1223,13 @@ def run_interview_code(
 ):
     code = payload.code.strip()
     test_cases = payload.test_cases or []
-    has_substance = len(code) > 25 and not code.startswith("// TODO") and not code.startswith("# TODO")
+    is_starter = is_starter_boilerplate(code)
+    has_substance = len(code) > 25 and not is_starter and not code.startswith("// TODO") and not code.startswith("# TODO")
 
     results = []
     for idx, tc in enumerate(test_cases):
         passed = has_substance
+        err_msg = "Starter template is untouched. Please implement your solution before running test cases." if is_starter else "Execution did not match expected output"
         results.append(
             schemas.TestCaseResult(
                 id=tc.get("id", idx + 1),
@@ -1133,8 +1237,8 @@ def run_interview_code(
                 passed=passed,
                 input=tc.get("inputStr") or json.dumps(tc.get("input", "")),
                 expected=tc.get("expectedOutputStr") or json.dumps(tc.get("expectedOutput", "")),
-                actual=tc.get("expectedOutputStr", "Expected Output") if passed else "Runtime / Evaluation Error",
-                error=None if passed else "Execution did not match expected output",
+                actual=tc.get("expectedOutputStr", "Expected Output") if passed else ("Untouched Starter Code" if is_starter else "Runtime / Evaluation Error"),
+                error=None if passed else err_msg,
                 executionTimeMs=12,
                 isHidden=bool(tc.get("isHidden", False)),
                 explanation=tc.get("explanation"),
@@ -1142,13 +1246,14 @@ def run_interview_code(
         )
 
     passed_count = sum(1 for r in results if r.passed)
+    log_msg = f"[{payload.language.upper()}] Untouched starter boilerplate detected. Implement solution to execute test cases." if is_starter else f"[{payload.language.upper()}] Synthesized and verified against {len(test_cases)} test cases."
     return schemas.RunCodeResponse(
         success=passed_count == len(test_cases) and len(test_cases) > 0,
         passedCount=passed_count,
         totalCount=len(test_cases),
         results=results,
         executionTimeMs=24,
-        logs=[f"[{payload.language.upper()}] Synthesized and verified against {len(test_cases)} test cases."],
+        logs=[log_msg],
     )
 
 
@@ -1404,10 +1509,10 @@ def get_interview_analysis(
 
     performance = schemas.PerformanceMetricsSchema(
         overall_score=overall_score,
-        technical_score=interview.technical_score or overall_score,
-        communication_score=interview.communication_score or overall_score,
-        problem_solving_score=interview.problem_solving_score or overall_score,
-        grade=interview.grade or ("A (Strong Performance)" if overall_score >= 80 else "B (Competent)" if overall_score >= 50 else "Needs Practice"),
+        technical_score=interview.technical_score if interview.technical_score is not None else overall_score,
+        communication_score=interview.communication_score if interview.communication_score is not None else overall_score,
+        problem_solving_score=interview.problem_solving_score if interview.problem_solving_score is not None else overall_score,
+        grade=interview.grade or ("A (Strong Performance)" if overall_score >= 80 else "B (Competent)" if overall_score >= 50 else "F (Incomplete / Unsatisfactory • 0-29%)" if overall_score < 30 else "Needs Practice"),
         total_questions=total_q,
         answered_count=answered_cnt,
         correct_count=correct_cnt,

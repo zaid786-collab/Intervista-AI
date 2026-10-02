@@ -32,6 +32,14 @@ class User(Base):
     avatar = Column(String(500), nullable=True)
 
     is_active = Column(Boolean, default=True, nullable=False)
+
+    # Telemetry and account status fields
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
+    last_active_at = Column(DateTime(timezone=True), nullable=True)
+    last_login_ip = Column(String(100), nullable=True)
+    last_login_user_agent = Column(String(500), nullable=True)
+    is_blocked = Column(Boolean, default=False, nullable=False)
+    block_reason = Column(String(500), nullable=True)
     
     # Subscription fields
     subscription_plan = Column(String(50), default="free", nullable=False)  # free, starter, pro, team
@@ -116,6 +124,12 @@ class Interview(Base):
     partial_count = Column(Integer, default=0, nullable=True)
     incorrect_count = Column(Integer, default=0, nullable=True)
     vision_data = Column(Text, nullable=True)  # JSON string of computer vision analysis and presentation metrics
+    
+    # Timing and duration telemetry
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    ended_at = Column(DateTime(timezone=True), nullable=True)
+    duration_seconds = Column(Integer, nullable=True)
+
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 

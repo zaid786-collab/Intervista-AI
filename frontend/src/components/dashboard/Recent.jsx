@@ -54,84 +54,86 @@ function Recent({ interviews = [], onStartInterview }) {
           </button>
         </div>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Company & Role</th>
-              <th>Score</th>
-              <th>Status</th>
-              <th>Date</th>
-              <th>Report / Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {interviews.map((item, index) => (
-              <tr key={item.id || index}>
-                <td>
-                  <strong>{item.company || "Mock Interview"}</strong>
-                  <br />
-                  <small style={{ color: "var(--text-muted, #94a3b8)" }}>{item.role}</small>
-                </td>
-
-                <td>
-                  <span style={{ fontWeight: "700", color: item.score && item.score !== "-" ? "#22c55e" : "inherit" }}>
-                    {item.score || "-"}
-                  </span>
-                </td>
-
-                <td>
-                  <span className={item.status === "Completed" ? "completed" : "pending"}>
-                    {item.status}
-                  </span>
-                </td>
-
-                <td>
-                  <small style={{ color: "var(--text-muted, #94a3b8)" }}>
-                    {item.date || "Today"}
-                    {item.duration_minutes ? ` • ${item.duration_minutes}m` : " • 1m"}
-                  </small>
-                </td>
-
-                <td>
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <button
-                      className="detail-btn"
-                      onClick={() => setSelectedInterview(item)}
-                      style={{ padding: "5px 10px", fontSize: "12px" }}
-                    >
-                      Summary
-                    </button>
-                    {item.status === "Completed" && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleDownloadPDF(item, e)}
-                        disabled={downloadingId === item.id}
-                        title="Download Evaluation PDF Report"
-                        style={{
-                          padding: "5px 9px",
-                          borderRadius: "6px",
-                          background: "rgba(56,189,248,0.12)",
-                          border: "1px solid rgba(56,189,248,0.3)",
-                          color: "#38bdf8",
-                          cursor: "pointer",
-                          fontSize: "12px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          fontWeight: "600",
-                        }}
-                      >
-                        <FaFilePdf />
-                        {downloadingId === item.id ? "Saving..." : "PDF"}
-                      </button>
-                    )}
-                  </div>
-                </td>
+        <div className="recent-table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Company & Role</th>
+                <th>Score</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Report / Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {interviews.map((item, index) => (
+                <tr key={item.id || index}>
+                  <td>
+                    <strong>{item.company || "Mock Interview"}</strong>
+                    <br />
+                    <small style={{ color: "var(--text-muted, #94a3b8)" }}>{item.role}</small>
+                  </td>
+
+                  <td>
+                    <span style={{ fontWeight: "700", color: item.score && item.score !== "-" ? "#22c55e" : "inherit" }}>
+                      {item.score || "-"}
+                    </span>
+                  </td>
+
+                  <td>
+                    <span className={item.status === "Completed" ? "completed" : "pending"}>
+                      {item.status}
+                    </span>
+                  </td>
+
+                  <td>
+                    <small style={{ color: "var(--text-muted, #94a3b8)" }}>
+                      {item.date || "Today"}
+                      {item.duration_minutes ? ` • ${item.duration_minutes}m` : " • 1m"}
+                    </small>
+                  </td>
+
+                  <td>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      <button
+                        className="detail-btn"
+                        onClick={() => setSelectedInterview(item)}
+                        style={{ padding: "5px 10px", fontSize: "12px" }}
+                      >
+                        Summary
+                      </button>
+                      {item.status === "Completed" && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDownloadPDF(item, e)}
+                          disabled={downloadingId === item.id}
+                          title="Download Evaluation PDF Report"
+                          style={{
+                            padding: "5px 9px",
+                            borderRadius: "6px",
+                            background: "rgba(56,189,248,0.12)",
+                            border: "1px solid rgba(56,189,248,0.3)",
+                            color: "#38bdf8",
+                            cursor: "pointer",
+                            fontSize: "12px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            fontWeight: "600",
+                          }}
+                        >
+                          <FaFilePdf />
+                          {downloadingId === item.id ? "Saving..." : "PDF"}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* Summary Modal */}

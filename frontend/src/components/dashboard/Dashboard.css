@@ -2315,7 +2315,9 @@ transition:.3s;
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
+    right: 0;
+    bottom: 0;
+    width: 100%;
     height: 100vh;
     background: rgba(10, 15, 29, 0.88);
     backdrop-filter: blur(8px);
@@ -2538,7 +2540,9 @@ transition:.3s;
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
+    right: 0;
+    bottom: 0;
+    width: 100%;
     height: 100vh;
     background: #020617;
     z-index: 99999;
@@ -3604,7 +3608,9 @@ transition:.3s;
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
+    right: 0;
+    bottom: 0;
+    width: 100%;
     height: 100vh;
     background: rgba(0, 0, 0, 0.92);
     z-index: 100000;
@@ -4276,24 +4282,14 @@ grid-template-columns:repeat(2,1fr);
 
 @media(max-width:768px){
 
-.sidebar{
-
-display:none;
-
-}
-
 .main{
-
 margin-left:0;
-
 width:100%;
-
 }
 
 .cards{
-
 grid-template-columns:1fr;
-
+gap: 12px;
 }
 
 }
@@ -7491,7 +7487,7 @@ grid-template-columns:1fr;
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  width: 100vw !important;
+  width: 100% !important;
   height: 100vh !important;
   z-index: 99999999 !important;
   background: #080d1a !important;
@@ -7518,7 +7514,9 @@ body:has(.solution-editor-container.editor-screen-half)::after {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
+  right: 0;
+  bottom: 0;
+  width: 100%;
   height: 100vh;
   background: rgba(3, 7, 18, 0.65);
   backdrop-filter: blur(8px) saturate(140%);
@@ -7575,15 +7573,17 @@ body.interview-cockpit-active .dashboard-main,
 body:has(.interview-live-cockpit-overlay) .dashboard-main {
   margin-left: 0 !important;
   padding: 0 !important;
-  width: 100vw !important;
-  max-width: 100vw !important;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 .interview-live-cockpit-overlay {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  width: 100vw !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
   height: 100vh !important;
   background: #020617 !important;
   z-index: 99999999 !important;
@@ -7596,8 +7596,8 @@ body:has(.interview-live-cockpit-overlay) .dashboard-main {
 }
 
 .interview-live-cockpit-overlay .cockpit-container {
-  width: 100vw !important;
-  max-width: 100vw !important;
+  width: 100% !important;
+  max-width: 100% !important;
   height: 100vh !important;
   border-radius: 0 !important;
   border: none !important;
@@ -8966,3 +8966,746 @@ body:has(.interview-live-cockpit-overlay) .dashboard-main {
 
 
 
+/* =========================================================================
+   STREAMLINED RESPONSIVE DESIGN SYSTEM: DASHBOARD & INTERVIEW ENGINE
+   Supports: Desktop (>1024px), Tablet (769px-1024px), Mobile (481px-768px),
+   Small Mobile (361px-480px), Extra-Small Mobile (320px-360px).
+   ========================================================================= */
+
+/* 1. TABLET BREAKPOINT (<= 1024px) */
+@media (max-width: 1024px) {
+  .dashboard-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .analytics {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .achievement-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  /* Tablet Overview Cards: Natural 2-column grid */
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+}
+
+/* 2. MOBILE & TABLET PORTRAIT BREAKPOINT (<= 768px) */
+@media (max-width: 768px) {
+  /* Prevent horizontal page overflow */
+  .dashboard {
+    overflow-x: hidden;
+  }
+
+  .main {
+    min-width: 0;
+    overflow-x: hidden;
+    padding: 16px 12px 60px 12px;
+  }
+
+  /* Mobile Drawer when desktop collapsed state is active */
+  .sidebar.collapsed {
+    width: min(280px, 85vw);
+    transform: translateX(-100%);
+    padding: 20px 14px;
+  }
+
+  .sidebar.collapsed.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar.collapsed .sidebar-item-text,
+  .sidebar.collapsed .sidebar-title,
+  .sidebar.collapsed .sidebar-label,
+  .sidebar.collapsed .sidebar-badge {
+    display: inline-block;
+  }
+
+  /* Welcome Header & Navigation */
+  .welcome {
+    padding: 16px 14px;
+    border-radius: 14px;
+  }
+
+  .welcome h1 {
+    font-size: 18px;
+    max-width: calc(100% - 95px);
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .welcome p {
+    font-size: 12.5px;
+    overflow-wrap: anywhere;
+  }
+
+  .welcome .start-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ================= DASHBOARD OVERVIEW CARDS: 1-COLUMN STACKING ================= */
+  .cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 14px;
+    width: 100%;
+  }
+
+  .card {
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 14px 16px;
+    margin: 0;
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .card-icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    flex-shrink: 0;
+  }
+
+  .card h4 {
+    font-size: 12px;
+    margin: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .card h2 {
+    font-size: 20px;
+    margin: 2px 0 0 0;
+    overflow-wrap: anywhere;
+  }
+
+  .card-text {
+    font-size: 11px;
+    margin-top: 8px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* Recent Interviews Table Scroll Container */
+  .recent-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .recent-table-wrapper table {
+    min-width: 520px;
+  }
+
+  .recent,
+  .heatmap {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .github-graph-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Floating Chat Box: Prevent viewport overflow on mobile */
+  .chat-box {
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: calc(100vw - 24px);
+    bottom: 90px;
+    height: min(480px, 75vh);
+  }
+
+  /* ================= MOCK INTERVIEW ENGINE: SETUP & PARAMETERS ================= */
+  .mock-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+    width: 100%;
+  }
+
+  .mock-header h2 {
+    font-size: 18px;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .ai-model-toggle-btn {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    line-height: 1.3;
+    padding: 6px 10px;
+  }
+
+  .mock-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .mock-card {
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 16px 14px;
+  }
+
+  .mock-select {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .interview-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .start-interview,
+  .schedule-btn {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+    justify-content: center;
+    padding: 12px 16px;
+    min-height: 48px;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .device-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .device-parameter-card {
+    padding: 12px;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .device-param-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .device-param-info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .device-param-info h5 {
+    font-size: 13px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .device-param-info p {
+    font-size: 11px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .device-param-status-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 8px;
+    min-width: 0;
+  }
+
+  .device-action-btn {
+    flex: 1 1 auto;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+    min-height: 38px;
+    padding: 6px 12px;
+    box-sizing: border-box;
+  }
+
+  .verify-all-devices-btn {
+    width: 100%;
+    justify-content: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+    padding: 10px 14px;
+    min-height: 42px;
+    box-sizing: border-box;
+  }
+
+  .preflight-modal-box {
+    width: min(900px, 94vw);
+    max-width: calc(100vw - 16px);
+    padding: 16px 12px;
+    box-sizing: border-box;
+  }
+
+  .one-click-setup-btn,
+  .preflight-launch-btn {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+    justify-content: center;
+    padding: 12px 14px;
+    min-height: 46px;
+    font-size: 13.5px;
+    line-height: 1.35;
+  }
+
+  .preflight-btn {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    min-height: 38px;
+    padding: 8px 10px;
+    box-sizing: border-box;
+  }
+
+  /* ================= LIVE INTERVIEW COCKPIT LAYOUT ================= */
+  .interview-live-cockpit-overlay {
+    padding: 0;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .interview-live-cockpit-overlay .cockpit-container {
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .cockpit-top-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .cockpit-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .cockpit-role-badge {
+    font-size: 11px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+    max-width: 100%;
+  }
+
+  .cockpit-title {
+    font-size: 14px;
+    margin: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .cockpit-telemetry-cluster {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .telemetry-pill {
+    font-size: 10px;
+    padding: 3px 7px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    min-height: 26px;
+    box-sizing: border-box;
+  }
+
+  .cockpit-timer {
+    font-size: 12px;
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+
+  .cockpit-exit-btn {
+    min-height: 28px;
+    padding: 4px 10px;
+    font-size: 11px;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .cockpit-main-grid {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  /* Compact media ribbon: keeps proctoring visible without pushing question offscreen */
+  .cockpit-left-pane {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    max-height: none;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+
+  .cockpit-feed-card {
+    padding: 6px;
+    border-radius: 8px;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .feed-media-wrap {
+    height: 80px;
+    min-width: 0;
+  }
+
+  /* Right Pane Workspace */
+  .cockpit-right-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow-y: visible;
+    padding-right: 0;
+    min-width: 0;
+  }
+
+  .rounds-stage-tracker {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px;
+    margin-bottom: 6px;
+    min-width: 0;
+  }
+
+  .round-stage-pill {
+    flex-shrink: 0;
+    padding: 6px 10px;
+    min-width: 110px;
+    box-sizing: border-box;
+  }
+
+  .round-pill-title {
+    font-size: 11px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .round-pill-progress {
+    font-size: 9.5px;
+    white-space: normal;
+  }
+
+  .questions-matrix-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+    min-width: 0;
+  }
+
+  .question-matrix-btn {
+    min-height: 32px;
+    font-size: 11px;
+    padding: 2px;
+    box-sizing: border-box;
+  }
+
+  .cockpit-question-box {
+    padding: 10px;
+    margin-bottom: 8px;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .question-box-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .q-badge-group {
+    flex-wrap: wrap;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .round-badge,
+  .q-badge {
+    font-size: 10.5px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+  }
+
+  .question-prompt-text {
+    font-size: 13.5px;
+    line-height: 1.45;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .solution-editor-container {
+    padding: 8px;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .editor-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 8px;
+    min-width: 0;
+  }
+
+  .editor-header > div {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .editor-screen-mode-pills {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .editor-mode-pill-btn,
+  .editor-tool-btn,
+  .question-submit-answer-btn,
+  .voice-dictation-btn,
+  .dsa-run-code-btn,
+  .dsa-submit-solution-btn {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    min-height: 36px;
+    padding: 6px 10px;
+    font-size: 11.5px;
+    line-height: 1.25;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    box-sizing: border-box;
+  }
+
+  .dsa-execution-btn-cluster {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .dsa-run-code-btn,
+  .dsa-submit-solution-btn {
+    flex: 1 1 auto;
+  }
+
+  .technical-code-textarea {
+    min-height: 140px;
+    font-size: 12.5px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+  }
+
+  /* Cockpit Bottom Sticky Controls: Flexible wrapping action buttons */
+  .cockpit-footer-actions {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    background: rgba(11, 19, 41, 0.98);
+    border-top: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 8px;
+    z-index: 100;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .cockpit-footer-middle,
+  .cockpit-footer-right {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .cockpit-prev-btn,
+  .cockpit-next-btn,
+  .cockpit-submit-q-btn,
+  .cockpit-submit-btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.3;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+    justify-content: center;
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+  }
+
+  /* Evaluation & Report */
+  .report-card-container {
+    padding: 12px 8px;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .score-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .score-summary-card {
+    padding: 10px 8px;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .score-summary-card h3 {
+    font-size: 18px;
+    overflow-wrap: anywhere;
+  }
+
+  .score-summary-card small {
+    font-size: 10px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .report-rounds-grid {
+    grid-template-columns: 1fr;
+    min-width: 0;
+  }
+
+  .report-pdf-btn,
+  .report-return-btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+    box-sizing: border-box;
+  }
+}
+
+/* 3. SMALL MOBILE BREAKPOINT (<= 480px) */
+@media (max-width: 480px) {
+  .dashboard {
+    padding-top: 70px;
+  }
+
+  .welcome h1 {
+    font-size: 16px;
+  }
+
+  .card {
+    padding: 12px 10px;
+  }
+
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    font-size: 13px;
+  }
+
+  .card h2 {
+    font-size: 18px;
+  }
+
+  .card h4 {
+    font-size: 11px;
+  }
+
+  .feed-media-wrap {
+    height: 72px;
+  }
+
+  .questions-matrix-row {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+  }
+}
+
+/* 4. EXTRA SMALL PHONES (<= 360px) */
+@media (max-width: 360px) {
+  .achievement-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .score-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cockpit-left-pane {
+    grid-template-columns: 1fr;
+  }
+
+  .cockpit-footer-middle,
+  .cockpit-footer-right {
+    flex-direction: column;
+  }
+}

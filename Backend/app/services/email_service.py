@@ -2,6 +2,7 @@ import logging
 import os
 import smtplib
 from email.message import EmailMessage
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,7 +19,39 @@ def is_smtp_configured() -> bool:
 
 
 def send_verification_otp(recipient: str, code: str) -> bool:
-    """Send a verification code using the SMTP account configured in .env, or log in dev mode."""
+    """Send a verification code using Resend API (if configured) or SMTP, or log in dev mode."""
+    resend_api_key = os.getenv("RESEND_API_KEY")
+    if resend_api_key and resend_api_key.strip():
+        sender = os.getenv("EMAIL_FROM") or os.getenv("SMTP_FROM") or "onboarding@resend.dev"
+        otp_text = (
+            f"Your Intervista AI verification code is: {code}\n\n"
+            "It expires in 10 minutes. Do not share this code with anyone."
+        )
+        try:
+            res = requests.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {resend_api_key.strip()}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": sender,
+                    "to": [recipient],
+                    "subject": "Your Intervista AI verification code",
+                    "text": otp_text,
+                },
+                timeout=10,
+            )
+            if 200 <= res.status_code < 300:
+                logger.info(f"Verification email successfully sent to {recipient} via Resend")
+                return True
+            else:
+                logger.warning(
+                    f"Resend API delivery failed for {recipient} with status {res.status_code}: {res.text[:200]}. Falling back to SMTP."
+                )
+        except Exception as resend_err:
+            logger.warning(f"Resend API request exception for {recipient}: {resend_err}. Falling back to SMTP.")
+
     if not is_smtp_configured():
         print(f"\n==========================================")
         print(f"[DEV AUTH OTP] Verification Code for {recipient}: {code}")

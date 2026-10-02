@@ -283,8 +283,8 @@ def is_meaningless_or_gibberish(text: str) -> bool:
     if lower in non_answers:
         return True
         
-    # Repeated characters (e.g. aaaaaa, 111111)
-    if re.search(r'(.)\1{4,}', trimmed):
+    # Repeated non-whitespace characters (e.g. aaaaaa, 111111, !!!!!!, zzzzzz)
+    if re.search(r'([^\s])\1{4,}', trimmed):
         return True
         
     # Keyboard mash patterns
@@ -1089,11 +1089,14 @@ def evaluate_with_local_rubric(
             question_id=q_id,
             question=q_text,
             answer=answer_text,
+            category=item.get("category"),
+            round_number=item.get("round_number", 1),
             company=company,
             role=role,
             difficulty=difficulty,
             domain=domain_val,
             expected_key_points=expected_points,
+            test_results=item.get("test_results"),
             status=status_hint,
         )
 

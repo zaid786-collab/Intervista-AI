@@ -49,7 +49,7 @@ import {
 import { useAuth } from "../../context/useAuth";
 import { generateInterviewPDF } from "../../utils/pdfGenerator";
 import { evaluateInterview, evaluateSingleQuestion, evaluateQuestionAPI } from "../../utils/evaluator";
-import { getToken, recordLocalInterviewSession, recordLocalScheduledInterview } from "../../api";
+import { getToken, recordLocalInterviewSession, recordLocalScheduledInterview, getApiBaseUrl } from "../../api";
 import { STRUCTURED_DSA_BY_ROLE } from "../../utils/dsaQuestions";
 import { runTestCases } from "../../utils/codeRunner";
 import { ProctoringManager, PROCTORING_VIOLATION_TYPES } from "../../utils/ProctoringManager";
@@ -737,6 +737,7 @@ function MockInterview({ onInterviewCompleted }) {
   const [showSubmitConfirmModal, setShowSubmitConfirmModal] = useState(false); // Confirmation modal for submitting test from any question
   const [initError, setInitError] = useState(null); // Error state for interview initialization
   const [streamWarning, setStreamWarning] = useState(null); // Warning when a stream drops during active interview
+  const isSubmittingInterviewRef = useRef(false);
 
   // Proctoring & Anti-Cheating States
   const [activeSessionId, setActiveSessionId] = useState(null);
@@ -1598,30 +1599,26 @@ function solution() {
 
     setIsSubmittingQuestion(true);
     const token = getToken();
-    const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+    const apiBase = getApiBaseUrl();
 
     try {
-      for (const base of candidateBases) {
-        try {
-          const url = base ? `${base}/api/interviews/save-answer` : `/api/interviews/save-answer`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({
-              session_id: activeSessionId,
-              question_id: q.id,
-              question: q.question,
-              candidate_answer: currentAns,
-              status: "COMPLETED",
-            }),
-          });
-          if (res.ok) break;
-        } catch {
-          // fallback to next base
-        }
+      try {
+        await fetch(`${apiBase}/api/interviews/save-answer`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            session_id: activeSessionId,
+            question_id: q.id,
+            question: q.question,
+            candidate_answer: currentAns,
+            status: "COMPLETED",
+          }),
+        });
+      } catch {
+        // gracefully continue
       }
 
       setSubmittedQuestions((prev) => ({
@@ -1653,30 +1650,26 @@ function solution() {
 
     setIsSubmittingQuestion(true);
     const token = getToken();
-    const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+    const apiBase = getApiBaseUrl();
 
     try {
-      for (const base of candidateBases) {
-        try {
-          const url = base ? `${base}/api/interviews/save-answer` : `/api/interviews/save-answer`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({
-              session_id: activeSessionId,
-              question_id: q.id,
-              question: q.question,
-              candidate_answer: "",
-              status: "SKIPPED",
-            }),
-          });
-          if (res.ok) break;
-        } catch {
-          // next base
-        }
+      try {
+        await fetch(`${apiBase}/api/interviews/save-answer`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            session_id: activeSessionId,
+            question_id: q.id,
+            question: q.question,
+            candidate_answer: "",
+            status: "SKIPPED",
+          }),
+        });
+      } catch {
+        // gracefully continue
       }
 
       setSubmittedQuestions((prev) => ({
@@ -1893,7 +1886,7 @@ function solution() {
 
     try {
       const token = getToken();
-      const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+      const apiBase = getApiBaseUrl();
       let fetchedQuestions = null;
 
       const effectiveDomain = domain === "Custom / Other Topic" ? (customDomain.trim() || "General Software Engineering") : domain;
@@ -1910,31 +1903,27 @@ function solution() {
 
       let sessionIdentifier = `intv_sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-      for (const base of candidateBases) {
-        try {
-          const url = base ? `${base}/api/interviews/start` : `/api/interviews/start`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify(payload),
-          });
+      try {
+        const res = await fetch(`${apiBase}/api/interviews/start`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(payload),
+        });
 
-          if (res.ok) {
-            const data = await res.json();
-            if (data.session_id) {
-              sessionIdentifier = data.session_id;
-            }
-            if (data.questions && data.questions.length > 0) {
-              fetchedQuestions = data.questions;
-              break;
-            }
+        if (res.ok) {
+          const data = await res.json();
+          if (data.session_id) {
+            sessionIdentifier = data.session_id;
           }
-        } catch {
-          // continue to next base URL
+          if (data.questions && data.questions.length > 0) {
+            fetchedQuestions = data.questions;
+          }
         }
+      } catch {
+        // continue to fallback question generation if server unreachable
       }
 
       // Fallback if backend unreachable
@@ -2048,11 +2037,13 @@ function solution() {
   };
 
   const handleSubmitInterview = async () => {
+    if (loading || isSubmittingInterviewRef.current) return;
     if (terminationData) {
       alert("This interview has been terminated for proctoring violations. Answer submission is disabled.");
       return;
     }
 
+    isSubmittingInterviewRef.current = true;
     setShowSubmitConfirmModal(false);
     setLoading(true);
     setAiSpeechState("analyzing");
@@ -2062,62 +2053,71 @@ function solution() {
       : Math.max(45 * 60 - timeLeft, 1);
     const activeMinutes = Math.max(Math.round(elapsedSeconds / 60), 1);
 
+    const normalizeCode = (s) => (s || "").replace(/\r\n/g, "\n").trim();
+
     const answersPayload = sessionQuestions.map((q) => {
       const rawAns = answers[q.id] || "";
       const trimmed = rawAns.trim();
-      // An answer is ONLY skipped if candidate explicitly clicked Skip AND has not entered an answer
-      const isExplicitSkipped = submittedQuestions[q.id] === "SKIPPED" && !trimmed;
+
+      // Check if candidate left starter code untouched
+      let isUntouchedStarter = false;
+      if (q.starter_templates && typeof q.starter_templates === "object") {
+        const templates = Object.values(q.starter_templates).map(normalizeCode);
+        const normAns = normalizeCode(rawAns);
+        if (normAns === "" || templates.includes(normAns)) {
+          isUntouchedStarter = true;
+        }
+      }
+
+      // An answer is strictly SKIPPED if candidate explicitly skipped, left it blank, or left starter template untouched
+      const isExplicitSkipped = (submittedQuestions[q.id] === "SKIPPED" && !trimmed) || isUntouchedStarter || !trimmed;
       const finalAns = isExplicitSkipped ? "" : rawAns;
-      const status = isExplicitSkipped ? "SKIPPED" : trimmed.length > 0 ? "COMPLETED" : "EMPTY";
+      const status = isExplicitSkipped ? "SKIPPED" : "COMPLETED";
       return {
         question_id: q.id,
         question: q.question,
         answer: finalAns,
         candidate_answer: finalAns,
         status,
-        test_results: testResultsMap[q.id] || null,
+        test_results: isUntouchedStarter ? null : (testResultsMap[q.id] || null),
       };
     });
 
     const token = getToken();
-    const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+    const apiBase = getApiBaseUrl();
     let evalData = null;
     const visionSummary = visionCV.getFinalSummary();
 
     const effectiveDomain = domain === "Custom / Other Topic" ? (customDomain.trim() || "General Software Engineering") : domain;
-    for (const base of candidateBases) {
-      try {
-        const url = base ? `${base}/api/interviews/submit` : `/api/interviews/submit`;
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    try {
+      const res = await fetch(`${apiBase}/api/interviews/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          session_id: activeSessionId,
+          company,
+          role,
+          difficulty,
+          interview_type: interviewType,
+          domain: effectiveDomain,
+          duration_minutes: activeMinutes,
+          answers: answersPayload,
+          warning_count: proctoringManagerRef.current?.getWarningCount() || 0,
+          proctoring_data: {
+            violations: proctoringManagerRef.current?.getViolationHistory() || [],
           },
-          body: JSON.stringify({
-            session_id: activeSessionId,
-            company,
-            role,
-            difficulty,
-            interview_type: interviewType,
-            domain: effectiveDomain,
-            duration_minutes: activeMinutes,
-            answers: answersPayload,
-            warning_count: proctoringManagerRef.current?.getWarningCount() || 0,
-            proctoring_data: {
-              violations: proctoringManagerRef.current?.getViolationHistory() || [],
-            },
-            vision_data: visionSummary,
-          }),
-        });
+          vision_data: visionSummary,
+        }),
+      });
 
-        if (res.ok) {
-          evalData = await res.json();
-          break;
-        }
-      } catch {
-        // fallback
+      if (res.ok) {
+        evalData = await res.json();
       }
+    } catch {
+      // fallback
     }
 
     if (!evalData) {
@@ -2136,21 +2136,21 @@ function solution() {
       company,
       role,
       difficulty,
-      score: evalData.score || evalData.score_percentage,
-      score_num: evalData.score,
+      score: evalData.score ?? evalData.score_percentage ?? 0,
+      score_num: evalData.score ?? 0,
       duration_minutes: activeMinutes,
       status: "Completed",
       feedback: evalData.overall_summary,
-      technical_score: evalData.technical_score,
-      communication_score: evalData.communication_score,
-      problem_solving_score: evalData.problem_solving_score,
+      technical_score: evalData.technical_score ?? 0,
+      communication_score: evalData.communication_score ?? 0,
+      problem_solving_score: evalData.problem_solving_score ?? 0,
       grade: evalData.grade,
       total_questions: evalData.total_questions || sessionQuestions.length,
       answered_count: evalData.answered_count !== undefined ? evalData.answered_count : fallbackAnswered,
       skipped_count: evalData.skipped_count !== undefined ? evalData.skipped_count : fallbackSkipped,
-      correct_count: evalData.correct_count || 0,
-      partial_count: evalData.partially_correct_count || evalData.partial_count || 0,
-      incorrect_count: evalData.incorrect_count || 0,
+      correct_count: evalData.correct_count ?? 0,
+      partial_count: evalData.partially_correct_count ?? evalData.partial_count ?? 0,
+      incorrect_count: evalData.incorrect_count ?? 0,
       strengths: evalData.strengths,
       improvements: evalData.improvements,
       detailed_feedback: evalData.detailed_feedback,
@@ -2165,6 +2165,7 @@ function solution() {
 
     setEvaluationResult(evalData);
     setLoading(false);
+    isSubmittingInterviewRef.current = false;
     setAiSpeechState("observing");
 
     if (onInterviewCompleted) {
@@ -2187,29 +2188,25 @@ function solution() {
 
     setLoading(true);
     const token = getToken();
-    const candidateBases = ["http://127.0.0.1:8000", "http://localhost:8000", ""];
+    const apiBase = getApiBaseUrl();
 
-    for (const base of candidateBases) {
-      try {
-        const url = base ? `${base}/api/interviews/schedule` : `/api/interviews/schedule`;
-        await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            company,
-            role,
-            date: scheduleDate,
-            time: scheduleTime,
-            mode: scheduleMode,
-          }),
-        });
-        break;
-      } catch {
-        // fallback
-      }
+    try {
+      await fetch(`${apiBase}/api/interviews/schedule`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          company,
+          role,
+          date: scheduleDate,
+          time: scheduleTime,
+          mode: scheduleMode,
+        }),
+      });
+    } catch {
+      // fallback
     }
 
     recordLocalScheduledInterview({
@@ -4229,7 +4226,6 @@ function solution() {
                                 style={{
                                   background: "linear-gradient(135deg, #10b981, #059669)",
                                   boxShadow: "0 2px 10px rgba(16, 185, 129, 0.3)",
-                                  whiteSpace: "nowrap",
                                 }}
                               >
                                 {loading ? <FaSpinner className="fa-spin" /> : <FaCheckCircle />}
@@ -4392,19 +4388,19 @@ function solution() {
 
                   <div className="score-summary-card">
                     <span className="score-label">Technical Depth</span>
-                    <h3 className="score-val blue">{evaluationResult.technical_score || 88}%</h3>
+                    <h3 className="score-val blue">{evaluationResult.technical_score ?? 0}%</h3>
                     <small>DSA & Architecture</small>
                   </div>
 
                   <div className="score-summary-card">
                     <span className="score-label">Communication</span>
-                    <h3 className="score-val purple">{evaluationResult.communication_score || 85}%</h3>
+                    <h3 className="score-val purple">{evaluationResult.communication_score ?? 0}%</h3>
                     <small>Clarity & HR Round</small>
                   </div>
 
                   <div className="score-summary-card">
                     <span className="score-label">Problem Solving</span>
-                    <h3 className="score-val amber">{evaluationResult.problem_solving_score || 84}%</h3>
+                    <h3 className="score-val amber">{evaluationResult.problem_solving_score ?? 0}%</h3>
                     <small>Aptitude & Logic</small>
                   </div>
 
@@ -4422,11 +4418,11 @@ function solution() {
                   <h4>🎯 Performance Breakdown by Round & Focus Area</h4>
                   <div className="report-rounds-grid">
                     {(evaluationResult.rounds_breakdown || [
-                      { round_number: 1, title: `${interviewType} - Part 1`, score: Math.round(evaluationResult.problem_solving_score || 80), questions_count: Math.ceil(sessionQuestions.length / 2) || 5 },
-                      { round_number: 2, title: `${interviewType} - Part 2`, score: Math.round(evaluationResult.technical_score || 85), questions_count: Math.floor(sessionQuestions.length / 2) || 5 },
+                      { round_number: 1, title: `${interviewType} - Part 1`, score: Math.round(evaluationResult.problem_solving_score ?? 0), questions_count: Math.ceil(sessionQuestions.length / 2) || 5 },
+                      { round_number: 2, title: `${interviewType} - Part 2`, score: Math.round(evaluationResult.technical_score ?? 0), questions_count: Math.floor(sessionQuestions.length / 2) || 5 },
                     ]).map((rb) => {
-                      const score = rb.score;
-                      const badge = score >= 85 ? "Strong Hire" : score >= 70 ? "Hire" : score >= 50 ? "Average" : "Needs Practice";
+                      const score = rb.score ?? 0;
+                      const badge = score >= 85 ? "Strong Hire" : score >= 70 ? "Hire" : score >= 50 ? "Average" : score > 0 ? "Needs Practice" : "Incomplete / Unsatisfactory";
                       return (
                         <div key={rb.round_number} className="round-score-card">
                           <div className="round-score-top">

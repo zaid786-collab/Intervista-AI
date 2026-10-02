@@ -54,6 +54,12 @@ class UserOut(BaseModel):
     subscription_plan: Optional[str] = "free"
     subscription_cycle: Optional[str] = "monthly"
     subscription_expires_at: Optional[datetime] = None
+    last_login_at: Optional[datetime] = None
+    last_active_at: Optional[datetime] = None
+    last_login_ip: Optional[str] = None
+    last_login_user_agent: Optional[str] = None
+    is_blocked: Optional[bool] = False
+    block_reason: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -134,6 +140,9 @@ class InterviewOut(BaseModel):
     duration_minutes: Optional[int] = 45
     warning_count: Optional[int] = 0
     termination_reason: Optional[str] = None
+    started_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None
+    duration_seconds: Optional[int] = None
 
 
 AdminUserDetails.model_rebuild()

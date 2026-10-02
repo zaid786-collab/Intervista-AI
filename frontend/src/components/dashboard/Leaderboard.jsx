@@ -46,7 +46,7 @@ function Leaderboard() {
             const apiMapped = data.slice(0, 5).map((u, i) => ({
               rank: i + 1,
               name: u.name,
-              score: `${u.avg_score || 90}%`,
+              score: `${u.avg_score ?? 0}%`,
               badge: i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🏅",
               role: u.role || "Software Engineer",
               streak: `${(u.total_interviews || 3) * 2} Days`,
